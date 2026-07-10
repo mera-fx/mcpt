@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Market data and generated research output
+data/
+results/
+reports/
+
+# Temporary and backup files
+*.bak
+*.before_*
+apply_research_lab_type_fix.py
+README.txt
+
+# Editor and operating-system files
+.vscode/
+.DS_Store
+Thumbs.db
