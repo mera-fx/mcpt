@@ -141,6 +141,224 @@ def zscore_mean_reversion_long_signal(
     )
 
 
+def calculate_volatility_compression_components(
+    data: pd.DataFrame,
+    *,
+    vol_lookback: int,
+    compression_quantile: float,
+    breakout_lookback: int,
+    compression_reference_window_bars: int = 2160,
+    compression_recency_bars: int = 24,
+    exit_lookback_bars: int = 24,
+) -> pd.DataFrame:
+    """Calculate the locked, causal EXP-003 indicator components."""
+
+    vol_lookback = int(vol_lookback)
+    breakout_lookback = int(breakout_lookback)
+    compression_quantile = float(compression_quantile)
+
+    if vol_lookback < 2:
+        raise ValueError(
+            "vol_lookback must be at least 2."
+        )
+
+    if breakout_lookback < 2:
+        raise ValueError(
+            "breakout_lookback must be at least 2."
+        )
+
+    if not 0.0 < compression_quantile < 1.0:
+        raise ValueError(
+            "compression_quantile must be between 0 and 1."
+        )
+
+    if compression_reference_window_bars < 2:
+        raise ValueError(
+            "compression_reference_window_bars must be at least 2."
+        )
+
+    close = data["close"].astype(float)
+    high = data["high"].astype(float)
+    low = data["low"].astype(float)
+
+    log_return = np.log(close).diff()
+
+    realized_volatility = log_return.rolling(
+        vol_lookback,
+        min_periods=vol_lookback,
+    ).std(ddof=0)
+
+    compression_threshold = realized_volatility.rolling(
+        compression_reference_window_bars,
+        min_periods=compression_reference_window_bars,
+    ).quantile(
+        compression_quantile
+    ).shift(1)
+
+    compressed = (
+        realized_volatility
+        <= compression_threshold
+    ).fillna(False)
+
+    recent_compression = compressed.astype(float).rolling(
+        compression_recency_bars,
+        min_periods=1,
+    ).max().astype(bool)
+
+    breakout_level = high.shift(1).rolling(
+        breakout_lookback,
+        min_periods=breakout_lookback,
+    ).max()
+
+    exit_level = low.shift(1).rolling(
+        exit_lookback_bars,
+        min_periods=exit_lookback_bars,
+    ).min()
+
+    return pd.DataFrame(
+        {
+            "log_return": log_return,
+            "realized_volatility": realized_volatility,
+            "compression_threshold": compression_threshold,
+            "compressed": compressed,
+            "recent_compression": recent_compression,
+            "breakout_level": breakout_level,
+            "exit_level": exit_level,
+        },
+        index=data.index,
+    )
+
+
+def build_volatility_breakout_position_signal(
+    *,
+    close: pd.Series,
+    recent_compression: pd.Series,
+    breakout_level: pd.Series,
+    exit_level: pd.Series,
+    maximum_holding_bars: int = 168,
+) -> pd.Series:
+    """Apply the locked EXP-003 long/flat state machine."""
+
+    maximum_holding_bars = int(
+        maximum_holding_bars
+    )
+
+    if maximum_holding_bars < 1:
+        raise ValueError(
+            "maximum_holding_bars must be positive."
+        )
+
+    index = close.index
+
+    recent = recent_compression.reindex(
+        index
+    ).fillna(False).astype(bool)
+
+    breakout = breakout_level.reindex(index)
+    exit_boundary = exit_level.reindex(index)
+
+    signal = pd.Series(
+        0.0,
+        index=index,
+        dtype=float,
+        name=(
+            "volatility_compression_breakout_long_signal"
+        ),
+    )
+
+    is_long = False
+    entry_signal_position: int | None = None
+
+    for position in range(len(index)):
+        current_close = float(
+            close.iloc[position]
+        )
+
+        current_breakout = breakout.iloc[
+            position
+        ]
+
+        current_exit = exit_boundary.iloc[
+            position
+        ]
+
+        if is_long:
+            bars_since_entry_signal = (
+                position
+                - int(entry_signal_position)
+            )
+
+            price_exit = (
+                pd.notna(current_exit)
+                and current_close
+                < float(current_exit)
+            )
+
+            time_exit = (
+                bars_since_entry_signal
+                >= maximum_holding_bars
+            )
+
+            if price_exit or time_exit:
+                is_long = False
+                entry_signal_position = None
+                signal.iloc[position] = 0.0
+            else:
+                signal.iloc[position] = 1.0
+
+            # Exit takes priority. No same-bar re-entry.
+            continue
+
+        entry = (
+            bool(recent.iloc[position])
+            and pd.notna(current_breakout)
+            and current_close
+            > float(current_breakout)
+        )
+
+        if entry:
+            is_long = True
+            entry_signal_position = position
+            signal.iloc[position] = 1.0
+
+    return signal
+
+
+def volatility_compression_breakout_long_signal(
+    data: pd.DataFrame,
+    *,
+    vol_lookback: int,
+    compression_quantile: float,
+    breakout_lookback: int,
+) -> pd.Series:
+    """Locked EXP-003 volatility-compression breakout signal."""
+
+    components = (
+        calculate_volatility_compression_components(
+            data,
+            vol_lookback=vol_lookback,
+            compression_quantile=(
+                compression_quantile
+            ),
+            breakout_lookback=breakout_lookback,
+        )
+    )
+
+    return build_volatility_breakout_position_signal(
+        close=data["close"].astype(float),
+        recent_compression=components[
+            "recent_compression"
+        ],
+        breakout_level=components[
+            "breakout_level"
+        ],
+        exit_level=components[
+            "exit_level"
+        ],
+        maximum_holding_bars=168,
+    )
+
+
 STRATEGIES: dict[str, StrategyDefinition] = {
     "donchian_breakout": StrategyDefinition(
         name="donchian_breakout",
@@ -158,6 +376,22 @@ STRATEGIES: dict[str, StrategyDefinition] = {
         description=(
             "Long-only z-score mean reversion with exit at "
             "the rolling mean."
+        ),
+    ),
+
+    "volatility_compression_breakout_long": StrategyDefinition(
+        name="volatility_compression_breakout_long",
+        signal_function=(
+            volatility_compression_breakout_long_signal
+        ),
+        parameter_names=(
+            "vol_lookback",
+            "compression_quantile",
+            "breakout_lookback",
+        ),
+        description=(
+            "Long-only upside breakout after a recent "
+            "realized-volatility compression regime."
         ),
     ),
 }

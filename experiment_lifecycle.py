@@ -146,9 +146,9 @@ EXPERIMENT_LIFECYCLE: dict[
             "were locked before implementation or result viewing."
         ),
         next_action=(
-            "Implement the locked strategy and add an in-sample-only "
-            "quick-screen mode. Do not calculate EXP-003 "
-            "out-of-sample results before the quick-screen decision."
+            "Commit the locked implementation, then run the one-time "
+            "in-sample-only quick-screen. Do not use the normal "
+            "research runner or calculate out-of-sample results."
         ),
         strategy_name=(
             "volatility_compression_breakout_long"

@@ -38,6 +38,9 @@ from experiment_lifecycle import (
     format_stage_label,
     get_experiment_lifecycle,
 )
+from research_access_control import (
+    assert_full_research_allowed,
+)
 from run_provenance import (
     append_run_history,
     combined_code_fingerprint,
@@ -1940,6 +1943,11 @@ def main() -> None:
         strategy_name=config.strategy_name,
     )
 
+    assert_full_research_allowed(
+        config,
+        lifecycle,
+    )
+
     lifecycle_record = lifecycle.to_dict()
 
     run_id, run_started_at_utc = (
@@ -1967,6 +1975,7 @@ def main() -> None:
                 "run_research_lab.py",
                 "run_provenance.py",
                 "strategy_registry.py",
+                "research_access_control.py",
                 "trade_engine.py",
                 "bar_permute.py",
                 "donchian.py",

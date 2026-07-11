@@ -36,9 +36,9 @@ def main() -> None:
     print("Current project milestone")
     print("-------------------------")
     print(
-        "EXP-003 is preregistered. The next task is to "
-        "implement the locked strategy and an in-sample-only "
-        "quick-screen mode without viewing OOS results."
+        "EXP-003 is preregistered and implemented. Commit the "
+        "implementation, then run the one-time in-sample-only "
+        "quick screen without viewing OOS results."
     )
 
 
