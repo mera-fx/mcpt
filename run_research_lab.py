@@ -34,6 +34,10 @@ from parameter_analysis import (
     analyze_parameter_stability,
     create_parameter_heatmaps,
 )
+from experiment_lifecycle import (
+    format_stage_label,
+    get_experiment_lifecycle,
+)
 from run_provenance import (
     append_run_history,
     combined_code_fingerprint,
@@ -699,6 +703,7 @@ def create_visual_report(
     best_parameters: dict[str, Any],
     best_score: float,
     parameter_stability_summary: dict[str, Any],
+    lifecycle_record: dict[str, Any],
     fixed_result: BacktestResult,
     walkforward_result: BacktestResult | None,
     benchmark_results: dict[str, BacktestResult],
@@ -1494,6 +1499,20 @@ def create_visual_report(
         mcpt_source.replace("_", " ").title()
     )
 
+    lifecycle_stage_text = html.escape(
+        format_stage_label(
+            lifecycle_record["stage"]
+        )
+    )
+
+    lifecycle_reason_text = html.escape(
+        str(lifecycle_record["stage_reason"])
+    )
+
+    lifecycle_next_action_text = html.escape(
+        str(lifecycle_record["next_action"])
+    )
+
     chart_html = ""
 
     for title, filename in chart_sections:
@@ -1634,7 +1653,24 @@ fast bar-return Profit Factor. The out-of-sample results below use
 completed trades, next-open execution and configured trading costs.
 </div>
 
+<div class="note">
+<strong>Research lifecycle stage:</strong>
+{lifecycle_stage_text}
+<p>{lifecycle_reason_text}</p>
+<strong>Next action:</strong>
+{lifecycle_next_action_text}
+</div>
+
 <div class="cards">
+    <div class="card">
+        <div class="card-label">
+            Research Stage
+        </div>
+        <div class="card-value">
+            {lifecycle_stage_text}
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-label">
             Best In-Sample Parameters
@@ -1862,14 +1898,49 @@ def main() -> None:
             print("---------------------")
 
             for available_config in configs:
+                available_lifecycle = (
+                    get_experiment_lifecycle(
+                        available_config.experiment_id,
+                        experiment_name=(
+                            available_config.experiment_name
+                        ),
+                        hypothesis=(
+                            available_config.hypothesis
+                        ),
+                        market_name=(
+                            available_config.market_name
+                        ),
+                        timeframe=(
+                            available_config.timeframe
+                        ),
+                        strategy_name=(
+                            available_config.strategy_name
+                        ),
+                    )
+                )
+
                 print(
                     f"{available_config.experiment_id}: "
-                    f"{available_config.experiment_name}"
+                    f"{available_config.experiment_name} | "
+                    f"{format_stage_label(
+                        available_lifecycle.stage
+                    )}"
                 )
 
         return
 
     config = load_experiment(arguments.experiment)
+
+    lifecycle = get_experiment_lifecycle(
+        config.experiment_id,
+        experiment_name=config.experiment_name,
+        hypothesis=config.hypothesis,
+        market_name=config.market_name,
+        timeframe=config.timeframe,
+        strategy_name=config.strategy_name,
+    )
+
+    lifecycle_record = lifecycle.to_dict()
 
     run_id, run_started_at_utc = (
         utc_run_identity()
@@ -1952,6 +2023,10 @@ def main() -> None:
     print(f"Name:       {config.experiment_name}")
     print(f"Strategy:   {config.strategy_name}")
     print(f"Market:     {config.market_name}")
+    print(
+        f"Stage:      "
+        f"{format_stage_label(lifecycle.stage)}"
+    )
     print(f"Run ID:     {run_id}")
     print(
         f"Git commit: "
@@ -1960,6 +2035,9 @@ def main() -> None:
     print(
         f"Git dirty:  "
         f"{git_information.get('working_tree_dirty')}"
+    )
+    print(
+        f"Next action: {lifecycle.next_action}"
     )
     print("==============================================")
     print()
@@ -2419,6 +2497,7 @@ def main() -> None:
         "configuration_fingerprint": (
             config_fingerprint
         ),
+        "research_lifecycle": lifecycle_record,
         "config": json_ready(asdict(config)),
         "effective_oos_start": effective_oos_start,
         "effective_oos_end": out_of_sample_data.index.max(),
@@ -2508,6 +2587,10 @@ def main() -> None:
             "experiment_id": (
                 config.experiment_id
             ),
+            "research_stage": lifecycle.stage,
+            "research_next_action": (
+                lifecycle.next_action
+            ),
             "git_commit": (
                 git_information.get("commit")
             ),
@@ -2593,6 +2676,7 @@ def main() -> None:
         parameter_stability_summary=(
             parameter_analysis.summary
         ),
+        lifecycle_record=lifecycle_record,
         fixed_result=fixed_result,
         walkforward_result=walkforward_result,
         benchmark_results=benchmark_results,
@@ -2663,6 +2747,10 @@ def main() -> None:
         )
 
     print()
+    print(
+        f"Research stage: "
+        f"{format_stage_label(lifecycle.stage)}"
+    )
     print(f"Results folder: {results_directory}")
     print(f"Run snapshot:   {run_directory}")
     print(f"Visual report:  {report_file}")

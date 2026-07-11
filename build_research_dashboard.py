@@ -12,7 +12,11 @@ import numpy as np
 import pandas as pd
 
 from experiment_config import list_experiments
-from experiment_decisions import get_experiment_decision
+from experiment_lifecycle import (
+    format_stage_label,
+    get_experiment_lifecycle,
+    list_experiment_lifecycles,
+)
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -192,8 +196,13 @@ def build_experiment_record(
         "Fixed parameters",
     )
 
-    decision = get_experiment_decision(
-        config.experiment_id
+    lifecycle = get_experiment_lifecycle(
+        config.experiment_id,
+        experiment_name=config.experiment_name,
+        hypothesis=config.hypothesis,
+        market_name=config.market_name,
+        timeframe=config.timeframe,
+        strategy_name=config.strategy_name,
     )
 
     has_results = fixed is not None
@@ -205,8 +214,19 @@ def build_experiment_record(
         "market_name": config.market_name,
         "timeframe": config.timeframe,
         "strategy_name": config.strategy_name,
-        "status": decision["status"],
-        "decision_reason": decision["reason"],
+        "status": lifecycle.stage,
+        "status_label": format_stage_label(
+            lifecycle.stage
+        ),
+        "stage_reason": lifecycle.stage_reason,
+        "next_action": lifecycle.next_action,
+        "preregistration_file": (
+            str(lifecycle.preregistration_file)
+            if lifecycle.preregistration_file
+            is not None
+            else ""
+        ),
+        "configured": True,
         "has_results": has_results,
         "report_exists": report_file.exists(),
         "report_file": report_file,
@@ -271,6 +291,52 @@ def build_experiment_record(
             "largest_loss_percent",
         ),
     }
+
+
+def build_lifecycle_only_record(
+    lifecycle,
+) -> dict[str, Any]:
+    return {
+        "experiment_id": lifecycle.experiment_id,
+        "experiment_name": lifecycle.experiment_name,
+        "hypothesis": lifecycle.hypothesis,
+        "market_name": lifecycle.market_name,
+        "timeframe": lifecycle.timeframe,
+        "strategy_name": lifecycle.strategy_name,
+        "status": lifecycle.stage,
+        "status_label": format_stage_label(
+            lifecycle.stage
+        ),
+        "stage_reason": lifecycle.stage_reason,
+        "next_action": lifecycle.next_action,
+        "preregistration_file": (
+            str(lifecycle.preregistration_file)
+            if lifecycle.preregistration_file
+            is not None
+            else ""
+        ),
+        "configured": False,
+        "has_results": False,
+        "report_exists": False,
+        "report_file": Path(),
+        "fixed_return_percent": np.nan,
+        "fixed_max_drawdown_percent": np.nan,
+        "fixed_trade_profit_factor": np.nan,
+        "fixed_trades": np.nan,
+        "walkforward_return_percent": np.nan,
+        "walkforward_max_drawdown_percent": np.nan,
+        "walkforward_trade_profit_factor": np.nan,
+        "walkforward_trades": np.nan,
+        "mcpt_p_value": np.nan,
+        "best_in_sample_bar_profit_factor": np.nan,
+        "best_in_sample_parameters": {},
+        "average_winner_percent": np.nan,
+        "average_loser_percent": np.nan,
+        "payoff_ratio": np.nan,
+        "largest_loss_percent": np.nan,
+    }
+
+
 
 
 def build_charts(
@@ -442,12 +508,19 @@ def build_dashboard_html(
     )
 
     accepted_count = sum(
-        record["status"] == "ACCEPTED"
+        record["status"]
+        == "ACCEPTED_FOR_PAPER_TESTING"
         for record in records
     )
 
-    review_count = sum(
-        record["status"] == "REVIEW"
+    active_count = sum(
+        record["status"] in {
+            "IDEA",
+            "PRE_REGISTERED",
+            "QUICK_SCREEN",
+            "FULL_VALIDATION",
+            "REVIEW",
+        }
         for record in records
     )
 
@@ -470,9 +543,15 @@ def build_dashboard_html(
                 f'Open full report</a>'
             )
         else:
+            missing_text = (
+                "Experiment not configured yet"
+                if not record["configured"]
+                else "Full report not generated"
+            )
+
             report_link = (
                 '<span class="report-missing">'
-                'Full report not generated</span>'
+                f'{html.escape(missing_text)}</span>'
             )
 
         parameters_text = json.dumps(
@@ -493,7 +572,7 @@ def build_dashboard_html(
         </div>
 
         <span class="status {status_class(status)}">
-            {html.escape(status)}
+            {html.escape(record["status_label"])}
         </span>
     </div>
 
@@ -589,8 +668,13 @@ def build_dashboard_html(
     </div>
 
     <div class="decision-reason">
-        <strong>Decision rationale:</strong>
-        {html.escape(record["decision_reason"])}
+        <strong>Stage rationale:</strong>
+        {html.escape(record["stage_reason"])}
+    </div>
+
+    <div class="decision-reason">
+        <strong>Next action:</strong>
+        {html.escape(record["next_action"])}
     </div>
 
     <div class="card-footer">
@@ -608,7 +692,7 @@ def build_dashboard_html(
     <td>{html.escape(record["experiment_name"])}</td>
     <td>
         <span class="status small {status_class(record["status"])}">
-            {html.escape(record["status"])}
+            {html.escape(record["status_label"])}
         </span>
     </td>
     <td>{format_number(record["mcpt_p_value"], 4)}</td>
@@ -792,7 +876,7 @@ h1 {{
     color: #ff8d8d;
 }}
 
-.status.accepted {{
+.status.accepted-for-paper-testing {{
     background: #12351f;
     color: #8ee2aa;
 }}
@@ -802,8 +886,10 @@ h1 {{
     color: #ffd36e;
 }}
 
-.status.planned,
-.status.running {{
+.status.idea,
+.status.pre-registered,
+.status.quick-screen,
+.status.full-validation {{
     background: #142c40;
     color: #8ecbff;
 }}
@@ -876,13 +962,12 @@ th {{
 <h1>Quantitative Research Dashboard</h1>
 
 <div class="subtitle">
-All configured experiments, decisions and validation results
-in one place.
+Research stages, next actions and validation results in one place.
 </div>
 
 <div class="summary-grid">
     <div class="summary-card">
-        <span>Configured experiments</span>
+        <span>Registered experiments</span>
         <strong>{len(records)}</strong>
     </div>
 
@@ -892,18 +977,18 @@ in one place.
     </div>
 
     <div class="summary-card">
-        <span>Accepted</span>
+        <span>Active pipeline</span>
+        <strong>{active_count}</strong>
+    </div>
+
+    <div class="summary-card">
+        <span>Accepted for paper testing</span>
         <strong>{accepted_count}</strong>
     </div>
 
     <div class="summary-card">
         <span>Rejected</span>
         <strong>{rejected_count}</strong>
-    </div>
-
-    <div class="summary-card">
-        <span>Awaiting review</span>
-        <strong>{review_count}</strong>
     </div>
 </div>
 
@@ -956,10 +1041,30 @@ def main() -> None:
             "No experiment configuration files were found."
         )
 
-    records = [
+    configured_records = [
         build_experiment_record(config)
         for config in configs
     ]
+
+    configured_ids = {
+        record["experiment_id"]
+        for record in configured_records
+    }
+
+    lifecycle_only_records = [
+        build_lifecycle_only_record(record)
+        for record in list_experiment_lifecycles()
+        if record.experiment_id
+        not in configured_ids
+    ]
+
+    records = sorted(
+        configured_records
+        + lifecycle_only_records,
+        key=lambda record: int(
+            record["experiment_id"].split("-")[1]
+        ),
+    )
 
     reports_root = resolve(
         configs[0].reports_folder
@@ -1006,6 +1111,8 @@ def main() -> None:
         "experiment_id",
         "experiment_name",
         "status",
+        "status_label",
+        "configured",
         "strategy_name",
         "mcpt_p_value",
         "best_in_sample_bar_profit_factor",
@@ -1021,7 +1128,9 @@ def main() -> None:
         "average_loser_percent",
         "payoff_ratio",
         "largest_loss_percent",
-        "decision_reason",
+        "stage_reason",
+        "next_action",
+        "preregistration_file",
     ]
 
     pd.DataFrame(records)[
@@ -1044,8 +1153,12 @@ def main() -> None:
         f"{sum(record['status'] == 'REJECTED' for record in records)}"
     )
     print(
-        "Accepted: "
-        f"{sum(record['status'] == 'ACCEPTED' for record in records)}"
+        "Accepted for paper testing: "
+        f"{sum(
+            record['status']
+            == 'ACCEPTED_FOR_PAPER_TESTING'
+            for record in records
+        )}"
     )
     print()
     print(f"Dashboard: {dashboard_file}")
