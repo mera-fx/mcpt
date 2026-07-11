@@ -30,6 +30,10 @@ from trade_engine import (
     signal_to_target_position,
 )
 from trade_diagnostics import calculate_trade_diagnostics
+from parameter_analysis import (
+    analyze_parameter_stability,
+    create_parameter_heatmaps,
+)
 from run_provenance import (
     append_run_history,
     combined_code_fingerprint,
@@ -694,6 +698,7 @@ def create_visual_report(
     optimization_table: pd.DataFrame,
     best_parameters: dict[str, Any],
     best_score: float,
+    parameter_stability_summary: dict[str, Any],
     fixed_result: BacktestResult,
     walkforward_result: BacktestResult | None,
     benchmark_results: dict[str, BacktestResult],
@@ -925,6 +930,17 @@ def create_visual_report(
             "03_parameter_search.png",
         ),
     ]
+
+    heatmap_sections = create_parameter_heatmaps(
+        optimization_table=optimization_table,
+        parameter_names=parameter_names,
+        best_parameters=best_parameters,
+        output_directory=report_directory,
+    )
+
+    chart_sections.extend(
+        heatmap_sections
+    )
 
     # --------------------------------------------------------
     # MCPT distribution
@@ -1333,6 +1349,95 @@ def create_visual_report(
             )
         )
 
+    stability_rows = [
+        {
+            "metric": "Edge assessment",
+            "value": (
+                parameter_stability_summary[
+                    "edge_assessment"
+                ]
+                .replace("_", " ")
+                .title()
+            ),
+        },
+        {
+            "metric": "Local surface",
+            "value": (
+                parameter_stability_summary[
+                    "local_surface_assessment"
+                ]
+                .replace("_", " ")
+                .title()
+            ),
+        },
+        {
+            "metric": "Valid combinations",
+            "value": (
+                parameter_stability_summary[
+                    "valid_combinations"
+                ]
+            ),
+        },
+        {
+            "metric": "PF ≥ 1.0 combinations",
+            "value": (
+                f"{parameter_stability_summary['break_even_count']} "
+                f"({parameter_stability_summary['break_even_share'] * 100:.1f}%)"
+            ),
+        },
+        {
+            "metric": "Within 95% of best",
+            "value": (
+                f"{parameter_stability_summary['near_best_count']} "
+                f"({parameter_stability_summary['near_best_share'] * 100:.1f}%)"
+            ),
+        },
+        {
+            "metric": "Immediate neighbours",
+            "value": (
+                parameter_stability_summary[
+                    "immediate_neighbor_count"
+                ]
+            ),
+        },
+        {
+            "metric": "Median neighbour PF",
+            "value": format_number(
+                parameter_stability_summary[
+                    "neighbor_median_score"
+                ],
+                4,
+            ),
+        },
+        {
+            "metric": "Neighbour retention",
+            "value": format_percent(
+                parameter_stability_summary[
+                    "neighbor_retention_ratio"
+                ]
+                * 100,
+                1,
+            ),
+        },
+    ]
+
+    parameter_stability_html = (
+        pd.DataFrame(stability_rows)
+        .to_html(
+            index=False,
+            classes="metrics",
+            border=0,
+        )
+    )
+
+    parameter_interpretation = html.escape(
+        str(
+            parameter_stability_summary[
+                "interpretation"
+            ]
+        )
+    )
+
     fixed_pf = fixed_result.summary[
         "trade_profit_factor"
     ]
@@ -1645,6 +1750,17 @@ Benchmarks provide context; outperforming one benchmark alone does
 not prove that a strategy has a robust edge.
 </div>
 
+<h2>Parameter Surface Stability</h2>
+
+<div class="note">
+Parameter stability describes the shape of the in-sample search
+surface. It does not prove profitability or replace MCPT and
+out-of-sample validation.
+<p>{parameter_interpretation}</p>
+</div>
+
+{parameter_stability_html}
+
 <h2>Trade-Quality Diagnostics</h2>
 
 <div class="note">
@@ -1916,6 +2032,66 @@ def main() -> None:
     optimization_table.to_csv(
         results_directory / "optimization.csv",
         index=False,
+    )
+
+    strategy_definition = get_strategy(
+        config.strategy_name
+    )
+
+    parameter_analysis = (
+        analyze_parameter_stability(
+            optimization_table=optimization_table,
+            parameter_names=(
+                strategy_definition.parameter_names
+            ),
+            best_parameters=best_parameters,
+        )
+    )
+
+    parameter_analysis.detail.to_csv(
+        results_directory
+        / "parameter_stability_detail.csv",
+        index=False,
+    )
+
+    (
+        results_directory
+        / "parameter_stability_summary.json"
+    ).write_text(
+        json.dumps(
+            json_ready(
+                parameter_analysis.summary
+            ),
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    print()
+    print("========== PARAMETER SURFACE ==========")
+    print(
+        "Edge assessment: "
+        + parameter_analysis.summary[
+            "edge_assessment"
+        ].replace("_", " ").title()
+    )
+    print(
+        "Local surface:   "
+        + parameter_analysis.summary[
+            "local_surface_assessment"
+        ].replace("_", " ").title()
+    )
+    print(
+        "PF >= 1.0:       "
+        f"{parameter_analysis.summary['break_even_count']}"
+        "/"
+        f"{parameter_analysis.summary['valid_combinations']}"
+    )
+    print(
+        "Within 95% best: "
+        f"{parameter_analysis.summary['near_best_count']}"
+        "/"
+        f"{parameter_analysis.summary['valid_combinations']}"
     )
 
     print()
@@ -2250,6 +2426,9 @@ def main() -> None:
         "out_of_sample_rows": len(out_of_sample_data),
         "best_in_sample_parameters": best_parameters,
         "best_in_sample_bar_profit_factor": best_score,
+        "parameter_stability": (
+            parameter_analysis.summary
+        ),
         "configured_fixed_parameters": (
             config.fixed_parameters
         ),
@@ -2355,6 +2534,26 @@ def main() -> None:
                 mcpt_permutations_used
             ),
             "mcpt_p_value": mcpt_p_value,
+            "parameter_edge_assessment": (
+                parameter_analysis.summary[
+                    "edge_assessment"
+                ]
+            ),
+            "parameter_surface_assessment": (
+                parameter_analysis.summary[
+                    "local_surface_assessment"
+                ]
+            ),
+            "parameter_break_even_share": (
+                parameter_analysis.summary[
+                    "break_even_share"
+                ]
+            ),
+            "parameter_near_best_share": (
+                parameter_analysis.summary[
+                    "near_best_share"
+                ]
+            ),
             "fixed_return_percent": (
                 fixed_result.summary[
                     "total_return_percent"
@@ -2391,6 +2590,9 @@ def main() -> None:
         optimization_table=optimization_table,
         best_parameters=best_parameters,
         best_score=best_score,
+        parameter_stability_summary=(
+            parameter_analysis.summary
+        ),
         fixed_result=fixed_result,
         walkforward_result=walkforward_result,
         benchmark_results=benchmark_results,
