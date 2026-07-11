@@ -36,9 +36,9 @@ def main() -> None:
     print("Current project milestone")
     print("-------------------------")
     print(
-        "EXP-003 is preregistered and implemented. Commit the "
-        "implementation, then run the one-time in-sample-only "
-        "quick screen without viewing OOS results."
+        "EXP-003 passed its locked in-sample quick screen and "
+        "is now in FULL_VALIDATION. Run the protected full-validation "
+        "workflow exactly once without changing any locked rule."
     )
 
 

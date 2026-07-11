@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import os
+
 from experiment_config import ResearchConfig
 from experiment_lifecycle import ExperimentLifecycle
 
 
-EXP003_FULL_RESEARCH_ALLOWED_STAGES = {
-    "FULL_VALIDATION",
+EXP003_FULL_VALIDATION_ENVIRONMENT_KEY = (
+    "EXP003_FULL_VALIDATION_AUTHORIZED"
+)
+
+EXP003_POST_VALIDATION_ALLOWED_STAGES = {
     "REVIEW",
     "ACCEPTED_FOR_PAPER_TESTING",
 }
@@ -15,20 +20,35 @@ def assert_full_research_allowed(
     config: ResearchConfig,
     lifecycle: ExperimentLifecycle,
 ) -> None:
-    """Prevent premature EXP-003 out-of-sample disclosure."""
+    """Prevent premature or unprotected EXP-003 OOS disclosure."""
 
     if config.experiment_id != "EXP-003":
         return
 
+    if lifecycle.stage == "FULL_VALIDATION":
+        if (
+            os.environ.get(
+                EXP003_FULL_VALIDATION_ENVIRONMENT_KEY
+            )
+            == "1"
+        ):
+            return
+
+        raise RuntimeError(
+            "EXP-003 is ready for full validation, but direct use "
+            "of run_research_lab.py is blocked. Run "
+            "run_exp003_full_validation.py exactly once so the "
+            "locked gates are evaluated and a decision is recorded."
+        )
+
     if lifecycle.stage in (
-        EXP003_FULL_RESEARCH_ALLOWED_STAGES
+        EXP003_POST_VALIDATION_ALLOWED_STAGES
     ):
         return
 
     raise RuntimeError(
         "EXP-003 out-of-sample research is locked while its "
         f"lifecycle stage is {lifecycle.stage}. Run "
-        "run_exp003_quick_screen.py instead. The normal research "
-        "runner becomes available only after every quick-screen "
-        "gate passes and the lifecycle advances to FULL_VALIDATION."
+        "run_exp003_quick_screen.py instead. Full validation "
+        "becomes available only after every quick-screen gate passes."
     )

@@ -139,16 +139,18 @@ EXPERIMENT_LIFECYCLE: dict[
             "regime, an upside range breakout may be followed "
             "by continuation strong enough to overcome costs."
         ),
-        stage="PRE_REGISTERED",
+        stage="FULL_VALIDATION",
         stage_reason=(
-            "The signal rules, parameter grid, research periods, "
-            "costs, validation sequence and pass/fail criteria "
-            "were locked before implementation or result viewing."
+            "The one-time in-sample quick screen passed all five "
+            "preregistered gates: best bar PF 1.1150, all 27 "
+            "parameter combinations at or above PF 1.0, neighbour "
+            "retention 0.9917, quick MCPT p-value 0.0769 and "
+            "105 fixed-parameter completed trades."
         ),
         next_action=(
-            "Commit the locked implementation, then run the one-time "
-            "in-sample-only quick-screen. Do not use the normal "
-            "research runner or calculate out-of-sample results."
+            "Run the protected EXP-003 full-validation workflow "
+            "exactly once. Do not run the normal research runner "
+            "directly or change any locked rule."
         ),
         strategy_name=(
             "volatility_compression_breakout_long"

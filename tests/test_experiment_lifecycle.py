@@ -39,7 +39,7 @@ class LifecycleRegistryTests(unittest.TestCase):
                 ALLOWED_STAGES,
             )
 
-    def test_exp003_is_recorded_as_preregistered(
+    def test_exp003_is_recorded_as_full_validation(
         self,
     ) -> None:
         record = get_experiment_lifecycle(
@@ -48,11 +48,11 @@ class LifecycleRegistryTests(unittest.TestCase):
 
         self.assertEqual(
             record.stage,
-            "PRE_REGISTERED",
+            "FULL_VALIDATION",
         )
 
         self.assertIn(
-            "quick-screen",
+            "full-validation",
             record.next_action.lower(),
         )
 
@@ -115,7 +115,7 @@ class LifecycleCompatibilityTests(unittest.TestCase):
             "REVIEW",
         )
 
-    def test_dashboard_supports_unconfigured_preregistered_experiment(
+    def test_dashboard_supports_full_validation_experiment(
         self,
     ) -> None:
         lifecycle = get_experiment_lifecycle(
@@ -136,7 +136,7 @@ class LifecycleCompatibilityTests(unittest.TestCase):
 
         self.assertEqual(
             record["status"],
-            "PRE_REGISTERED",
+            "FULL_VALIDATION",
         )
 
 
