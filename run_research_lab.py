@@ -30,6 +30,18 @@ from trade_engine import (
     signal_to_target_position,
 )
 from trade_diagnostics import calculate_trade_diagnostics
+from run_provenance import (
+    append_run_history,
+    combined_code_fingerprint,
+    configuration_fingerprint,
+    git_state,
+    load_compatible_mcpt_cache,
+    mcpt_base_signature,
+    runtime_environment,
+    save_mcpt_cache,
+    sha256_file,
+    utc_run_identity,
+)
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -688,6 +700,7 @@ def create_visual_report(
     walkforward_parameters: pd.DataFrame | None,
     mcpt_results: pd.DataFrame | None,
     mcpt_p_value: float | None,
+    mcpt_source: str,
     diagnostic_summary: pd.DataFrame,
     diagnostic_by_side: pd.DataFrame,
     effective_oos_start: pd.Timestamp,
@@ -1369,7 +1382,11 @@ def create_visual_report(
     mcpt_text = (
         format_number(mcpt_p_value, 4)
         if mcpt_p_value is not None
-        else "Not run"
+        else "Not available"
+    )
+
+    mcpt_source_text = html.escape(
+        mcpt_source.replace("_", " ").title()
     )
 
     chart_html = ""
@@ -1537,6 +1554,15 @@ completed trades, next-open execution and configured trading costs.
         </div>
         <div class="card-value">
             {mcpt_text}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-label">
+            MCPT Result Source
+        </div>
+        <div class="card-value">
+            {mcpt_source_text}
         </div>
     </div>
 
@@ -1729,6 +1755,50 @@ def main() -> None:
 
     config = load_experiment(arguments.experiment)
 
+    run_id, run_started_at_utc = (
+        utc_run_identity()
+    )
+
+    data_file_path = resolve_project_path(
+        config.data_file
+    )
+
+    if not data_file_path.exists():
+        raise FileNotFoundError(
+            f"Market data file was not found:\n"
+            f"{data_file_path}"
+        )
+
+    data_file_sha256 = sha256_file(
+        data_file_path
+    )
+
+    code_fingerprint = (
+        combined_code_fingerprint(
+            PROJECT_DIR,
+            (
+                "run_research_lab.py",
+                "run_provenance.py",
+                "strategy_registry.py",
+                "trade_engine.py",
+                "bar_permute.py",
+                "donchian.py",
+            ),
+        )
+    )
+
+    git_information = git_state(
+        PROJECT_DIR
+    )
+
+    environment_information = (
+        runtime_environment()
+    )
+
+    config_fingerprint = (
+        configuration_fingerprint(config)
+    )
+
     results_directory = (
         resolve_project_path(config.results_folder)
         / config.experiment_id
@@ -1749,12 +1819,32 @@ def main() -> None:
         exist_ok=True,
     )
 
+    run_directory = (
+        results_directory
+        / "runs"
+        / run_id
+    )
+
+    run_directory.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
     print()
     print("==============================================")
     print(f"Experiment: {config.experiment_id}")
     print(f"Name:       {config.experiment_name}")
     print(f"Strategy:   {config.strategy_name}")
     print(f"Market:     {config.market_name}")
+    print(f"Run ID:     {run_id}")
+    print(
+        f"Git commit: "
+        f"{git_information.get('short_commit') or 'Unavailable'}"
+    )
+    print(
+        f"Git dirty:  "
+        f"{git_information.get('working_tree_dirty')}"
+    )
     print("==============================================")
     print()
 
@@ -1899,6 +1989,14 @@ def main() -> None:
     mcpt_results: pd.DataFrame | None = None
     mcpt_p_value: float | None = None
     better_or_equal: int | None = None
+    mcpt_permutations_used: int | None = None
+    mcpt_source = "disabled"
+
+    mcpt_signature = mcpt_base_signature(
+        config=config,
+        data_file_sha256=data_file_sha256,
+        code_fingerprint=code_fingerprint,
+    )
 
     should_run_mcpt = (
         config.run_mcpt
@@ -1924,10 +2022,74 @@ def main() -> None:
             permutations,
         )
 
-        mcpt_results.to_csv(
-            results_directory / "mcpt.csv",
-            index=False,
+        cache_metadata = save_mcpt_cache(
+            results_directory=results_directory,
+            results=mcpt_results,
+            p_value=mcpt_p_value,
+            better_or_equal=better_or_equal,
+            permutations=permutations,
+            configured_full_permutations=(
+                config.mcpt_permutations
+            ),
+            base_signature=mcpt_signature,
+            real_score=best_score,
         )
+
+        mcpt_permutations_used = permutations
+        mcpt_source = (
+            f"{cache_metadata['cache_kind']}_run"
+        )
+
+    elif config.run_mcpt:
+        (
+            cached_results,
+            cached_metadata,
+        ) = load_compatible_mcpt_cache(
+            results_directory=results_directory,
+            base_signature=mcpt_signature,
+        )
+
+        if (
+            cached_results is not None
+            and cached_metadata is not None
+        ):
+            mcpt_results = cached_results
+            mcpt_p_value = float(
+                cached_metadata["p_value"]
+            )
+            better_or_equal = int(
+                cached_metadata[
+                    "better_or_equal"
+                ]
+            )
+            mcpt_permutations_used = int(
+                cached_metadata["permutations"]
+            )
+            mcpt_source = (
+                "cached_"
+                + str(
+                    cached_metadata[
+                        "cache_kind"
+                    ]
+                )
+            )
+
+            print()
+            print(
+                "Using compatible cached MCPT result: "
+                f"{mcpt_source} "
+                f"({mcpt_permutations_used:,} permutations)"
+            )
+        else:
+            mcpt_source = (
+                "skipped_no_compatible_cache"
+            )
+
+            print()
+            print(
+                "MCPT was skipped and no compatible "
+                "provenance-verified cache was found."
+            )
 
     summary_rows = [
         summary_row(
@@ -2056,6 +2218,31 @@ def main() -> None:
     )
 
     metadata = {
+        "run_id": run_id,
+        "run_started_at_utc": run_started_at_utc,
+        "run_mode": (
+            "quick"
+            if arguments.quick
+            else "standard"
+        ),
+        "cli_options": {
+            "experiment": arguments.experiment,
+            "quick": arguments.quick,
+            "skip_mcpt": arguments.skip_mcpt,
+            "skip_walkforward": (
+                arguments.skip_walkforward
+            ),
+        },
+        "git": git_information,
+        "runtime_environment": (
+            environment_information
+        ),
+        "data_file": str(data_file_path),
+        "data_file_sha256": data_file_sha256,
+        "code_fingerprint": code_fingerprint,
+        "configuration_fingerprint": (
+            config_fingerprint
+        ),
         "config": json_ready(asdict(config)),
         "effective_oos_start": effective_oos_start,
         "effective_oos_end": out_of_sample_data.index.max(),
@@ -2068,6 +2255,11 @@ def main() -> None:
         ),
         "mcpt_p_value": mcpt_p_value,
         "mcpt_better_or_equal": better_or_equal,
+        "mcpt_permutations_used": (
+            mcpt_permutations_used
+        ),
+        "mcpt_source": mcpt_source,
+        "mcpt_signature": mcpt_signature,
         "quick_mode": arguments.quick,
         "walkforward_ran": (
             walkforward_result is not None
@@ -2103,15 +2295,93 @@ def main() -> None:
         },
     }
 
+    metadata_text = json.dumps(
+        json_ready(metadata),
+        indent=2,
+    )
+
     (
         results_directory
         / "run_metadata.json"
     ).write_text(
-        json.dumps(
-            json_ready(metadata),
-            indent=2,
-        ),
+        metadata_text,
         encoding="utf-8",
+    )
+
+    (
+        run_directory
+        / "run_metadata.json"
+    ).write_text(
+        metadata_text,
+        encoding="utf-8",
+    )
+
+    append_run_history(
+        history_file=(
+            results_directory
+            / "run_history.csv"
+        ),
+        row={
+            "run_id": run_id,
+            "started_at_utc": (
+                run_started_at_utc
+            ),
+            "experiment_id": (
+                config.experiment_id
+            ),
+            "git_commit": (
+                git_information.get("commit")
+            ),
+            "git_dirty": (
+                git_information.get(
+                    "working_tree_dirty"
+                )
+            ),
+            "configuration_fingerprint": (
+                config_fingerprint
+            ),
+            "data_file_sha256": (
+                data_file_sha256
+            ),
+            "code_fingerprint": (
+                code_fingerprint
+            ),
+            "quick_mode": arguments.quick,
+            "walkforward_ran": (
+                walkforward_result is not None
+            ),
+            "mcpt_source": mcpt_source,
+            "mcpt_permutations": (
+                mcpt_permutations_used
+            ),
+            "mcpt_p_value": mcpt_p_value,
+            "fixed_return_percent": (
+                fixed_result.summary[
+                    "total_return_percent"
+                ]
+            ),
+            "fixed_trade_profit_factor": (
+                fixed_result.summary[
+                    "trade_profit_factor"
+                ]
+            ),
+            "walkforward_return_percent": (
+                walkforward_result.summary[
+                    "total_return_percent"
+                ]
+                if walkforward_result
+                is not None
+                else None
+            ),
+            "walkforward_trade_profit_factor": (
+                walkforward_result.summary[
+                    "trade_profit_factor"
+                ]
+                if walkforward_result
+                is not None
+                else None
+            ),
+        },
     )
 
     report_file = create_visual_report(
@@ -2127,6 +2397,7 @@ def main() -> None:
         walkforward_parameters=walkforward_parameters,
         mcpt_results=mcpt_results,
         mcpt_p_value=mcpt_p_value,
+        mcpt_source=mcpt_source,
         diagnostic_summary=diagnostic_summary,
         diagnostic_by_side=diagnostic_by_side,
         effective_oos_start=effective_oos_start,
@@ -2179,15 +2450,20 @@ def main() -> None:
         .to_string()
     )
 
+    print()
+    print(
+        f"MCPT source:  {mcpt_source}"
+    )
+
     if mcpt_p_value is not None:
-        print()
         print(
             f"MCPT p-value: {mcpt_p_value:.4f}"
         )
 
     print()
     print(f"Results folder: {results_directory}")
-    print(f"Visual report: {report_file}")
+    print(f"Run snapshot:   {run_directory}")
+    print(f"Visual report:  {report_file}")
     print("=========================================")
 
 
