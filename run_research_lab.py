@@ -538,6 +538,53 @@ def build_cost_model(
     )
 
 
+def run_standard_benchmarks(
+    out_of_sample_data: pd.DataFrame,
+    config: ResearchConfig,
+) -> dict[str, BacktestResult]:
+    """
+    Run consistent context benchmarks over the same OOS period.
+
+    Buy and Hold:
+    - Enter long at the first OOS bar open
+    - Exit at the final OOS bar close
+    - Uses the same configured transaction costs
+
+    Cash:
+    - Remain flat for the entire period
+    - Provides a zero-return reference
+    """
+
+    buy_hold_target = pd.Series(
+        1.0,
+        index=out_of_sample_data.index,
+        name="buy_hold_target",
+    )
+
+    cash_target = pd.Series(
+        0.0,
+        index=out_of_sample_data.index,
+        name="cash_target",
+    )
+
+    cost_model = build_cost_model(config)
+
+    return {
+        "Buy and Hold": backtest_signal_strategy(
+            out_of_sample_data,
+            buy_hold_target,
+            cost_model=cost_model,
+            starting_capital=config.starting_capital,
+        ),
+        "Cash": backtest_signal_strategy(
+            out_of_sample_data,
+            cash_target,
+            cost_model=cost_model,
+            starting_capital=config.starting_capital,
+        ),
+    }
+
+
 def run_fixed_backtest(
     research_data: pd.DataFrame,
     out_of_sample_data: pd.DataFrame,
@@ -637,6 +684,7 @@ def create_visual_report(
     best_score: float,
     fixed_result: BacktestResult,
     walkforward_result: BacktestResult | None,
+    benchmark_results: dict[str, BacktestResult],
     walkforward_parameters: pd.DataFrame | None,
     mcpt_results: pd.DataFrame | None,
     mcpt_p_value: float | None,
@@ -671,6 +719,17 @@ def create_visual_report(
             walkforward_result.equity_curve["equity"],
             linewidth=1.8,
             label="Walk-forward",
+        )
+
+    for benchmark_name, benchmark_result in (
+        benchmark_results.items()
+    ):
+        plt.plot(
+            benchmark_result.equity_curve.index,
+            benchmark_result.equity_curve["equity"],
+            linewidth=1.4,
+            linestyle="--",
+            label=benchmark_name,
         )
 
     plt.axhline(
@@ -714,6 +773,17 @@ def create_visual_report(
             walkforward_result.equity_curve["drawdown"] * 100,
             linewidth=1.8,
             label="Walk-forward",
+        )
+
+    for benchmark_name, benchmark_result in (
+        benchmark_results.items()
+    ):
+        plt.plot(
+            benchmark_result.equity_curve.index,
+            benchmark_result.equity_curve["drawdown"] * 100,
+            linewidth=1.4,
+            linestyle="--",
+            label=benchmark_name,
         )
 
     plt.axhline(0, linewidth=1)
@@ -1258,6 +1328,26 @@ def create_visual_report(
         "total_return_percent"
     ]
 
+    buy_hold_result = benchmark_results[
+        "Buy and Hold"
+    ]
+
+    cash_result = benchmark_results[
+        "Cash"
+    ]
+
+    buy_hold_return = buy_hold_result.summary[
+        "total_return_percent"
+    ]
+
+    cash_return = cash_result.summary[
+        "total_return_percent"
+    ]
+
+    fixed_excess_vs_buy_hold = (
+        fixed_return - buy_hold_return
+    )
+
     if walkforward_result is not None:
         walkforward_pf_text = format_number(
             walkforward_result.summary[
@@ -1470,6 +1560,36 @@ completed trades, next-open execution and configured trading costs.
 
     <div class="card">
         <div class="card-label">
+            Buy & Hold OOS Return
+        </div>
+        <div class="card-value">
+            {format_percent(buy_hold_return, 2)}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-label">
+            Fixed Excess vs Buy & Hold
+        </div>
+        <div class="card-value">
+            {format_percent(
+                fixed_excess_vs_buy_hold,
+                2,
+            )}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-label">
+            Cash OOS Return
+        </div>
+        <div class="card-value">
+            {format_percent(cash_return, 2)}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-label">
             Walk-Forward Trade PF
         </div>
         <div class="card-value">
@@ -1489,6 +1609,15 @@ completed trades, next-open execution and configured trading costs.
 
 <h2>Completed-Trade Summary</h2>
 {summary_html}
+
+<h2>Benchmark Context</h2>
+
+<div class="note">
+Buy and Hold and Cash use exactly the same out-of-sample period.
+Buy and Hold is charged the configured entry and exit costs.
+Benchmarks provide context; outperforming one benchmark alone does
+not prove that a strategy has a robust edge.
+</div>
 
 <h2>Trade-Quality Diagnostics</h2>
 
@@ -1714,6 +1843,26 @@ def main() -> None:
         results_directory,
     )
 
+    print()
+    print("Running standard benchmarks...")
+
+    benchmark_results = run_standard_benchmarks(
+        out_of_sample_data,
+        config,
+    )
+
+    save_backtest_files(
+        "buy_hold",
+        benchmark_results["Buy and Hold"],
+        results_directory,
+    )
+
+    save_backtest_files(
+        "cash",
+        benchmark_results["Cash"],
+        results_directory,
+    )
+
     walkforward_result: BacktestResult | None = None
     walkforward_parameters: pd.DataFrame | None = None
 
@@ -1794,6 +1943,19 @@ def main() -> None:
                 walkforward_result,
             )
         )
+
+    summary_rows.extend(
+        [
+            summary_row(
+                "Buy and Hold",
+                benchmark_results["Buy and Hold"],
+            ),
+            summary_row(
+                "Cash",
+                benchmark_results["Cash"],
+            ),
+        ]
+    )
 
     summary = pd.DataFrame(
         summary_rows
@@ -1911,6 +2073,34 @@ def main() -> None:
             walkforward_result is not None
         ),
         "mcpt_ran": mcpt_results is not None,
+        "benchmarks": {
+            benchmark_name: {
+                "total_return_percent": (
+                    benchmark_result.summary[
+                        "total_return_percent"
+                    ]
+                ),
+                "max_drawdown_percent": (
+                    benchmark_result.summary[
+                        "max_drawdown_percent"
+                    ]
+                ),
+                "trade_profit_factor": (
+                    benchmark_result.summary[
+                        "trade_profit_factor"
+                    ]
+                ),
+                "total_trades": (
+                    benchmark_result.summary[
+                        "total_trades"
+                    ]
+                ),
+            }
+            for (
+                benchmark_name,
+                benchmark_result,
+            ) in benchmark_results.items()
+        },
     }
 
     (
@@ -1933,6 +2123,7 @@ def main() -> None:
         best_score=best_score,
         fixed_result=fixed_result,
         walkforward_result=walkforward_result,
+        benchmark_results=benchmark_results,
         walkforward_parameters=walkforward_parameters,
         mcpt_results=mcpt_results,
         mcpt_p_value=mcpt_p_value,
@@ -1957,6 +2148,18 @@ def main() -> None:
         ]
         .round(3)
         .to_string()
+    )
+
+    print()
+    print("============== BENCHMARK CONTEXT =============")
+    print(
+        f"Fixed excess vs Buy and Hold: "
+        f"{(
+            fixed_result.summary['total_return_percent']
+            - benchmark_results['Buy and Hold'].summary[
+                'total_return_percent'
+            ]
+        ):.3f}%"
     )
 
     print()
