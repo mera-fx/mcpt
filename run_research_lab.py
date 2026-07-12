@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import html
 import json
 from dataclasses import asdict
 from pathlib import Path
@@ -42,6 +41,7 @@ from experiment_lifecycle import (
 from research_access_control import (
     assert_full_research_allowed,
 )
+from research_report_ui import write_research_report
 from run_provenance import (
     append_run_history,
     combined_code_fingerprint,
@@ -1255,570 +1255,40 @@ def create_visual_report(
         )
     )
 
-    display_columns = [
-        "ending_capital",
-        "total_return_percent",
-        "max_drawdown_percent",
-        "total_trades",
-        "win_rate_percent",
-        "trade_profit_factor",
-        "average_trade_percent",
-        "average_holding_hours",
-        "exposure_percent",
-        "long_trades",
-        "short_trades",
-        "long_net_profit",
-        "short_net_profit",
-    ]
-
-    display_summary = summary[
-        display_columns
-    ].copy()
-
-    display_summary = display_summary.round(3)
-
-    summary_html = display_summary.to_html(
-        classes="metrics",
-        border=0,
-    )
-
-    diagnostic_columns = [
-        "total_trades",
-        "win_rate_percent",
-        "trade_profit_factor",
-        "average_winner_percent",
-        "average_loser_percent",
-        "payoff_ratio",
-        "largest_win_percent",
-        "largest_loss_percent",
-        "fifth_percentile_trade_percent",
-        "top_1_loss_share_percent",
-        "top_5_loss_share_percent",
-        "max_consecutive_wins",
-        "max_consecutive_losses",
-        "average_winner_holding_hours",
-        "average_loser_holding_hours",
-    ]
-
-    diagnostic_display = diagnostic_summary[
-        diagnostic_columns
-    ].copy().round(3)
-
-    diagnostic_html = diagnostic_display.to_html(
-        classes="metrics",
-        border=0,
-    )
-
-    if diagnostic_by_side.empty:
-        diagnostic_by_side_html = (
-            "<p>No side-level diagnostics were available.</p>"
-        )
-    else:
-        side_columns = [
-            "test",
-            "side",
-            "total_trades",
-            "win_rate_percent",
-            "trade_profit_factor",
-            "average_winner_percent",
-            "average_loser_percent",
-            "payoff_ratio",
-            "largest_loss_percent",
-            "net_profit_cash",
-        ]
-
-        diagnostic_by_side_html = (
-            diagnostic_by_side[
-                side_columns
-            ]
-            .round(3)
-            .to_html(
-                index=False,
-                classes="metrics",
-                border=0,
-            )
-        )
-
-    stability_rows = [
-        {
-            "metric": "Edge assessment",
-            "value": (
-                parameter_stability_summary[
-                    "edge_assessment"
-                ]
-                .replace("_", " ")
-                .title()
-            ),
-        },
-        {
-            "metric": "Local surface",
-            "value": (
-                parameter_stability_summary[
-                    "local_surface_assessment"
-                ]
-                .replace("_", " ")
-                .title()
-            ),
-        },
-        {
-            "metric": "Valid combinations",
-            "value": (
-                parameter_stability_summary[
-                    "valid_combinations"
-                ]
-            ),
-        },
-        {
-            "metric": "PF ≥ 1.0 combinations",
-            "value": (
-                f"{parameter_stability_summary['break_even_count']} "
-                f"({parameter_stability_summary['break_even_share'] * 100:.1f}%)"
-            ),
-        },
-        {
-            "metric": "Within 95% of best",
-            "value": (
-                f"{parameter_stability_summary['near_best_count']} "
-                f"({parameter_stability_summary['near_best_share'] * 100:.1f}%)"
-            ),
-        },
-        {
-            "metric": "Immediate neighbours",
-            "value": (
-                parameter_stability_summary[
-                    "immediate_neighbor_count"
-                ]
-            ),
-        },
-        {
-            "metric": "Median neighbour PF",
-            "value": format_number(
-                parameter_stability_summary[
-                    "neighbor_median_score"
-                ],
-                4,
-            ),
-        },
-        {
-            "metric": "Neighbour retention",
-            "value": format_percent(
-                parameter_stability_summary[
-                    "neighbor_retention_ratio"
-                ]
-                * 100,
-                1,
-            ),
-        },
-    ]
-
-    parameter_stability_html = (
-        pd.DataFrame(stability_rows)
-        .to_html(
-            index=False,
-            classes="metrics",
-            border=0,
-        )
-    )
-
-    parameter_interpretation = html.escape(
-        str(
-            parameter_stability_summary[
-                "interpretation"
-            ]
-        )
-    )
-
-    fixed_pf = fixed_result.summary[
-        "trade_profit_factor"
-    ]
-
-    fixed_return = fixed_result.summary[
-        "total_return_percent"
-    ]
-
-    buy_hold_result = benchmark_results[
-        "Buy and Hold"
-    ]
-
-    cash_result = benchmark_results[
-        "Cash"
-    ]
-
-    buy_hold_return = buy_hold_result.summary[
-        "total_return_percent"
-    ]
-
-    cash_return = cash_result.summary[
-        "total_return_percent"
-    ]
-
-    fixed_excess_vs_buy_hold = (
-        fixed_return - buy_hold_return
-    )
-
-    if walkforward_result is not None:
-        walkforward_pf_text = format_number(
-            walkforward_result.summary[
-                "trade_profit_factor"
-            ],
-            3,
-        )
-
-        walkforward_return_text = format_percent(
-            walkforward_result.summary[
-                "total_return_percent"
-            ],
-            2,
-        )
-    else:
-        walkforward_pf_text = "Not run"
-        walkforward_return_text = "Not run"
-
-    mcpt_text = (
-        format_number(mcpt_p_value, 4)
-        if mcpt_p_value is not None
-        else "Not available"
-    )
-
-    mcpt_source_text = html.escape(
-        mcpt_source.replace("_", " ").title()
-    )
-
-    lifecycle_stage_text = html.escape(
-        format_stage_label(
-            lifecycle_record["stage"]
-        )
-    )
-
-    lifecycle_reason_text = html.escape(
-        str(lifecycle_record["stage_reason"])
-    )
-
-    lifecycle_next_action_text = html.escape(
-        str(lifecycle_record["next_action"])
-    )
-
-    chart_html = ""
-
-    for title, filename in chart_sections:
-        chart_html += f"""
-        <h2>{html.escape(title)}</h2>
-        <img
-            class="chart"
-            src="{html.escape(filename)}"
-            alt="{html.escape(title)}"
-        >
-        """
-
-    best_parameters_text = html.escape(
-        json.dumps(
-            json_ready(best_parameters),
-            sort_keys=True,
-        )
-    )
-
-    report_html = f"""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<title>{html.escape(config.experiment_id)} Research Report</title>
-
-<style>
-body {{
-    background: #090909;
-    color: #eeeeee;
-    font-family: Arial, Helvetica, sans-serif;
-    margin: 0;
-}}
-
-.page {{
-    max-width: 1450px;
-    margin: auto;
-    padding: 35px;
-}}
-
-h1 {{
-    font-size: 38px;
-    margin-bottom: 5px;
-}}
-
-h2 {{
-    margin-top: 45px;
-    border-bottom: 1px solid #333333;
-    padding-bottom: 8px;
-}}
-
-.subtitle {{
-    color: #aaaaaa;
-    margin-bottom: 28px;
-}}
-
-.cards {{
-    display: grid;
-    grid-template-columns:
-        repeat(auto-fit, minmax(220px, 1fr));
-    gap: 18px;
-    margin: 25px 0;
-}}
-
-.card {{
-    background: #151515;
-    border: 1px solid #303030;
-    border-radius: 10px;
-    padding: 20px;
-}}
-
-.card-label {{
-    color: #aaaaaa;
-    font-size: 14px;
-}}
-
-.card-value {{
-    font-size: 26px;
-    font-weight: bold;
-    margin-top: 8px;
-}}
-
-.note {{
-    background: #151515;
-    border-left: 5px solid #888888;
-    padding: 18px;
-    margin: 25px 0;
-}}
-
-.chart {{
-    width: 100%;
-    border: 1px solid #333333;
-    border-radius: 8px;
-    margin: 15px 0 35px;
-}}
-
-.metrics {{
-    width: 100%;
-    border-collapse: collapse;
-    background: #151515;
-}}
-
-.metrics th,
-.metrics td {{
-    border: 1px solid #333333;
-    padding: 10px;
-    text-align: center;
-}}
-
-.metrics th {{
-    background: #222222;
-}}
-</style>
-</head>
-
-<body>
-<div class="page">
-
-<h1>
-{html.escape(config.experiment_id)} —
-{html.escape(config.experiment_name)}
-</h1>
-
-<div class="subtitle">
-{html.escape(config.market_name)} ·
-{html.escape(config.timeframe)} ·
-Out-of-sample {html.escape(str(effective_oos_start))}
-through {html.escape(str(oos_end))}
-</div>
-
-<div class="note">
-<strong>Hypothesis</strong>
-<p>{html.escape(config.hypothesis)}</p>
-
-<strong>Important:</strong>
-The optimization and MCPT objective is the original repository's
-fast bar-return Profit Factor. The out-of-sample results below use
-completed trades, next-open execution and configured trading costs.
-</div>
-
-<div class="note">
-<strong>Research lifecycle stage:</strong>
-{lifecycle_stage_text}
-<p>{lifecycle_reason_text}</p>
-<strong>Next action:</strong>
-{lifecycle_next_action_text}
-</div>
-
-<div class="cards">
-    <div class="card">
-        <div class="card-label">
-            Research Stage
-        </div>
-        <div class="card-value">
-            {lifecycle_stage_text}
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-label">
-            Best In-Sample Parameters
-        </div>
-        <div class="card-value">
-            {best_parameters_text}
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-label">
-            Best In-Sample Bar PF
-        </div>
-        <div class="card-value">
-            {format_number(best_score, 4)}
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-label">
-            MCPT p-value
-        </div>
-        <div class="card-value">
-            {mcpt_text}
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-label">
-            MCPT Result Source
-        </div>
-        <div class="card-value">
-            {mcpt_source_text}
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-label">
-            Fixed OOS Trade PF
-        </div>
-        <div class="card-value">
-            {format_number(fixed_pf, 3)}
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-label">
-            Fixed OOS Return
-        </div>
-        <div class="card-value">
-            {format_percent(fixed_return, 2)}
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-label">
-            Buy & Hold OOS Return
-        </div>
-        <div class="card-value">
-            {format_percent(buy_hold_return, 2)}
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-label">
-            Fixed Excess vs Buy & Hold
-        </div>
-        <div class="card-value">
-            {format_percent(
-                fixed_excess_vs_buy_hold,
-                2,
-            )}
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-label">
-            Cash OOS Return
-        </div>
-        <div class="card-value">
-            {format_percent(cash_return, 2)}
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-label">
-            Walk-Forward Trade PF
-        </div>
-        <div class="card-value">
-            {walkforward_pf_text}
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="card-label">
-            Walk-Forward Return
-        </div>
-        <div class="card-value">
-            {walkforward_return_text}
-        </div>
-    </div>
-</div>
-
-<h2>Completed-Trade Summary</h2>
-{summary_html}
-
-<h2>Benchmark Context</h2>
-
-<div class="note">
-Buy and Hold and Cash use exactly the same out-of-sample period.
-Buy and Hold is charged the configured entry and exit costs.
-Benchmarks provide context; outperforming one benchmark alone does
-not prove that a strategy has a robust edge.
-</div>
-
-<h2>Parameter Surface Stability</h2>
-
-<div class="note">
-Parameter stability describes the shape of the in-sample search
-surface. It does not prove profitability or replace MCPT and
-out-of-sample validation.
-<p>{parameter_interpretation}</p>
-</div>
-
-{parameter_stability_html}
-
-<h2>Trade-Quality Diagnostics</h2>
-
-<div class="note">
-Win rate must be considered together with the average winner,
-average loser, payoff ratio, tail losses and losing streaks.
-A high win rate can still produce negative expectancy.
-</div>
-
-{diagnostic_html}
-
-<h2>Diagnostics by Position Side</h2>
-{diagnostic_by_side_html}
-
-{chart_html}
-
-<h2>Research Notes</h2>
-
-<p>
-This report intentionally does not assign an automatic pass/fail
-decision. Statistical significance, economic significance,
-out-of-sample consistency, costs and market rationale must be
-considered together.
-</p>
-
-</div>
-</body>
-</html>
-"""
-
     report_file = report_directory / "report.html"
 
-    report_file.write_text(
-        report_html,
-        encoding="utf-8",
+    return write_research_report(
+        report_file=report_file,
+        experiment_id=config.experiment_id,
+        experiment_name=config.experiment_name,
+        market_name=config.market_name,
+        timeframe=config.timeframe,
+        hypothesis=config.hypothesis,
+        effective_oos_start=effective_oos_start,
+        oos_end=oos_end,
+        lifecycle_stage=format_stage_label(
+            lifecycle_record["stage"]
+        ),
+        lifecycle_reason=str(
+            lifecycle_record["stage_reason"]
+        ),
+        lifecycle_next_action=str(
+            lifecycle_record["next_action"]
+        ),
+        best_parameters=best_parameters,
+        fixed_parameters=config.fixed_parameters,
+        best_score=best_score,
+        mcpt_p_value=mcpt_p_value,
+        mcpt_source=mcpt_source,
+        summary=summary,
+        parameter_stability=(
+            parameter_stability_summary
+        ),
+        diagnostic_summary=diagnostic_summary,
+        diagnostic_by_side=diagnostic_by_side,
+        chart_sections=chart_sections,
+        generated_from_saved_results=False,
     )
-
-    return report_file
 
 
 # ============================================================
@@ -1984,6 +1454,7 @@ def main() -> None:
             PROJECT_DIR,
             (
                 "run_research_lab.py",
+                "research_report_ui.py",
                 "mcpt_engine.py",
                 "run_provenance.py",
                 "strategy_registry.py",
