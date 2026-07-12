@@ -36,9 +36,10 @@ def main() -> None:
     print("Current project milestone")
     print("-------------------------")
     print(
-        "EXP-003 passed its locked in-sample quick screen and "
-        "is now in FULL_VALIDATION. Run the protected full-validation "
-        "workflow exactly once without changing any locked rule."
+        "EXP-003 is accepted for paper testing. "
+        "The research result is frozen. The next engineering task "
+        "is a paper-only simulator using the fixed preregistered "
+        "parameters and the locked operational plan."
     )
 
 

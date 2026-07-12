@@ -39,7 +39,7 @@ class LifecycleRegistryTests(unittest.TestCase):
                 ALLOWED_STAGES,
             )
 
-    def test_exp003_is_recorded_as_full_validation(
+    def test_exp003_is_accepted_for_paper_testing(
         self,
     ) -> None:
         record = get_experiment_lifecycle(
@@ -48,11 +48,11 @@ class LifecycleRegistryTests(unittest.TestCase):
 
         self.assertEqual(
             record.stage,
-            "REVIEW",
+            "ACCEPTED_FOR_PAPER_TESTING",
         )
 
         self.assertIn(
-            "formal review",
+            "paper-only simulator",
             record.next_action.lower(),
         )
 
@@ -101,7 +101,7 @@ class LifecycleCompatibilityTests(unittest.TestCase):
             "EXP-001"
         )
 
-        review = get_experiment_decision(
+        accepted = get_experiment_decision(
             "EXP-003"
         )
 
@@ -111,11 +111,11 @@ class LifecycleCompatibilityTests(unittest.TestCase):
         )
 
         self.assertEqual(
-            review["status"],
-            "REVIEW",
+            accepted["status"],
+            "ACCEPTED",
         )
 
-    def test_dashboard_supports_full_validation_experiment(
+    def test_dashboard_supports_accepted_experiment(
         self,
     ) -> None:
         lifecycle = get_experiment_lifecycle(
@@ -136,7 +136,7 @@ class LifecycleCompatibilityTests(unittest.TestCase):
 
         self.assertEqual(
             record["status"],
-            "REVIEW",
+            "ACCEPTED_FOR_PAPER_TESTING",
         )
 
 
