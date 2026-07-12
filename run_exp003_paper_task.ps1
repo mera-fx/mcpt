@@ -16,17 +16,11 @@ New-Item `
     -Force | Out-Null
 
 $mutexName = "Local\MCPT_EXP003_PAPER_UPDATE"
-$mutex = New-Object System.Threading.Mutex(
-    $false,
-    $mutexName
-)
-
+$mutex = [System.Threading.Mutex]::new($false, $mutexName)
 $hasLock = $false
 
 try {
-    $hasLock = $mutex.WaitOne(
-        [TimeSpan]::Zero
-    )
+    $hasLock = $mutex.WaitOne([TimeSpan]::Zero)
 
     if (-not $hasLock) {
         Add-Content `
