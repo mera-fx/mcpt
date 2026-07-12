@@ -12,6 +12,12 @@ data/
 results/
 reports/
 
+# Paper-testing data and generated output
+paper_data/
+paper_state/
+paper_results/
+paper_reports/
+
 # Temporary and backup files
 *.bak
 *.before_*
