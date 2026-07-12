@@ -10,9 +10,6 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
-
-from bar_permute import get_permutation
 from experiment_config import (
     ResearchConfig,
     list_experiments,
@@ -22,6 +19,10 @@ from strategy_registry import (
     expand_parameter_grid,
     generate_signal,
     get_strategy,
+)
+from mcpt_engine import (
+    McptExecutionInfo,
+    run_mcpt_engine,
 )
 from trade_engine import (
     CostModel,
@@ -491,57 +492,38 @@ def run_mcpt(
     in_sample_data: pd.DataFrame,
     config: ResearchConfig,
     permutations: int,
-) -> tuple[pd.DataFrame, float, int]:
+    *,
+    requested_workers: int,
+    checkpoint_directory: Path,
+    checkpoint_every: int,
+    resume: bool,
+    checkpoint_signature: dict[str, Any],
+) -> tuple[
+    pd.DataFrame,
+    float,
+    int,
+    McptExecutionInfo,
+]:
     _, real_score, _ = optimize_strategy(
         in_sample_data,
         config,
     )
 
-    rows: list[dict[str, Any]] = []
-
-    print()
-    print(
-        f"Running {permutations:,} in-sample market permutations..."
+    return run_mcpt_engine(
+        in_sample_data=in_sample_data,
+        strategy_name=config.strategy_name,
+        optimization_grid=config.optimization_grid,
+        random_seed=config.random_seed,
+        permutations=permutations,
+        real_score=real_score,
+        requested_workers=requested_workers,
+        checkpoint_directory=checkpoint_directory,
+        checkpoint_every=checkpoint_every,
+        resume=resume,
+        checkpoint_signature=(
+            checkpoint_signature
+        ),
     )
-
-    for permutation_number in tqdm(
-        range(permutations),
-        desc="MCPT",
-    ):
-        permuted_data = get_permutation(
-            in_sample_data,
-            seed=config.random_seed + permutation_number,
-        )
-
-        best_parameters, best_score, _ = optimize_strategy(
-            permuted_data,
-            config,
-        )
-
-        rows.append(
-            {
-                "permutation": permutation_number + 1,
-                "best_bar_profit_factor": best_score,
-                **best_parameters,
-            }
-        )
-
-    results = pd.DataFrame(rows)
-
-    better_or_equal = int(
-        (
-            results["best_bar_profit_factor"]
-            >= real_score
-        ).sum()
-    )
-
-    p_value = (
-        better_or_equal + 1
-    ) / (
-        permutations + 1
-    )
-
-    return results, float(p_value), better_or_equal
 
 
 # ============================================================
@@ -1880,6 +1862,35 @@ def parse_arguments() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--mcpt-workers",
+        type=int,
+        default=0,
+        help=(
+            "MCPT process workers. 0 selects automatic mode, "
+            "1 forces serial mode."
+        ),
+    )
+
+    parser.add_argument(
+        "--mcpt-checkpoint-every",
+        type=int,
+        default=10,
+        help=(
+            "Save MCPT progress after this many newly completed "
+            "permutations."
+        ),
+    )
+
+    parser.add_argument(
+        "--no-mcpt-resume",
+        action="store_true",
+        help=(
+            "Ignore compatible MCPT checkpoints and start the "
+            "requested permutation run from zero."
+        ),
+    )
+
+    parser.add_argument(
         "--skip-walkforward",
         action="store_true",
         help="Skip walk-forward testing.",
@@ -1973,6 +1984,7 @@ def main() -> None:
             PROJECT_DIR,
             (
                 "run_research_lab.py",
+                "mcpt_engine.py",
                 "run_provenance.py",
                 "strategy_registry.py",
                 "research_access_control.py",
@@ -2253,6 +2265,7 @@ def main() -> None:
     mcpt_p_value: float | None = None
     better_or_equal: int | None = None
     mcpt_permutations_used: int | None = None
+    mcpt_execution_info: McptExecutionInfo | None = None
     mcpt_source = "disabled"
 
     mcpt_signature = mcpt_base_signature(
@@ -2279,10 +2292,27 @@ def main() -> None:
             mcpt_results,
             mcpt_p_value,
             better_or_equal,
+            mcpt_execution_info,
         ) = run_mcpt(
             in_sample_data,
             config,
             permutations,
+            requested_workers=(
+                arguments.mcpt_workers
+            ),
+            checkpoint_directory=(
+                results_directory
+                / "mcpt_checkpoint"
+            ),
+            checkpoint_every=(
+                arguments.mcpt_checkpoint_every
+            ),
+            resume=(
+                not arguments.no_mcpt_resume
+            ),
+            checkpoint_signature=(
+                mcpt_signature
+            ),
         )
 
         cache_metadata = save_mcpt_cache(
@@ -2492,6 +2522,13 @@ def main() -> None:
             "experiment": arguments.experiment,
             "quick": arguments.quick,
             "skip_mcpt": arguments.skip_mcpt,
+            "mcpt_workers": arguments.mcpt_workers,
+            "mcpt_checkpoint_every": (
+                arguments.mcpt_checkpoint_every
+            ),
+            "mcpt_resume": (
+                not arguments.no_mcpt_resume
+            ),
             "skip_walkforward": (
                 arguments.skip_walkforward
             ),
@@ -2527,6 +2564,11 @@ def main() -> None:
         ),
         "mcpt_source": mcpt_source,
         "mcpt_signature": mcpt_signature,
+        "mcpt_execution": (
+            mcpt_execution_info.to_dict()
+            if mcpt_execution_info is not None
+            else None
+        ),
         "quick_mode": arguments.quick,
         "walkforward_ran": (
             walkforward_result is not None
