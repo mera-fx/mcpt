@@ -28,3 +28,6 @@ README.txt
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Scheduled paper-update logs
+paper_logs/
