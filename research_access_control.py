@@ -10,8 +10,9 @@ EXP003_FULL_VALIDATION_ENVIRONMENT_KEY = (
     "EXP003_FULL_VALIDATION_AUTHORIZED"
 )
 
-EXP003_POST_VALIDATION_ALLOWED_STAGES = {
+EXP003_POST_VALIDATION_LOCKED_STAGES = {
     "REVIEW",
+    "REJECTED",
     "ACCEPTED_FOR_PAPER_TESTING",
 }
 
@@ -42,9 +43,14 @@ def assert_full_research_allowed(
         )
 
     if lifecycle.stage in (
-        EXP003_POST_VALIDATION_ALLOWED_STAGES
+        EXP003_POST_VALIDATION_LOCKED_STAGES
     ):
-        return
+        raise RuntimeError(
+            "EXP-003 research results are frozen while its "
+            f"lifecycle stage is {lifecycle.stage}. Do not rerun "
+            "the research engine. Use the recorded result files "
+            "and the protected review workflow instead."
+        )
 
     raise RuntimeError(
         "EXP-003 out-of-sample research is locked while its "

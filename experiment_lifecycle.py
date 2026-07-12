@@ -139,18 +139,18 @@ EXPERIMENT_LIFECYCLE: dict[
             "regime, an upside range breakout may be followed "
             "by continuation strong enough to overcome costs."
         ),
-        stage="FULL_VALIDATION",
+        stage="REVIEW",
         stage_reason=(
-            "The one-time in-sample quick screen passed all five "
-            "preregistered gates: best bar PF 1.1150, all 27 "
-            "parameter combinations at or above PF 1.0, neighbour "
-            "retention 0.9917, quick MCPT p-value 0.0769 and "
-            "105 fixed-parameter completed trades."
+            "The protected one-time full validation passed every "
+            "preregistered gate: full MCPT p-value 0.0380, positive "
+            "fixed and walk-forward OOS returns, Profit Factors "
+            "above 1.0, adequate trade counts, acceptable drawdown "
+            "and three profitable OOS calendar years."
         ),
         next_action=(
-            "Run the protected EXP-003 full-validation workflow "
-            "exactly once. Do not run the normal research runner "
-            "directly or change any locked rule."
+            "Run the read-only EXP-003 formal review exactly once. "
+            "Do not rerun research, alter locked rules or accept the "
+            "strategy for paper testing before the review decision."
         ),
         strategy_name=(
             "volatility_compression_breakout_long"

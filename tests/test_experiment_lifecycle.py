@@ -48,11 +48,11 @@ class LifecycleRegistryTests(unittest.TestCase):
 
         self.assertEqual(
             record.stage,
-            "FULL_VALIDATION",
+            "REVIEW",
         )
 
         self.assertIn(
-            "full-validation",
+            "formal review",
             record.next_action.lower(),
         )
 
@@ -136,7 +136,7 @@ class LifecycleCompatibilityTests(unittest.TestCase):
 
         self.assertEqual(
             record["status"],
-            "FULL_VALIDATION",
+            "REVIEW",
         )
 
 
