@@ -59,8 +59,14 @@ def evaluate_exp003_review(
 
     pf_ge_one = int(
         parameter_stability.get(
-            "combinations_at_or_above_one",
-            parameter_stability.get("pf_ge_1_count", 0),
+            "break_even_count",
+            parameter_stability.get(
+                "combinations_at_or_above_one",
+                parameter_stability.get(
+                    "pf_ge_1_count",
+                    0,
+                ),
+            ),
         )
     )
 
