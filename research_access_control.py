@@ -25,13 +25,19 @@ def assert_full_research_allowed(
 
     if config.experiment_id == "EXP-004":
         raise RuntimeError(
-            "EXP-004 uses a session-aware intraday research engine. "
-            "Direct use of run_research_lab.py is blocked while its "
-            f"lifecycle stage is {lifecycle.stage}. Download only "
-            "the locked in-sample data with "
-            "download_exp004_qqq_is_data.py, then run "
-            "run_exp004_quick_screen.py. OOS access requires a "
-            "separate protected full-validation workflow."
+            "EXP-004 is a frozen rejected experiment. Its protected "
+            "QQQ quick screen failed, and the 2023–2025 OOS period "
+            "must remain locked. Do not rerun, repair or disclose "
+            "EXP-004 under the generic research runner."
+        )
+
+    if config.experiment_id == "EXP-005":
+        raise RuntimeError(
+            "EXP-005 is a preregistered no-optimization NQ/MNQ "
+            "transfer experiment. Direct use of run_research_lab.py "
+            "is blocked. Use only the future protected EXP-005 "
+            "downloader and transfer runner; confirmation data must "
+            "remain locked until every quick-transfer gate passes."
         )
 
     if config.experiment_id != "EXP-003":

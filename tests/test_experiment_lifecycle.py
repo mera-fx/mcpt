@@ -65,11 +65,33 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.preregistration_file
         )
 
-    def test_exp004_is_preregistered(
+    def test_exp004_is_rejected(
         self,
     ) -> None:
         record = get_experiment_lifecycle(
             "EXP-004"
+        )
+
+        self.assertEqual(
+            record.stage,
+            "REJECTED",
+        )
+
+        self.assertIn(
+            "0.3077",
+            record.stage_reason,
+        )
+
+        self.assertIn(
+            "OOS",
+            record.next_action,
+        )
+
+    def test_exp005_is_preregistered(
+        self,
+    ) -> None:
+        record = get_experiment_lifecycle(
+            "EXP-005"
         )
 
         self.assertEqual(
@@ -79,7 +101,7 @@ class LifecycleRegistryTests(unittest.TestCase):
 
         self.assertEqual(
             record.market_name,
-            "QQQ ETF",
+            "NQ / MNQ futures",
         )
 
         self.assertEqual(

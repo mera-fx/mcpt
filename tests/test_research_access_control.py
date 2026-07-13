@@ -73,12 +73,31 @@ class ResearchAccessControlTests(
             experiment_id="EXP-004"
         )
         lifecycle = SimpleNamespace(
+            stage="REJECTED"
+        )
+
+        with self.assertRaisesRegex(
+            RuntimeError,
+            "frozen rejected",
+        ):
+            assert_full_research_allowed(
+                config,
+                lifecycle,
+            )
+
+    def test_exp005_generic_runner_is_blocked(
+        self,
+    ) -> None:
+        config = SimpleNamespace(
+            experiment_id="EXP-005"
+        )
+        lifecycle = SimpleNamespace(
             stage="PRE_REGISTERED"
         )
 
         with self.assertRaisesRegex(
             RuntimeError,
-            "session-aware intraday",
+            "no-optimization NQ/MNQ",
         ):
             assert_full_research_allowed(
                 config,

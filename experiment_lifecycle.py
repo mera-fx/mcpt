@@ -171,25 +171,64 @@ EXPERIMENT_LIFECYCLE: dict[
             "enough during the same regular session to overcome "
             "realistic intraday trading costs."
         ),
-        stage="PRE_REGISTERED",
+        stage="REJECTED",
         stage_reason=(
-            "The QQQ opening-range hypothesis and all research "
-            "rules were locked before implementation. The historical "
-            "SIP downloader, session-aware ORB engine and protected "
-            "in-sample quick-screen workflow are now implemented; "
-            "no EXP-004 result has been viewed."
+            "The protected in-sample quick screen failed three "
+            "locked gates. Best trade Profit Factor was 1.0463 "
+            "versus the required 1.10, fixed-parameter Profit "
+            "Factor was 1.0211 versus 1.05, and the session-aware "
+            "25-permutation MCPT p-value was 0.3077 versus 0.20. "
+            "The test contained 973 completed trades and zero "
+            "included invalid sessions, so the negative result "
+            "was not caused by an undersized or invalid sample."
         ),
         next_action=(
-            "Commit the implementation, configure Alpaca market-data "
-            "credentials, download only the locked 2019–2022 "
-            "in-sample SIP bars, then run the protected quick screen "
-            "exactly once. Do not expose OOS results."
+            "Preserve EXP-004 as a completed negative result. "
+            "Keep 2023–2025 QQQ OOS results locked and do not "
+            "change its rules or gates. More structured ORB "
+            "variants require new experiment IDs. EXP-005 may "
+            "test only the unchanged fixed ORB rules on NQ/MNQ."
         ),
         market_name="QQQ ETF",
         timeframe="5 minutes",
         strategy_name="opening_range_breakout",
         preregistration_file=Path(
             "research/EXP-004_preregistration.md"
+        ),
+    ),
+    "EXP-005": ExperimentLifecycle(
+        experiment_id="EXP-005",
+        experiment_name=(
+            "NQ/MNQ 5-Minute ORB Locked Transfer"
+        ),
+        hypothesis=(
+            "The unchanged fixed EXP-004 opening-range rules may "
+            "transfer from QQQ to Nasdaq-100 futures and remain "
+            "profitable after contract-specific futures costs."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "EXP-005 is a no-optimization cross-market transfer "
+            "test. The signal rules, transfer periods, continuous-"
+            "contract roll convention, cost assumptions, session-"
+            "aware permutation method and pass/fail gates were "
+            "locked before NQ or MNQ research data was downloaded "
+            "or inspected."
+        ),
+        next_action=(
+            "Set up a Databento historical-data key, estimate the "
+            "request cost, and implement the protected quick "
+            "transfer workflow using only 2019-05-06 through "
+            "2022-12-30. Keep the 2023–2025 confirmation period "
+            "locked unless every quick-transfer gate passes."
+        ),
+        market_name="NQ / MNQ futures",
+        timeframe="5 minutes",
+        strategy_name=(
+            "opening_range_breakout_locked_transfer"
+        ),
+        preregistration_file=Path(
+            "research/EXP-005_preregistration.md"
         ),
     ),
 }

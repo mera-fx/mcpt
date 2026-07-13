@@ -43,9 +43,11 @@ def main() -> None:
     print("-------------------------")
     print(
         "EXP-003 continues automatic paper testing. "
-        "EXP-004 is preregistered on QQQ and may now proceed "
-        "to data ingestion and an in-sample-only ORB quick "
-        "screen. No EXP-004 OOS result may be exposed yet."
+        "EXP-004 is preserved as a rejected QQQ basic-ORB "
+        "result with OOS still locked. EXP-005 is "
+        "preregistered as a no-optimization NQ/MNQ transfer. "
+        "Structured ORB optimization remains a separate "
+        "future research path."
     )
 
 

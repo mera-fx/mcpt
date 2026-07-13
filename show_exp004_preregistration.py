@@ -4,87 +4,99 @@ from exp004_preregistration import (
     get_exp004_preregistration,
     validate_exp004_preregistration,
 )
+from exp004_quick_screen_record import (
+    get_exp004_quick_screen_record,
+    validate_exp004_quick_screen_record,
+)
+from experiment_lifecycle import (
+    get_experiment_lifecycle,
+)
 
 
 def main() -> None:
     validate_exp004_preregistration()
-    record = get_exp004_preregistration()
+    validate_exp004_quick_screen_record()
 
-    print()
-    print("EXP-004 PREREGISTRATION")
-    print("=======================")
-    print(
-        f"Status: {record['research_status']}"
+    preregistration = (
+        get_exp004_preregistration()
     )
-    print(
-        f"Market: "
-        f"{record['market_and_data']['primary_market']}"
+    result = (
+        get_exp004_quick_screen_record()
     )
-    print(
-        f"Bars:   "
-        f"{record['market_and_data']['timeframe']}"
+    lifecycle = get_experiment_lifecycle(
+        "EXP-004"
     )
 
     print()
-    print("Fixed parameters")
-    print("----------------")
+    print("EXP-004 FINAL RECORD")
+    print("====================")
+    print(
+        f"Lifecycle: {lifecycle.stage}"
+    )
+    print(
+        f"Decision:  {result['decision']}"
+    )
+    print(
+        "OOS disclosure: "
+        f"{result['out_of_sample_disclosure']}"
+    )
+    print(
+        "2023–2025 viewed: "
+        f"{result['out_of_sample_period_viewed']}"
+    )
 
-    for name, value in (
-        record["fixed_parameters"].items()
-    ):
+    print()
+    print("Original fixed parameters")
+    print("-------------------------")
+
+    for name, value in preregistration[
+        "fixed_parameters"
+    ].items():
         print(f"{name}: {value}")
 
     print()
-    print("Parameter grid")
-    print("--------------")
+    print("Failed quick-screen gates")
+    print("-------------------------")
 
-    for name, values in (
-        record["optimized_parameters"].items()
-    ):
+    for name in result["failed_gates"]:
+        gate = result["gates"][name]
+
         print(
-            f"{name}: "
-            + ", ".join(
-                str(value)
-                for value in values
-            )
+            f"{name}: {gate['actual']} "
+            f"{gate['operator']} "
+            f"{gate['threshold']} -> FAIL"
         )
 
     print()
+    print("Sample")
+    print("------")
     print(
-        "Total combinations: "
-        f"{record['parameter_count']}"
+        "Included sessions: "
+        f"{result['data']['included_sessions']}"
+    )
+    print(
+        "Completed trades: "
+        f"{result['observed']['fixed_in_sample_completed_trades']}"
+    )
+    print(
+        "Included invalid sessions: "
+        f"{result['data']['included_invalid_sessions']}"
     )
 
     print()
-    print("Research periods")
-    print("----------------")
-    split = record["research_split"]
+    print("Final instruction")
+    print("-----------------")
     print(
-        "In sample:  "
-        f"{split['in_sample_start']} through "
-        f"{split['in_sample_end']}"
-    )
-    print(
-        "Out of sample: "
-        f"{split['out_of_sample_start']} through "
-        f"{split['out_of_sample_end']}"
+        "Do not rerun EXP-004 or reveal its locked OOS "
+        "period. More structured ORB rules require a new "
+        "experiment ID."
     )
 
     print()
-    print("Next action")
-    print("-----------")
+    print("Tracked result")
+    print("--------------")
     print(
-        "Configure Alpaca credentials, download only the "
-        "locked in-sample SIP bars, then run the protected "
-        "EXP-004 quick screen exactly once. Do not expose "
-        "OOS results."
-    )
-
-    print()
-    print("Full document")
-    print("-------------")
-    print(
-        "research/EXP-004_preregistration.md"
+        "research/EXP-004_quick_screen_result.md"
     )
 
 
