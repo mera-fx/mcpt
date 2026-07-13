@@ -99,6 +99,7 @@ class RawFileRecord:
     first_timestamp_utc: str
     last_timestamp_utc: str
     duplicate_rows_removed: int = 0
+    non_research_conflicting_duplicate_rows_removed: int = 0
     archived_path: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -275,14 +276,27 @@ def _validate_ohlcv(
         )
 
 
+def _is_locked_cash_timestamp(
+    timestamp: pd.Timestamp,
+) -> bool:
+    local = timestamp.tz_convert(
+        NEW_YORK_TZ
+    )
+
+    return (
+        QUICK_START <= local.date() <= QUICK_END
+        and SESSION_START <= local.time() < SESSION_END
+    )
+
+
 def _deduplicate_identical_timestamp_rows(
     frame: pd.DataFrame,
     *,
     path: Path,
     symbol: str,
-) -> tuple[pd.DataFrame, int]:
+) -> tuple[pd.DataFrame, int, int]:
     if not frame.index.has_duplicates:
-        return frame, 0
+        return frame, 0, 0
 
     columns = [
         "open",
@@ -294,6 +308,7 @@ def _deduplicate_identical_timestamp_rows(
 
     pieces: list[pd.DataFrame] = []
     removed = 0
+    non_research_conflicting_removed = 0
 
     for timestamp, group in frame.groupby(
         level=0,
@@ -310,11 +325,18 @@ def _deduplicate_identical_timestamp_rows(
             axis=0,
         )
 
-        if not np.allclose(
+        rows_match = np.allclose(
             values,
             reference,
             atol=1e-12,
             rtol=0.0,
+        )
+
+        if (
+            not rows_match
+            and _is_locked_cash_timestamp(
+                pd.Timestamp(timestamp)
+            )
         ):
             preview = (
                 group[columns]
@@ -323,16 +345,24 @@ def _deduplicate_identical_timestamp_rows(
             )
 
             raise QuantowerImportError(
-                f"{path.name} contains conflicting duplicate "
-                f"timestamp {timestamp.isoformat()} for "
-                f"{symbol}. The duplicate bars have different "
-                f"OHLCV values: {preview}"
+                f"{path.name} contains research-session "
+                f"conflicting duplicate timestamp "
+                f"{timestamp.isoformat()} for {symbol}. "
+                f"The duplicate bars have different OHLCV "
+                f"values: {preview}"
             )
 
         pieces.append(
             group.iloc[[0]]
         )
-        removed += len(group) - 1
+
+        duplicate_rows = len(group) - 1
+        removed += duplicate_rows
+
+        if not rows_match:
+            non_research_conflicting_removed += (
+                duplicate_rows
+            )
 
     deduplicated = pd.concat(
         pieces,
@@ -344,7 +374,11 @@ def _deduplicate_identical_timestamp_rows(
             f"{path.name} duplicate cleanup failed."
         )
 
-    return deduplicated, removed
+    return (
+        deduplicated,
+        removed,
+        non_research_conflicting_removed,
+    )
 
 
 def read_quantower_csv(
@@ -441,12 +475,14 @@ def read_quantower_csv(
 
     numeric.index.name = "timestamp"
 
-    numeric, duplicate_rows_removed = (
-        _deduplicate_identical_timestamp_rows(
-            numeric,
-            path=path,
-            symbol=normalized_symbol,
-        )
+    (
+        numeric,
+        duplicate_rows_removed,
+        non_research_conflicting_duplicate_rows_removed,
+    ) = _deduplicate_identical_timestamp_rows(
+        numeric,
+        path=path,
+        symbol=normalized_symbol,
     )
 
     if not numeric.index.is_monotonic_increasing:
@@ -472,6 +508,9 @@ def read_quantower_csv(
         ),
         duplicate_rows_removed=(
             duplicate_rows_removed
+        ),
+        non_research_conflicting_duplicate_rows_removed=(
+            non_research_conflicting_duplicate_rows_removed
         ),
     )
 
@@ -1527,6 +1566,18 @@ def build_processed_dataset(
         "mnq_within_file_rows_deduplicated": int(
             sum(
                 record.duplicate_rows_removed
+                for record in mnq_import.files
+            )
+        ),
+        "nq_non_research_conflicting_duplicate_rows_ignored": int(
+            sum(
+                record.non_research_conflicting_duplicate_rows_removed
+                for record in nq_import.files
+            )
+        ),
+        "mnq_non_research_conflicting_duplicate_rows_ignored": int(
+            sum(
+                record.non_research_conflicting_duplicate_rows_removed
                 for record in mnq_import.files
             )
         ),
