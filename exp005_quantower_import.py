@@ -15,6 +15,11 @@ from exp005_recheck_resolution import (
     validate_exp005_recheck_resolution,
 )
 
+from exp005_missing_session_resolution import (
+    get_exp005_missing_session_resolution,
+    validate_exp005_missing_session_resolution,
+)
+
 
 PROJECT_DIR = Path(__file__).resolve().parent
 QUICK_START = date(2019, 5, 6)
@@ -1645,6 +1650,234 @@ def _strict_missing_session_rows(
     )
 
 
+def _expected_missing_index_from_profile(
+    *,
+    session_date: date,
+    profile: dict[str, Any],
+) -> pd.DatetimeIndex:
+    mode = profile["missing_mode"]
+    full = expected_cash_index(
+        session_date
+    )
+
+    if mode == "none":
+        return full[:0]
+
+    if mode == "full_session":
+        return full
+
+    if mode == "leading_range":
+        start = pd.Timestamp(
+            f"{session_date.isoformat()} "
+            f"{profile['missing_start']}",
+            tz=NEW_YORK_TZ,
+        )
+        end = pd.Timestamp(
+            f"{session_date.isoformat()} "
+            f"{profile['missing_end']}",
+            tz=NEW_YORK_TZ,
+        )
+
+        return pd.date_range(
+            start=start,
+            end=end,
+            freq="1min",
+        )
+
+    if mode == "explicit":
+        return pd.DatetimeIndex(
+            [
+                pd.Timestamp(
+                    f"{session_date.isoformat()} {clock}",
+                    tz=NEW_YORK_TZ,
+                )
+                for clock in profile["missing_times"]
+            ]
+        )
+
+    raise QuantowerImportError(
+        f"Unknown locked missing mode: {mode}"
+    )
+
+
+def _observed_cash_profile(
+    symbol_import: SymbolImport,
+    *,
+    session_date: date,
+) -> dict[str, Any]:
+    expected = expected_cash_index(
+        session_date
+    )
+    cash = _cash_only(
+        symbol_import.frame
+    )
+    actual = cash[
+        cash["session_date"] == session_date
+    ].drop(
+        columns=["session_date"]
+    )
+
+    actual_index = pd.DatetimeIndex(
+        actual.index
+    ).sort_values()
+
+    return {
+        "actual_bars": int(len(actual_index)),
+        "missing_index": expected.difference(
+            actual_index
+        ),
+        "unexpected_index": actual_index.difference(
+            expected
+        ),
+        "duplicate_bars": int(
+            actual_index.duplicated().sum()
+        ),
+    }
+
+
+def validate_locked_provider_unavailable_sessions(
+    *,
+    nq_import: SymbolImport,
+    mnq_import: SymbolImport,
+    missing_expected: pd.DataFrame,
+) -> pd.DataFrame:
+    validate_exp005_missing_session_resolution()
+    record = get_exp005_missing_session_resolution()
+
+    imports = {
+        "NQ": nq_import,
+        "MNQ": mnq_import,
+    }
+
+    for symbol, required in record[
+        "required_source_hashes"
+    ].items():
+        observed_hashes = {
+            item.sha256
+            for item in imports[symbol].files
+        }
+        absent = set(
+            required.values()
+        ).difference(observed_hashes)
+
+        if absent:
+            raise IncompleteExportError(
+                f"{symbol} is missing a locked full-export "
+                "or retry evidence file."
+            )
+
+    for session_text, specification in record[
+        "sessions"
+    ].items():
+        session_date = date.fromisoformat(
+            session_text
+        )
+
+        for symbol, profile in specification[
+            "symbols"
+        ].items():
+            observed = _observed_cash_profile(
+                imports[symbol],
+                session_date=session_date,
+            )
+            expected_missing = (
+                _expected_missing_index_from_profile(
+                    session_date=session_date,
+                    profile=profile,
+                )
+            )
+
+            if (
+                observed["actual_bars"]
+                != profile["actual_bars"]
+                or not observed[
+                    "missing_index"
+                ].equals(expected_missing)
+                or len(
+                    observed["unexpected_index"]
+                )
+                != 0
+                or observed["duplicate_bars"] != 0
+            ):
+                raise IncompleteExportError(
+                    f"Locked provider-history profile changed "
+                    f"for {symbol} {session_text}. Do not "
+                    "exclude or fill the session automatically."
+                )
+
+    observed_missing: dict[str, list[str]] = {}
+
+    if not missing_expected.empty:
+        for row in missing_expected.to_dict(
+            orient="records"
+        ):
+            observed_missing[
+                str(row["session_date"])
+            ] = str(
+                row["symbol"]
+            ).split(",")
+
+    expected_missing = record[
+        "expected_missing_session_rows"
+    ]
+
+    if observed_missing != expected_missing:
+        raise IncompleteExportError(
+            "The observed incomplete-session set does not "
+            "exactly match locked record EXP-005-DQ2.",
+            missing_sessions=missing_expected,
+        )
+
+    rows: list[dict[str, Any]] = []
+
+    for session_text, specification in record[
+        "sessions"
+    ].items():
+        nq_profile = _observed_cash_profile(
+            nq_import,
+            session_date=date.fromisoformat(
+                session_text
+            ),
+        )
+        mnq_profile = _observed_cash_profile(
+            mnq_import,
+            session_date=date.fromisoformat(
+                session_text
+            ),
+        )
+
+        rows.append(
+            {
+                "symbol": "BOTH",
+                "session_date": session_text,
+                "reason": (
+                    "locked_provider_history_unavailable"
+                ),
+                "actual_bars_nq": (
+                    nq_profile["actual_bars"]
+                ),
+                "actual_bars_mnq": (
+                    mnq_profile["actual_bars"]
+                ),
+                "missing_bars_nq": int(
+                    len(nq_profile["missing_index"])
+                ),
+                "missing_bars_mnq": int(
+                    len(mnq_profile["missing_index"])
+                ),
+                "bars_synthesized": 0,
+                "resolution_record": (
+                    "EXP-005-DQ2"
+                ),
+                "detail": specification["reason"],
+            }
+        )
+
+    return pd.DataFrame(
+        rows
+    )
+
+
 def build_processed_dataset(
     *,
     nq_paths: Iterable[Path],
@@ -1700,20 +1933,13 @@ def build_processed_dataset(
         mnq,
     )
 
-    if not missing_expected.empty:
-        preview = ", ".join(
-            missing_expected[
-                "session_date"
-            ].head(10)
+    locked_provider_exclusions = (
+        validate_locked_provider_unavailable_sessions(
+            nq_import=nq_import,
+            mnq_import=mnq_import,
+            missing_expected=missing_expected,
         )
-
-        raise IncompleteExportError(
-            "The full quick-period export is incomplete. "
-            f"{len(missing_expected)} expected full sessions "
-            f"are missing from NQ, MNQ or both. First: {preview}. "
-            "Re-export the missing date range before importing.",
-            missing_sessions=missing_expected,
-        )
+    )
 
     aligned = align_nq_mnq(
         nq,
@@ -1782,6 +2008,7 @@ def build_processed_dataset(
         mnq.incomplete_sessions,
         nq.unexpected_sessions,
         mnq.unexpected_sessions,
+        locked_provider_exclusions,
         aligned.excluded_mismatch_sessions,
     ]
 
@@ -1913,6 +2140,15 @@ def build_processed_dataset(
                 == "potential_front_month_mismatch"
             ).sum()
         ) if not aligned.excluded_mismatch_sessions.empty else 0,
+        "locked_provider_unavailable_sessions_excluded": int(
+            len(locked_provider_exclusions)
+        ),
+        "locked_provider_unavailable_dates": (
+            locked_provider_exclusions[
+                "session_date"
+            ].tolist()
+        ),
+        "bars_synthesized_for_missing_sessions": 0,
         "included_invalid_sessions": 0,
         "included_front_month_mismatch_sessions": 0,
         "first_included_session": (
