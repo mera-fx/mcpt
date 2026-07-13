@@ -65,6 +65,32 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.preregistration_file
         )
 
+    def test_exp004_is_preregistered(
+        self,
+    ) -> None:
+        record = get_experiment_lifecycle(
+            "EXP-004"
+        )
+
+        self.assertEqual(
+            record.stage,
+            "PRE_REGISTERED",
+        )
+
+        self.assertEqual(
+            record.market_name,
+            "QQQ ETF",
+        )
+
+        self.assertEqual(
+            record.timeframe,
+            "5 minutes",
+        )
+
+        self.assertIsNotNone(
+            record.preregistration_file
+        )
+
     def test_unregistered_config_defaults_to_idea(
         self,
     ) -> None:

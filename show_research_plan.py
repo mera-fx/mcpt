@@ -26,6 +26,12 @@ def main() -> None:
             f"Stage: {format_stage_label(record.stage)}"
         )
         print(
+            f"Market: {record.market_name}"
+        )
+        print(
+            f"Timeframe: {record.timeframe}"
+        )
+        print(
             f"Reason: {record.stage_reason}"
         )
         print(
@@ -36,10 +42,10 @@ def main() -> None:
     print("Current project milestone")
     print("-------------------------")
     print(
-        "EXP-003 is accepted for paper testing. "
-        "The research result is frozen. The next engineering task "
-        "is a paper-only simulator using the fixed preregistered "
-        "parameters and the locked operational plan."
+        "EXP-003 continues automatic paper testing. "
+        "EXP-004 is preregistered on QQQ and may now proceed "
+        "to data ingestion and an in-sample-only ORB quick "
+        "screen. No EXP-004 OOS result may be exposed yet."
     )
 
 

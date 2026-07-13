@@ -160,6 +160,36 @@ EXPERIMENT_LIFECYCLE: dict[
             "research/EXP-003_preregistration.md"
         ),
     ),
+    "EXP-004": ExperimentLifecycle(
+        experiment_id="EXP-004",
+        experiment_name=(
+            "QQQ 5-Minute Opening Range Breakout"
+        ),
+        hypothesis=(
+            "After QQQ establishes its opening range, the first "
+            "confirmed break outside that range may continue far "
+            "enough during the same regular session to overcome "
+            "realistic intraday trading costs."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "The QQQ opening-range hypothesis, session rules, "
+            "parameter grid, data split, session-aware permutation "
+            "method and pass/fail gates were locked before data "
+            "download, strategy implementation or result inspection."
+        ),
+        next_action=(
+            "Build the historical QQQ SIP downloader and the "
+            "session-aware ORB engine. Run only the protected "
+            "in-sample quick screen before any OOS result is exposed."
+        ),
+        market_name="QQQ ETF",
+        timeframe="5 minutes",
+        strategy_name="opening_range_breakout",
+        preregistration_file=Path(
+            "research/EXP-004_preregistration.md"
+        ),
+    ),
 }
 
 
