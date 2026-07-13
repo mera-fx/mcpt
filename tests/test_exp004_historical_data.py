@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
 
 from alpaca_historical_data import (
+    AlpacaHistoricalDataError,
     clean_full_regular_sessions,
+    fetch_market_calendar,
     parse_market_calendar,
     parse_stock_bars,
     validate_exp004_clean_data,
@@ -106,6 +109,87 @@ class Exp004HistoricalDataTests(
             ].tolist(),
             [True, False],
         )
+
+    def test_calendar_falls_back_from_paper_to_live(
+        self,
+    ) -> None:
+        response = [
+            {
+                "date": "2022-01-03",
+                "open": "09:30",
+                "close": "16:00",
+            }
+        ]
+
+        with patch(
+            "alpaca_historical_data."
+            "alpaca_headers_from_environment",
+            return_value={
+                "APCA-API-KEY-ID": "test",
+                "APCA-API-SECRET-KEY": "test",
+            },
+        ), patch(
+            "alpaca_historical_data._request_json",
+            side_effect=[
+                AlpacaHistoricalDataError(
+                    "paper rejected credentials"
+                ),
+                response,
+            ],
+        ) as request_json:
+            calendar = fetch_market_calendar(
+                start="2022-01-03",
+                end="2022-01-03",
+            )
+
+        self.assertEqual(
+            len(calendar),
+            1,
+        )
+
+        self.assertEqual(
+            request_json.call_count,
+            2,
+        )
+
+        self.assertIn(
+            "paper-api.alpaca.markets",
+            request_json.call_args_list[
+                0
+            ].kwargs["url"],
+        )
+
+        self.assertIn(
+            "api.alpaca.markets",
+            request_json.call_args_list[
+                1
+            ].kwargs["url"],
+        )
+
+    def test_calendar_reports_both_auth_failures(
+        self,
+    ) -> None:
+        with patch(
+            "alpaca_historical_data."
+            "alpaca_headers_from_environment",
+            return_value={
+                "APCA-API-KEY-ID": "test",
+                "APCA-API-SECRET-KEY": "test",
+            },
+        ), patch(
+            "alpaca_historical_data._request_json",
+            side_effect=AlpacaHistoricalDataError(
+                "HTTP 401"
+            ),
+        ):
+            with self.assertRaisesRegex(
+                AlpacaHistoricalDataError,
+                "both the paper and live",
+            ):
+                fetch_market_calendar(
+                    start="2022-01-03",
+                    end="2022-01-03",
+                )
 
     def test_complete_session_is_included(
         self,

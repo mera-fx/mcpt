@@ -21,6 +21,7 @@ from intraday_market_foundation import (
 
 DATA_BASE_URL = "https://data.alpaca.markets"
 PAPER_BASE_URL = "https://paper-api.alpaca.markets"
+LIVE_BASE_URL = "https://api.alpaca.markets"
 
 
 class AlpacaHistoricalDataError(RuntimeError):
@@ -338,29 +339,72 @@ def fetch_market_calendar(
     start: str,
     end: str,
 ) -> pd.DataFrame:
+    """
+    Fetch the US market calendar with whichever Alpaca credential
+    environment the user generated.
+
+    Alpaca paper and live Trading API credentials use different
+    hosts. Historical market-data credentials may have been generated
+    from either dashboard context, so try paper first and then live.
+    """
+
     headers = (
         alpaca_headers_from_environment()
     )
 
-    payload = _request_json(
-        url=(
-            f"{PAPER_BASE_URL}/v2/calendar"
-        ),
-        parameters={
-            "start": start,
-            "end": end,
-        },
-        headers=headers,
+    configured_base = os.environ.get(
+        "APCA_TRADING_BASE_URL",
+        "",
+    ).strip().rstrip("/")
+
+    base_urls = (
+        [configured_base]
+        if configured_base
+        else [
+            PAPER_BASE_URL,
+            LIVE_BASE_URL,
+        ]
     )
 
-    if not isinstance(payload, list):
-        raise AlpacaHistoricalDataError(
-            "Unexpected market-calendar "
-            "response."
+    failures: list[str] = []
+
+    for base_url in base_urls:
+        try:
+            payload = _request_json(
+                url=(
+                    f"{base_url}/v2/calendar"
+                ),
+                parameters={
+                    "start": start,
+                    "end": end,
+                },
+                headers=headers,
+            )
+        except AlpacaHistoricalDataError as error:
+            failures.append(
+                f"{base_url}: {error}"
+            )
+            continue
+
+        if not isinstance(payload, list):
+            failures.append(
+                f"{base_url}: unexpected "
+                "market-calendar response"
+            )
+            continue
+
+        return parse_market_calendar(
+            payload
         )
 
-    return parse_market_calendar(
-        payload
+    raise AlpacaHistoricalDataError(
+        "Alpaca calendar authentication failed on both the "
+        "paper and live Trading API hosts. The saved key and "
+        "secret are visible to Python, but they are not accepted "
+        "by either matching Trading API environment. Regenerate "
+        "an API key pair in the Alpaca dashboard and save both "
+        "values from the same key pair.\n- "
+        + "\n- ".join(failures)
     )
 
 
