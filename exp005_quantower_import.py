@@ -10,6 +10,11 @@ from typing import Any, Iterable
 import numpy as np
 import pandas as pd
 
+from exp005_recheck_resolution import (
+    get_exp005_recheck_resolution,
+    validate_exp005_recheck_resolution,
+)
+
 
 PROJECT_DIR = Path(__file__).resolve().parent
 QUICK_START = date(2019, 5, 6)
@@ -23,6 +28,13 @@ EXPECTED_FIVE_MINUTE_BARS = 78
 TICK_SIZE = 0.25
 MAX_MEDIAN_CLOSE_DIFFERENCE = 5.0
 MAX_SINGLE_CLOSE_DIFFERENCE = 20.0
+
+RECHECK_ROOT = (
+    PROJECT_DIR
+    / "data"
+    / "EXP-005"
+    / "recheck"
+)
 
 INCOMING_ROOT = (
     PROJECT_DIR
@@ -100,6 +112,9 @@ class RawFileRecord:
     last_timestamp_utc: str
     duplicate_rows_removed: int = 0
     non_research_conflicting_duplicate_rows_removed: int = 0
+    research_volume_only_conflicts_resolved: int = 0
+    research_ohlc_conflicts_resolved_by_recheck: int = 0
+    source_role: str = "FULL_EXPORT"
     archived_path: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -289,14 +304,36 @@ def _is_locked_cash_timestamp(
     )
 
 
+def _matching_correction_row(
+    corrections: pd.DataFrame | None,
+    timestamp: pd.Timestamp,
+) -> pd.DataFrame | None:
+    if corrections is None:
+        return None
+
+    if timestamp not in corrections.index:
+        return None
+
+    row = corrections.loc[[timestamp]].copy()
+
+    if len(row) != 1:
+        raise QuantowerImportError(
+            f"Correction set contains multiple rows for "
+            f"{timestamp.isoformat()}."
+        )
+
+    return row
+
+
 def _deduplicate_identical_timestamp_rows(
     frame: pd.DataFrame,
     *,
     path: Path,
     symbol: str,
-) -> tuple[pd.DataFrame, int, int]:
+    corrections: pd.DataFrame | None = None,
+) -> tuple[pd.DataFrame, int, int, int, int]:
     if not frame.index.has_duplicates:
-        return frame, 0, 0
+        return frame, 0, 0, 0, 0
 
     columns = [
         "open",
@@ -305,10 +342,18 @@ def _deduplicate_identical_timestamp_rows(
         "close",
         "volume",
     ]
+    price_columns = [
+        "open",
+        "high",
+        "low",
+        "close",
+    ]
 
     pieces: list[pd.DataFrame] = []
     removed = 0
     non_research_conflicting_removed = 0
+    research_volume_only_resolved = 0
+    research_ohlc_recheck_resolved = 0
 
     for timestamp, group in frame.groupby(
         level=0,
@@ -332,12 +377,79 @@ def _deduplicate_identical_timestamp_rows(
             rtol=0.0,
         )
 
-        if (
-            not rows_match
-            and _is_locked_cash_timestamp(
-                pd.Timestamp(timestamp)
+        if rows_match:
+            pieces.append(
+                group.iloc[[0]]
             )
-        ):
+            removed += len(group) - 1
+            continue
+
+        inside = _is_locked_cash_timestamp(
+            pd.Timestamp(timestamp)
+        )
+
+        if not inside:
+            pieces.append(
+                group.iloc[[0]]
+            )
+            duplicate_rows = len(group) - 1
+            removed += duplicate_rows
+            non_research_conflicting_removed += (
+                duplicate_rows
+            )
+            continue
+
+        prices = group[
+            price_columns
+        ].astype(float)
+
+        price_reference = np.repeat(
+            prices.to_numpy()[[0]],
+            repeats=len(prices),
+            axis=0,
+        )
+
+        prices_match = np.allclose(
+            prices.to_numpy(),
+            price_reference,
+            atol=1e-12,
+            rtol=0.0,
+        )
+
+        if prices_match:
+            selected_index = (
+                group["volume"]
+                .astype(float)
+                .idxmax()
+            )
+
+            selected = group.loc[
+                [selected_index]
+            ]
+
+            # idxmax on a duplicated DatetimeIndex returns the
+            # timestamp label, so select the first row with the
+            # maximum volume explicitly.
+            maximum_volume = float(
+                group["volume"].max()
+            )
+
+            selected = group[
+                group["volume"].astype(float)
+                == maximum_volume
+            ].iloc[[0]]
+
+            pieces.append(selected)
+            removed += len(group) - 1
+            research_volume_only_resolved += 1
+            continue
+
+        correction = _matching_correction_row(
+            corrections,
+            pd.Timestamp(timestamp),
+        )
+
+        if correction is None:
             preview = (
                 group[columns]
                 .head(4)
@@ -345,24 +457,40 @@ def _deduplicate_identical_timestamp_rows(
             )
 
             raise QuantowerImportError(
-                f"{path.name} contains research-session "
-                f"conflicting duplicate timestamp "
+                f"{path.name} contains unresolved "
+                f"research-session OHLC conflict at "
                 f"{timestamp.isoformat()} for {symbol}. "
-                f"The duplicate bars have different OHLCV "
-                f"values: {preview}"
+                f"Values: {preview}"
             )
 
-        pieces.append(
-            group.iloc[[0]]
+        correction_values = correction[
+            columns
+        ].astype(float).to_numpy()
+
+        candidates = group[
+            columns
+        ].astype(float).to_numpy()
+
+        matches_candidate = any(
+            np.allclose(
+                correction_values[0],
+                candidate,
+                atol=1e-12,
+                rtol=0.0,
+            )
+            for candidate in candidates
         )
 
-        duplicate_rows = len(group) - 1
-        removed += duplicate_rows
-
-        if not rows_match:
-            non_research_conflicting_removed += (
-                duplicate_rows
+        if not matches_candidate:
+            raise QuantowerImportError(
+                f"Locked recheck bar for {symbol} "
+                f"{timestamp.isoformat()} does not match "
+                "either original conflicting row."
             )
+
+        pieces.append(correction)
+        removed += len(group) - 1
+        research_ohlc_recheck_resolved += 1
 
     deduplicated = pd.concat(
         pieces,
@@ -378,6 +506,8 @@ def _deduplicate_identical_timestamp_rows(
         deduplicated,
         removed,
         non_research_conflicting_removed,
+        research_volume_only_resolved,
+        research_ohlc_recheck_resolved,
     )
 
 
@@ -385,6 +515,8 @@ def read_quantower_csv(
     path: Path,
     *,
     symbol: str,
+    corrections: pd.DataFrame | None = None,
+    source_role: str = "FULL_EXPORT",
 ) -> tuple[pd.DataFrame, RawFileRecord]:
     path = Path(path)
     normalized_symbol = _validate_symbol(symbol)
@@ -479,10 +611,13 @@ def read_quantower_csv(
         numeric,
         duplicate_rows_removed,
         non_research_conflicting_duplicate_rows_removed,
+        research_volume_only_conflicts_resolved,
+        research_ohlc_conflicts_resolved_by_recheck,
     ) = _deduplicate_identical_timestamp_rows(
         numeric,
         path=path,
         symbol=normalized_symbol,
+        corrections=corrections,
     )
 
     if not numeric.index.is_monotonic_increasing:
@@ -512,6 +647,13 @@ def read_quantower_csv(
         non_research_conflicting_duplicate_rows_removed=(
             non_research_conflicting_duplicate_rows_removed
         ),
+        research_volume_only_conflicts_resolved=(
+            research_volume_only_conflicts_resolved
+        ),
+        research_ohlc_conflicts_resolved_by_recheck=(
+            research_ohlc_conflicts_resolved_by_recheck
+        ),
+        source_role=source_role,
     )
 
     return numeric, record
@@ -546,6 +688,7 @@ def load_symbol_chunks(
     paths: Iterable[Path],
     *,
     symbol: str,
+    corrections: pd.DataFrame | None = None,
 ) -> SymbolImport:
     normalized_symbol = _validate_symbol(symbol)
     path_list = sorted(
@@ -568,6 +711,7 @@ def load_symbol_chunks(
         frame, record = read_quantower_csv(
             path,
             symbol=normalized_symbol,
+            corrections=corrections,
         )
 
         frames.append(frame)
@@ -635,6 +779,141 @@ def load_symbol_chunks(
         files=tuple(records),
         duplicate_overlap_rows_removed=removed,
     )
+
+
+def load_locked_recheck_corrections(
+    paths: Iterable[Path],
+    *,
+    symbol: str,
+) -> tuple[pd.DataFrame, tuple[RawFileRecord, ...]]:
+    validate_exp005_recheck_resolution()
+    normalized_symbol = _validate_symbol(
+        symbol
+    )
+    record = get_exp005_recheck_resolution()
+    expected = record[
+        "recheck_files"
+    ][normalized_symbol]
+
+    path_list = sorted(
+        {
+            Path(path).resolve()
+            for path in paths
+        },
+        key=lambda item: str(item).lower(),
+    )
+
+    if len(path_list) != len(expected):
+        raise QuantowerImportError(
+            f"{normalized_symbol} requires exactly "
+            f"{len(expected)} locked recheck CSV files."
+        )
+
+    expected_hashes = {
+        item["sha256"]: item
+        for item in expected.values()
+    }
+
+    seen_hashes: set[str] = set()
+    rows: list[pd.DataFrame] = []
+    records: list[RawFileRecord] = []
+
+    for path in path_list:
+        digest = sha256_file(
+            path
+        )
+
+        if digest not in expected_hashes:
+            raise QuantowerImportError(
+                f"Unexpected {normalized_symbol} recheck "
+                f"file hash: {path.name}."
+            )
+
+        if digest in seen_hashes:
+            raise QuantowerImportError(
+                f"Duplicate {normalized_symbol} recheck file."
+            )
+
+        frame, file_record = read_quantower_csv(
+            path,
+            symbol=normalized_symbol,
+            source_role="RECHECK_CORRECTION",
+        )
+
+        if frame.index.has_duplicates:
+            raise QuantowerImportError(
+                f"{path.name} contains recheck duplicates."
+            )
+
+        specification = expected_hashes[
+            digest
+        ]
+        timestamp = pd.Timestamp(
+            specification["timestamp_utc"]
+        )
+        expected_bar = specification[
+            "bar"
+        ]
+
+        if timestamp not in frame.index:
+            raise QuantowerImportError(
+                f"{path.name} is missing its locked "
+                f"correction timestamp {timestamp}."
+            )
+
+        actual = frame.loc[
+            [timestamp],
+            [
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+            ],
+        ].astype(float)
+
+        expected_values = np.array(
+            [
+                expected_bar["open"],
+                expected_bar["high"],
+                expected_bar["low"],
+                expected_bar["close"],
+                expected_bar["volume"],
+            ],
+            dtype=float,
+        )
+
+        if not np.allclose(
+            actual.to_numpy()[0],
+            expected_values,
+            atol=1e-12,
+            rtol=0.0,
+        ):
+            raise QuantowerImportError(
+                f"{path.name} correction bar changed."
+            )
+
+        rows.append(actual)
+        records.append(file_record)
+        seen_hashes.add(digest)
+
+    if seen_hashes != set(expected_hashes):
+        raise QuantowerImportError(
+            f"{normalized_symbol} recheck set is incomplete."
+        )
+
+    corrections = pd.concat(
+        rows,
+        axis=0,
+    ).sort_index()
+
+    if corrections.index.has_duplicates:
+        raise QuantowerImportError(
+            f"{normalized_symbol} correction timestamps "
+            "are duplicated."
+        )
+
+    return corrections, tuple(records)
 
 
 def load_expected_full_sessions(
@@ -1370,6 +1649,8 @@ def build_processed_dataset(
     *,
     nq_paths: Iterable[Path],
     mnq_paths: Iterable[Path],
+    nq_recheck_paths: Iterable[Path],
+    mnq_recheck_paths: Iterable[Path],
     qqq_calendar_path: Path = QQQ_CALENDAR_FILE,
     archive_files: bool = True,
 ) -> ProcessedDataset:
@@ -1377,14 +1658,30 @@ def build_processed_dataset(
         qqq_calendar_path
     )
 
+    nq_corrections, nq_recheck_records = (
+        load_locked_recheck_corrections(
+            nq_recheck_paths,
+            symbol="NQ",
+        )
+    )
+
+    mnq_corrections, mnq_recheck_records = (
+        load_locked_recheck_corrections(
+            mnq_recheck_paths,
+            symbol="MNQ",
+        )
+    )
+
     nq_import = load_symbol_chunks(
         nq_paths,
         symbol="NQ",
+        corrections=nq_corrections,
     )
 
     mnq_import = load_symbol_chunks(
         mnq_paths,
         symbol="MNQ",
+        corrections=mnq_corrections,
     )
 
     nq = extract_complete_sessions(
@@ -1468,6 +1765,8 @@ def build_processed_dataset(
     original_records = (
         *nq_import.files,
         *mnq_import.files,
+        *nq_recheck_records,
+        *mnq_recheck_records,
     )
 
     manifest = (
@@ -1581,6 +1880,31 @@ def build_processed_dataset(
                 for record in mnq_import.files
             )
         ),
+        "nq_research_volume_only_conflicts_resolved": int(
+            sum(
+                record.research_volume_only_conflicts_resolved
+                for record in nq_import.files
+            )
+        ),
+        "mnq_research_volume_only_conflicts_resolved": int(
+            sum(
+                record.research_volume_only_conflicts_resolved
+                for record in mnq_import.files
+            )
+        ),
+        "nq_research_ohlc_conflicts_resolved_by_recheck": int(
+            sum(
+                record.research_ohlc_conflicts_resolved_by_recheck
+                for record in nq_import.files
+            )
+        ),
+        "mnq_research_ohlc_conflicts_resolved_by_recheck": int(
+            sum(
+                record.research_ohlc_conflicts_resolved_by_recheck
+                for record in mnq_import.files
+            )
+        ),
+        "locked_recheck_files": 4,
         "potential_front_month_mismatch_sessions_excluded": int(
             (
                 aligned.excluded_mismatch_sessions[

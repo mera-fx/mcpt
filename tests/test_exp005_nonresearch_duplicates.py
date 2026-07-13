@@ -154,7 +154,7 @@ class Exp005NonResearchDuplicateTests(
                 1,
             )
 
-    def test_conflicting_duplicate_during_cash_session_still_stops(
+    def test_ohlc_duplicate_during_cash_session_still_stops(
         self,
     ) -> None:
         with tempfile.TemporaryDirectory() as temp:
@@ -180,6 +180,19 @@ class Exp005NonResearchDuplicateTests(
                 volume=47,
             )
 
+            raw.loc[
+                raw.index[-1],
+                "High",
+            ] = (
+                float(
+                    raw.loc[
+                        raw.index[-1],
+                        "High",
+                    ]
+                )
+                + 0.25
+            )
+
             raw.to_csv(
                 path,
                 sep=";",
@@ -188,7 +201,7 @@ class Exp005NonResearchDuplicateTests(
 
             with self.assertRaisesRegex(
                 QuantowerImportError,
-                "research-session conflicting duplicate",
+                "unresolved research-session OHLC conflict",
             ):
                 read_quantower_csv(
                     path,

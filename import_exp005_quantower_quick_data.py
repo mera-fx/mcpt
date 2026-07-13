@@ -16,6 +16,7 @@ from exp005_preregistration import (
 from exp005_quantower_import import (
     IncompleteExportError,
     INCOMING_ROOT,
+    RECHECK_ROOT,
     PROCESSED_ROOT,
     QQQ_CALENDAR_FILE,
     RESULTS_ROOT,
@@ -206,17 +207,33 @@ def _atomic_parquet(
     temporary.replace(path)
 
 
-def incoming_csvs(
+def csvs_in_folder(
+    root: Path,
     symbol: str,
 ) -> list[Path]:
-    folder = (
-        INCOMING_ROOT
-        / symbol
-    )
+    folder = root / symbol
 
     return sorted(
         folder.glob("*.csv"),
         key=lambda item: item.name.lower(),
+    )
+
+
+def incoming_csvs(
+    symbol: str,
+) -> list[Path]:
+    return csvs_in_folder(
+        INCOMING_ROOT,
+        symbol,
+    )
+
+
+def recheck_csvs(
+    symbol: str,
+) -> list[Path]:
+    return csvs_in_folder(
+        RECHECK_ROOT,
+        symbol,
     )
 
 
@@ -407,6 +424,14 @@ def main() -> None:
         "MNQ"
     )
 
+    nq_recheck_paths = recheck_csvs(
+        "NQ"
+    )
+
+    mnq_recheck_paths = recheck_csvs(
+        "MNQ"
+    )
+
     if not nq_paths or not mnq_paths:
         raise FileNotFoundError(
             "Place Quantower CSV exports in both:\n"
@@ -440,6 +465,12 @@ def main() -> None:
         f"MNQ files:    {len(mnq_paths)}"
     )
     print(
+        f"NQ rechecks:  {len(nq_recheck_paths)}"
+    )
+    print(
+        f"MNQ rechecks: {len(mnq_recheck_paths)}"
+    )
+    print(
         f"Git commit:   {git['short_commit']}"
     )
     print()
@@ -448,6 +479,8 @@ def main() -> None:
         processed = build_processed_dataset(
             nq_paths=nq_paths,
             mnq_paths=mnq_paths,
+            nq_recheck_paths=nq_recheck_paths,
+            mnq_recheck_paths=mnq_recheck_paths,
             qqq_calendar_path=QQQ_CALENDAR_FILE,
             archive_files=True,
         )
