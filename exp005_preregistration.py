@@ -9,7 +9,7 @@ from exp004_preregistration import (
 
 
 EXP005_PREREGISTRATION: dict[str, Any] = {
-    "schema_version": 1,
+    "schema_version": 2,
     "experiment_id": "EXP-005",
     "title": (
         "NQ/MNQ 5-Minute ORB Locked Transfer"
@@ -18,6 +18,31 @@ EXP005_PREREGISTRATION: dict[str, Any] = {
     "research_status": "PRE_REGISTERED",
     "implementation_status": "NOT_IMPLEMENTED",
     "results_viewed": "NONE",
+    "source_validation_samples_viewed": True,
+    "source_amendment": {
+        "amendment_id": "EXP-005-A1",
+        "amended_date": "2026-07-13",
+        "status": "LOCKED_BEFORE_FULL_DATA_EXPORT",
+        "reason": (
+            "The originally named paid historical source was "
+            "incompatible with the project requirement that "
+            "all research tooling and data remain free. A "
+            "Lucid Trading account with Rithmic history was "
+            "already available at no additional cost."
+        ),
+        "changed_scope": "DATA_SOURCE_AND_ROLL_OBSERVABILITY_ONLY",
+        "unchanged": [
+            "Hypothesis",
+            "Fixed ORB signal and execution rules",
+            "No-optimization rule",
+            "Quick and confirmation periods",
+            "Contract multipliers and cost assumptions",
+            "MCPT method and permutation counts",
+            "Every quick and full pass/fail threshold",
+            "Confirmation-period lock",
+        ],
+        "document": "research/EXP-005_source_amendment.md",
+    },
     "source_experiment": {
         "experiment_id": "EXP-004",
         "source_decision": "REJECT",
@@ -44,21 +69,55 @@ EXP005_PREREGISTRATION: dict[str, Any] = {
         "primary_evidence_market": "NQ",
         "secondary_cost_market": "MNQ",
         "secondary_is_independent_evidence": False,
-        "dataset": "GLBX.MDP3",
-        "data_provider": "Databento",
-        "input_schema": "ohlcv-1m",
+        "dataset": (
+            "Rithmic provider-managed CME front-month history"
+        ),
+        "data_provider": (
+            "Lucid Trading / Rithmic via Quantower "
+            "History Exporter"
+        ),
+        "additional_data_cost": 0.0,
+        "input_schema": (
+            "Quantower Time-Time one-minute CSV"
+        ),
         "output_timeframe": "5 minutes",
-        "input_symbol_type": "continuous",
+        "input_symbol_type": "provider_front_month",
         "symbols": {
-            "NQ": "NQ.v.0",
-            "MNQ": "MNQ.v.0",
+            "NQ": "NQ",
+            "MNQ": "MNQ",
+        },
+        "symbol_identity": {
+            "NQ": (
+                "NQ@CME; description begins "
+                "'Front Month for NQ'"
+            ),
+            "MNQ": (
+                "MNQ front-month root; separate from "
+                "specific contracts such as MNQU6"
+            ),
         },
         "continuous_roll_rule": (
-            "volume-ranked front contract"
+            "provider-defined front month; exact rollover "
+            "trigger is not exposed in the CSV export"
         ),
-        "price_adjustment": "none",
-        "continuous_prices": "original_unadjusted",
+        "price_adjustment": (
+            "provider-defined or unknown; no adjusted/"
+            "unadjusted claim is made"
+        ),
+        "roll_observability": "INDIRECT_ONLY",
+        "same_session_only_reason": (
+            "The ORB range, breakout, entry, stop and forced "
+            "exit all occur inside the same 09:30–16:00 ET "
+            "cash session. No previous close, overnight gap, "
+            "cross-session return or overnight position is used."
+        ),
         "source_timezone": "UTC",
+        "source_timezone_evidence": (
+            "A Quantower task requested at UK local midnight "
+            "produced a CSV beginning one hour earlier during "
+            "British Summer Time; the US cash session aligned "
+            "to 13:30–19:59 UTC."
+        ),
         "research_timezone": "America/New_York",
         "orb_anchor": "US_CASH_OPEN",
         "regular_session_start": "09:30",
@@ -72,17 +131,71 @@ EXP005_PREREGISTRATION: dict[str, Any] = {
             "close": "last",
             "volume": "sum",
         },
+        "data_acquisition": {
+            "method": "MANUAL_HISTORY_EXPORTER_CSV",
+            "connection": "Lucid Trading",
+            "aggregation": "Time - Time",
+            "bar_size": "1 minute",
+            "data_type": "trade/last",
+            "full_quick_export_completed": False,
+            "confirmation_export_prohibited": True,
+            "raw_files_are_immutable": True,
+            "multiple_chunks_allowed": True,
+        },
         "early_close_sessions": "EXCLUDED",
         "incomplete_sessions": "EXCLUDED",
         "missing_bar_fill": "PROHIBITED",
         "duplicate_timestamp_action": "STOP",
-        "roll_switch_inside_session": "EXCLUDE_SESSION",
+        "cross_symbol_alignment": {
+            "required_for_inclusion": True,
+            "identical_cash_minute_timestamps": True,
+            "maximum_median_absolute_close_difference_points": 5.0,
+            "maximum_single_absolute_close_difference_points": 20.0,
+            "failure_action": (
+                "Exclude the session from both NQ and MNQ as "
+                "a potential front-month mismatch or data anomaly."
+            ),
+        },
+        "roll_switch_inside_session": (
+            "POTENTIAL_SWITCH_OR_MISMATCH_SESSION_EXCLUDED"
+        ),
         "included_roll_switch_sessions": 0,
         "overnight_data_use": (
-            "Downloaded only when required to identify "
-            "session-opening gaps or contract mapping; no "
-            "overnight signal or position is permitted."
+            "Raw exports may contain surrounding futures bars, "
+            "but the research importer retains only the locked "
+            "09:30–16:00 ET cash-session bars. No overnight "
+            "signal, feature or position is permitted."
         ),
+        "source_validation_samples": {
+            "date": "2019-08-09",
+            "research_results_calculated": False,
+            "NQ": {
+                "raw_rows": 1305,
+                "cash_session_rows": 390,
+                "five_minute_bars": 78,
+                "missing_cash_minutes": 0,
+                "duplicate_timestamps": 0,
+                "invalid_ohlc_rows": 0,
+                "tick_nonconforming_values": 0,
+                "sha256": (
+                    "9fd2ac2ab4e9185ce937d969cc0184c6"
+                    "f7757a108c4eb8dd58d13d27840678c9"
+                ),
+            },
+            "MNQ": {
+                "raw_rows": 1300,
+                "cash_session_rows": 390,
+                "five_minute_bars": 78,
+                "missing_cash_minutes": 0,
+                "duplicate_timestamps": 0,
+                "invalid_ohlc_rows": 0,
+                "tick_nonconforming_values": 0,
+                "sha256": (
+                    "e330ee53d485975772de33bc60d97006"
+                    "bc7d9f24c10345579a9f01225a6bb369"
+                ),
+            },
+        },
     },
     "research_split": {
         "quick_transfer_start": "2019-05-06",
@@ -344,6 +457,29 @@ def validate_exp005_preregistration(
             "EXP-005 cannot record viewed results."
         )
 
+    if current.get(
+        "source_validation_samples_viewed"
+    ) is not True:
+        raise ValueError(
+            "EXP-005 source-validation samples must be "
+            "recorded honestly."
+        )
+
+    amendment = current[
+        "source_amendment"
+    ]
+
+    if (
+        amendment["amendment_id"] != "EXP-005-A1"
+        or amendment["status"]
+        != "LOCKED_BEFORE_FULL_DATA_EXPORT"
+        or amendment["changed_scope"]
+        != "DATA_SOURCE_AND_ROLL_OBSERVABILITY_ONLY"
+    ):
+        raise ValueError(
+            "EXP-005 source amendment changed scope."
+        )
+
     source = current[
         "source_experiment"
     ]
@@ -413,28 +549,131 @@ def validate_exp005_preregistration(
         )
 
     if market[
+        "data_provider"
+    ] != (
+        "Lucid Trading / Rithmic via Quantower "
+        "History Exporter"
+    ):
+        raise ValueError(
+            "EXP-005 must use the locked free source."
+        )
+
+    if market[
+        "additional_data_cost"
+    ] != 0.0:
+        raise ValueError(
+            "EXP-005 data must remain zero additional cost."
+        )
+
+    if market[
         "symbols"
     ] != {
-        "NQ": "NQ.v.0",
-        "MNQ": "MNQ.v.0",
+        "NQ": "NQ",
+        "MNQ": "MNQ",
     }:
         raise ValueError(
-            "EXP-005 continuous symbols changed."
+            "EXP-005 front-month symbols changed."
+        )
+
+    if market[
+        "input_symbol_type"
+    ] != "provider_front_month":
+        raise ValueError(
+            "EXP-005 symbol type changed."
         )
 
     if market[
         "continuous_roll_rule"
-    ] != "volume-ranked front contract":
+    ] != (
+        "provider-defined front month; exact rollover "
+        "trigger is not exposed in the CSV export"
+    ):
         raise ValueError(
-            "EXP-005 roll rule changed."
+            "EXP-005 provider roll statement changed."
         )
 
     if market[
         "price_adjustment"
-    ] != "none":
+    ] != (
+        "provider-defined or unknown; no adjusted/"
+        "unadjusted claim is made"
+    ):
         raise ValueError(
-            "EXP-005 prices must remain unadjusted."
+            "EXP-005 cannot claim an unknown adjustment method."
         )
+
+    if market[
+        "source_timezone"
+    ] != "UTC":
+        raise ValueError(
+            "EXP-005 CSV timestamps must be parsed as UTC."
+        )
+
+    acquisition = market[
+        "data_acquisition"
+    ]
+
+    if acquisition[
+        "full_quick_export_completed"
+    ] is not False:
+        raise ValueError(
+            "Full EXP-005 quick data cannot be recorded yet."
+        )
+
+    if acquisition[
+        "confirmation_export_prohibited"
+    ] is not True:
+        raise ValueError(
+            "EXP-005 confirmation export is not blocked."
+        )
+
+    alignment = market[
+        "cross_symbol_alignment"
+    ]
+
+    if (
+        alignment[
+            "maximum_median_absolute_close_difference_points"
+        ] != 5.0
+        or alignment[
+            "maximum_single_absolute_close_difference_points"
+        ] != 20.0
+    ):
+        raise ValueError(
+            "EXP-005 NQ/MNQ alignment thresholds changed."
+        )
+
+    samples = market[
+        "source_validation_samples"
+    ]
+
+    if samples[
+        "research_results_calculated"
+    ] is not False:
+        raise ValueError(
+            "Source-validation samples cannot contain results."
+        )
+
+    for symbol, rows in (
+        ("NQ", 1305),
+        ("MNQ", 1300),
+    ):
+        sample = samples[
+            symbol
+        ]
+
+        if (
+            sample["raw_rows"] != rows
+            or sample["cash_session_rows"] != 390
+            or sample["five_minute_bars"] != 78
+            or sample["missing_cash_minutes"] != 0
+            or sample["duplicate_timestamps"] != 0
+            or sample["invalid_ohlc_rows"] != 0
+            or sample["tick_nonconforming_values"] != 0
+        ):
+            raise ValueError(
+                f"{symbol} source-validation evidence changed."
+            )
 
     if (
         market["expected_one_minute_bars"] != 390
@@ -446,9 +685,12 @@ def validate_exp005_preregistration(
 
     if market[
         "roll_switch_inside_session"
-    ] != "EXCLUDE_SESSION":
+    ] != (
+        "POTENTIAL_SWITCH_OR_MISMATCH_SESSION_EXCLUDED"
+    ):
         raise ValueError(
-            "Intraday roll switches must be excluded."
+            "Potential front-month mismatch sessions must "
+            "be excluded."
         )
 
     split = current[

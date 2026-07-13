@@ -17,6 +17,26 @@ from experiment_lifecycle import (
 
 
 class LifecycleRegistryTests(unittest.TestCase):
+    def test_exp005_lifecycle_mentions_free_source(
+        self,
+    ) -> None:
+        record = get_experiment_lifecycle(
+            "EXP-005"
+        )
+
+        self.assertIn(
+            "Lucid/Rithmic",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "2019-05-06",
+            record.next_action,
+        )
+        self.assertIn(
+            "unexported",
+            record.next_action,
+        )
+
     def test_registry_is_valid_and_unique(
         self,
     ) -> None:

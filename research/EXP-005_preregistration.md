@@ -3,10 +3,12 @@
 ## NQ/MNQ 5-Minute ORB Locked Transfer
 
 **Status:** PRE_REGISTERED  
-**Locked:** 2026-07-13  
+**Originally locked:** 2026-07-13  
+**Source amendment:** EXP-005-A1, locked 2026-07-13  
 **Implementation:** Not implemented  
-**NQ/MNQ research data downloaded:** No  
-**NQ/MNQ results viewed:** None
+**Full quick-transfer data exported:** No  
+**Source-validation samples inspected:** Yes  
+**Strategy results viewed:** None
 
 EXP-005 is a no-optimization transfer test. It asks whether the
 exact fixed basic ORB from EXP-004 behaves differently on
@@ -45,51 +47,96 @@ tracks the same Nasdaq-100 futures exposure. It tests whether the
 smaller contract remains viable after its different per-contract
 cost burden.
 
-## 3. Historical data convention
+## 3. Amended free historical source
+
+The original Databento source was replaced before any complete
+research-period export or strategy result was viewed.
 
 ```text
-Provider: Databento
-Dataset: GLBX.MDP3
-Input schema: ohlcv-1m
-Input symbol type: continuous
-NQ symbol: NQ.v.0
-MNQ symbol: MNQ.v.0
-Roll rule: volume-ranked front contract
-Price adjustment: none
-Five-minute bars: aggregated from one-minute bars
+Provider: Lucid Trading / Rithmic
+Export application: Quantower History Exporter
+Additional data cost: $0
+Input format: Time-Time one-minute CSV
+NQ symbol: NQ — provider-managed front month
+MNQ symbol: MNQ — provider-managed front month
+CSV timestamps: parsed as UTC
+Five-minute bars: aggregated locally from one-minute bars
 ```
 
-Continuous prices remain the original unadjusted contract prices.
-Any session in which the mapped contract changes during the
-09:30–16:00 ET test window is excluded.
+The exact provider rollover trigger and any historical price
+adjustment method are not exposed by the CSV export. EXP-005
+therefore makes no volume-roll, calendar-roll, adjusted-price or
+unadjusted-price claim.
 
-## 4. Session rules
+This uncertainty is limited by the strategy design: every range,
+signal, entry and exit occurs within the same 09:30–16:00 ET cash
+session. Previous closes, overnight gaps, cross-session returns
+and overnight positions are not used.
+
+For a session to be included, NQ and MNQ must have identical cash
+minute timestamps. A session is excluded from both symbols as a
+potential front-month mismatch or data anomaly when either:
+
+```text
+Median absolute NQ–MNQ one-minute close difference > 5 points
+Maximum absolute NQ–MNQ one-minute close difference > 20 points
+```
+
+Zero potential mismatch sessions may be included.
+
+The full amendment is recorded in:
+
+```text
+research/EXP-005_source_amendment.md
+```
+
+## 4. Source-validation evidence
+
+A single normal session, 9 August 2019, was exported for each
+provider front-month symbol solely to establish data availability,
+timestamp interpretation and file quality.
+
+| Check | NQ | MNQ |
+|---|---:|---:|
+| Raw one-minute rows | 1,305 | 1,300 |
+| 09:30–16:00 ET rows | 390 | 390 |
+| Five-minute bars | 78 | 78 |
+| Missing cash minutes | 0 | 0 |
+| Duplicate timestamps | 0 | 0 |
+| Invalid OHLC rows | 0 | 0 |
+| Tick violations | 0 | 0 |
+
+No ORB trades, returns, Profit Factors, parameter comparisons or
+pass/fail decisions were calculated from these samples.
+
+## 5. Session rules
 
 - ORB anchor: 09:30 New York cash-equity open
 - Included window: 09:30–16:00 ET
-- Required input: exactly 390 one-minute bars
-- Required output: exactly 78 five-minute bars
+- Required input: exactly 390 one-minute bars per symbol
+- Required output: exactly 78 five-minute bars per symbol
 - Early closes: excluded
 - Incomplete sessions: excluded
 - Missing-bar filling: prohibited
 - Duplicate timestamps: stop
-- Intraday roll switch: exclude the session
-- Included invalid or roll-switch sessions: zero
+- Potential front-month mismatch: exclude from both symbols
+- Included invalid or mismatch sessions: zero
+- Raw files are immutable after import
 
-Futures data outside the cash window may be used only to identify
-the session-opening gap or contract mapping. No overnight signal
-or position is allowed.
+Raw exports may contain surrounding futures bars, but only the
+locked cash-session window enters the research data.
 
-## 5. Protected research periods
+## 6. Protected research periods
 
 | Stage | Period | Access |
 |---|---|---|
 | Quick transfer | 2019-05-06 through 2022-12-30 | First |
 | Confirmation | 2023-01-03 through 2025-12-31 | Locked until quick pass |
 
-The start date is the MNQ launch date.
+The start date remains the MNQ launch date. The source amendment
+does not alter either period.
 
-## 6. Contract and cost assumptions
+## 7. Contract and cost assumptions
 
 ### NQ
 
@@ -115,27 +162,21 @@ Total modeled cost: $1.50 per side
 Round trip: $3.00
 ```
 
-Results are reported on a one-contract basis. Profit Factor is the
-primary scale-independent comparison. Capital percentage return
-is not a pass/fail gate because whole-contract notional exposure
-changes with the index level and account size.
+These assumptions and every decision gate remain unchanged.
 
-Cost sensitivity at zero, one and two ticks of slippage per side
-must be reported. The one-tick case is the decision model.
-
-## 7. Session-aware MCPT
+## 8. Session-aware MCPT
 
 EXP-005 uses the same economic randomization principle as EXP-004,
-but begins with one-minute futures bars:
+beginning with one-minute futures bars:
 
 - Relative OHLC components are permuted across complete sessions
   inside each one-minute time slot.
-- Session-opening gaps are permuted separately.
+- Session-opening components are permuted separately.
 - Synthetic one-minute sessions are reconstructed.
-- Synthetic data is then aggregated to five-minute bars.
+- Synthetic data is aggregated to five-minute bars.
 - Time-of-day distributions and session boundaries are preserved.
-- There is no parameter optimization on real or permuted data.
-- Numbered deterministic seeds are required.
+- No parameter optimization occurs on real or permuted data.
+- Deterministic numbered seeds are required.
 - Serial and multicore results must match exactly.
 
 ```text
@@ -144,7 +185,7 @@ Quick MCPT: 25 NQ permutations
 Full MCPT: 1,000 NQ permutations
 ```
 
-## 8. Quick-transfer gates
+## 9. Quick-transfer gates
 
 All gates must pass:
 
@@ -159,13 +200,11 @@ All gates must pass:
 | NQ long trades | At least 150 |
 | NQ short trades | At least 150 |
 | Included invalid sessions | 0 |
-| Included intraday roll-switch sessions | 0 |
+| Included front-month mismatch sessions | 0 |
 
 A failure rejects EXP-005 without exposing 2023–2025.
 
-A complete pass permits one protected confirmation run.
-
-## 9. Full-validation gates
+## 10. Full-validation gates
 
 All gates must pass:
 
@@ -179,19 +218,20 @@ All gates must pass:
 | NQ completed trades | At least 500 |
 | Profitable NQ calendar years | At least 2 |
 | Included invalid sessions | 0 |
-| Included intraday roll-switch sessions | 0 |
+| Included front-month mismatch sessions | 0 |
 
 A pass advances to review rather than directly to paper testing.
 
-## 10. Interpretation limits
+## 11. Interpretation limits
 
 - A rejection applies only to the unchanged basic ORB.
 - It does not reject more structured ORB variants.
-- A pass would support transfer of this exact rule set only.
-- NQ and MNQ are not counted as two independent confirmations.
+- A pass supports this exact rule set only.
+- NQ and MNQ are not independent confirmations.
+- The provider roll and adjustment methods remain unknown.
 - No result may be used to change EXP-005 after disclosure.
 
-Structured ORB research is documented separately in:
+Structured ORB research remains separate in:
 
 ```text
 research/ORB_structured_variant_roadmap.md

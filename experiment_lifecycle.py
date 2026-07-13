@@ -209,18 +209,19 @@ EXPERIMENT_LIFECYCLE: dict[
         stage="PRE_REGISTERED",
         stage_reason=(
             "EXP-005 is a no-optimization cross-market transfer "
-            "test. The signal rules, transfer periods, continuous-"
-            "contract roll convention, cost assumptions, session-"
-            "aware permutation method and pass/fail gates were "
-            "locked before NQ or MNQ research data was downloaded "
-            "or inspected."
+            "test. Source amendment EXP-005-A1 replaced the paid "
+            "source with zero-additional-cost Lucid/Rithmic "
+            "front-month CSV exports before the complete quick "
+            "period was exported or strategy results were viewed. "
+            "Signal rules, periods, costs, MCPT and gates remain "
+            "unchanged."
         ),
         next_action=(
-            "Set up a Databento historical-data key, estimate the "
-            "request cost, and implement the protected quick "
-            "transfer workflow using only 2019-05-06 through "
-            "2022-12-30. Keep the 2023–2025 confirmation period "
-            "locked unless every quick-transfer gate passes."
+            "Implement the protected Quantower CSV importer and "
+            "then export only NQ and MNQ front-month history for "
+            "2019-05-06 through 2022-12-30. Keep 2023–2025 "
+            "unexported and locked unless every quick-transfer "
+            "gate passes."
         ),
         market_name="NQ / MNQ futures",
         timeframe="5 minutes",

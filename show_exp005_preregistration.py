@@ -4,10 +4,14 @@ from exp005_preregistration import (
     get_exp005_preregistration,
     validate_exp005_preregistration,
 )
+from exp005_source_amendment import (
+    validate_exp005_source_amendment,
+)
 
 
 def main() -> None:
     validate_exp005_preregistration()
+    validate_exp005_source_amendment()
     record = get_exp005_preregistration()
 
     print()
@@ -17,7 +21,11 @@ def main() -> None:
         f"Status: {record['research_status']}"
     )
     print(
-        "Transfer: unchanged EXP-004 fixed rules"
+        "Amendment: EXP-005-A1 — free source locked"
+    )
+    print(
+        "Strategy results viewed: "
+        f"{record['results_viewed']}"
     )
     print(
         "Primary evidence: "
@@ -42,8 +50,8 @@ def main() -> None:
         print(f"{name}: {value}")
 
     print()
-    print("Data")
-    print("----")
+    print("Amended free data source")
+    print("------------------------")
     market = record["market_and_data"]
     print(
         f"Provider: {market['data_provider']}"
@@ -57,9 +65,38 @@ def main() -> None:
         f"{market['symbols']['MNQ']}"
     )
     print(
+        "Symbol type: "
+        f"{market['input_symbol_type']}"
+    )
+    print(
+        "Additional data cost: "
+        f"${market['additional_data_cost']:.2f}"
+    )
+    print(
         "Roll rule: "
         f"{market['continuous_roll_rule']}"
     )
+    print(
+        "Adjustment: "
+        f"{market['price_adjustment']}"
+    )
+
+    print()
+    print("Source-validation samples")
+    print("-------------------------")
+
+    samples = market[
+        "source_validation_samples"
+    ]
+
+    for symbol in ("NQ", "MNQ"):
+        sample = samples[symbol]
+        print(
+            f"{symbol}: "
+            f"{sample['cash_session_rows']} one-minute bars, "
+            f"{sample['five_minute_bars']} five-minute bars, "
+            f"{sample['missing_cash_minutes']} missing"
+        )
 
     print()
     print("Protected periods")
@@ -81,17 +118,19 @@ def main() -> None:
     print("Next action")
     print("-----------")
     print(
-        "Set up Databento, estimate the historical request "
-        "cost, then build the protected quick-transfer "
-        "downloader and runner. Do not download or expose "
-        "the confirmation period."
+        "Build the protected Quantower CSV importer, then "
+        "export only the 2019–2022 NQ and MNQ front-month "
+        "quick period. Do not export 2023–2025."
     )
 
     print()
-    print("Full document")
-    print("-------------")
+    print("Documents")
+    print("---------")
     print(
         "research/EXP-005_preregistration.md"
+    )
+    print(
+        "research/EXP-005_source_amendment.md"
     )
 
 

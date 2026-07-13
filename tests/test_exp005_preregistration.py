@@ -48,7 +48,7 @@ class Exp005PreregistrationTests(
             1,
         )
 
-    def test_nq_is_primary_and_mnq_is_not_independent(
+    def test_free_rithmic_source_is_locked(
         self,
     ) -> None:
         market = get_exp005_preregistration()[
@@ -56,44 +56,113 @@ class Exp005PreregistrationTests(
         ]
 
         self.assertEqual(
-            market["primary_evidence_market"],
-            "NQ",
+            market["data_provider"],
+            (
+                "Lucid Trading / Rithmic via Quantower "
+                "History Exporter"
+            ),
         )
         self.assertEqual(
-            market["secondary_cost_market"],
-            "MNQ",
+            market["additional_data_cost"],
+            0.0,
         )
-        self.assertFalse(
-            market[
-                "secondary_is_independent_evidence"
-            ]
-        )
-
-    def test_continuous_roll_and_confirmation_lock(
-        self,
-    ) -> None:
-        record = get_exp005_preregistration()
-        market = record["market_and_data"]
-        split = record["research_split"]
-
         self.assertEqual(
             market["symbols"],
             {
-                "NQ": "NQ.v.0",
-                "MNQ": "MNQ.v.0",
+                "NQ": "NQ",
+                "MNQ": "MNQ",
             },
         )
         self.assertEqual(
-            market["continuous_roll_rule"],
-            "volume-ranked front contract",
+            market["input_symbol_type"],
+            "provider_front_month",
         )
+
+    def test_roll_and_adjustment_are_not_overclaimed(
+        self,
+    ) -> None:
+        market = get_exp005_preregistration()[
+            "market_and_data"
+        ]
+
+        self.assertIn(
+            "not exposed",
+            market["continuous_roll_rule"],
+        )
+        self.assertIn(
+            "unknown",
+            market["price_adjustment"],
+        )
+        self.assertEqual(
+            market["roll_observability"],
+            "INDIRECT_ONLY",
+        )
+
+    def test_source_samples_are_not_results(
+        self,
+    ) -> None:
+        record = get_exp005_preregistration()
+        samples = record[
+            "market_and_data"
+        ]["source_validation_samples"]
+
+        self.assertEqual(
+            record["results_viewed"],
+            "NONE",
+        )
+        self.assertTrue(
+            record[
+                "source_validation_samples_viewed"
+            ]
+        )
+        self.assertFalse(
+            samples["research_results_calculated"]
+        )
+
+        for symbol in ("NQ", "MNQ"):
+            self.assertEqual(
+                samples[symbol][
+                    "cash_session_rows"
+                ],
+                390,
+            )
+            self.assertEqual(
+                samples[symbol][
+                    "five_minute_bars"
+                ],
+                78,
+            )
+
+    def test_confirmation_lock_is_unchanged(
+        self,
+    ) -> None:
+        record = get_exp005_preregistration()
+        split = record["research_split"]
+        acquisition = record[
+            "market_and_data"
+        ]["data_acquisition"]
+
         self.assertEqual(
             split["quick_transfer_start"],
             "2019-05-06",
         )
         self.assertEqual(
+            split["quick_transfer_end"],
+            "2022-12-30",
+        )
+        self.assertEqual(
             split["confirmation_access"],
             "LOCKED_UNTIL_QUICK_PASS",
+        )
+        self.assertTrue(
+            acquisition[
+                "confirmation_export_prohibited"
+            ]
+        )
+        self.assertFalse(
+            acquisition[
+                "full_quick_export_completed"
+            ]
         )
 
     def test_contract_costs_are_consistent(
@@ -120,7 +189,7 @@ class Exp005PreregistrationTests(
             3.0,
         )
 
-    def test_human_preregistration_and_roadmap_exist(
+    def test_human_documents_exist(
         self,
     ) -> None:
         root = Path(
@@ -132,7 +201,11 @@ class Exp005PreregistrationTests(
             / "research"
             / "EXP-005_preregistration.md"
         )
-
+        amendment = (
+            root
+            / "research"
+            / "EXP-005_source_amendment.md"
+        )
         roadmap = (
             root
             / "research"
@@ -143,6 +216,9 @@ class Exp005PreregistrationTests(
             preregistration.exists()
         )
         self.assertTrue(
+            amendment.exists()
+        )
+        self.assertTrue(
             roadmap.exists()
         )
 
@@ -151,15 +227,11 @@ class Exp005PreregistrationTests(
         )
 
         self.assertIn(
-            "no-optimization transfer test",
+            "Lucid Trading / Rithmic",
             content,
         )
         self.assertIn(
-            "NQ.v.0",
-            content,
-        )
-        self.assertIn(
-            "MNQ.v.0",
+            "Strategy results viewed:** None",
             content,
         )
 
