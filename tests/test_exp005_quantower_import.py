@@ -181,6 +181,105 @@ class Exp005QuantowerImportTests(
                 sha256_file(path),
             )
 
+
+def test_identical_duplicates_inside_one_file_are_removed(
+    self,
+) -> None:
+    with tempfile.TemporaryDirectory() as temp:
+        path = Path(temp) / "NQ.csv"
+        index = make_full_session(
+            date(2019, 8, 9)
+        )
+
+        write_quantower_csv(
+            path,
+            index,
+        )
+
+        raw = pd.read_csv(
+            path,
+            sep=";",
+        )
+
+        raw = pd.concat(
+            [
+                raw,
+                raw.iloc[[125]],
+            ],
+            ignore_index=True,
+        )
+
+        raw.to_csv(
+            path,
+            sep=";",
+            index=False,
+        )
+
+        frame, record = read_quantower_csv(
+            path,
+            symbol="NQ",
+        )
+
+        self.assertEqual(
+            len(frame),
+            390,
+        )
+        self.assertEqual(
+            record.duplicate_rows_removed,
+            1,
+        )
+        self.assertFalse(
+            frame.index.has_duplicates
+        )
+
+def test_conflicting_duplicates_inside_one_file_are_rejected(
+    self,
+) -> None:
+    with tempfile.TemporaryDirectory() as temp:
+        path = Path(temp) / "NQ.csv"
+        index = make_full_session(
+            date(2019, 8, 9)
+        )
+
+        write_quantower_csv(
+            path,
+            index,
+        )
+
+        raw = pd.read_csv(
+            path,
+            sep=";",
+        )
+
+        conflicting = raw.iloc[[125]].copy()
+        conflicting.loc[
+            conflicting.index[0],
+            "Close",
+        ] += 0.25
+
+        raw = pd.concat(
+            [
+                raw,
+                conflicting,
+            ],
+            ignore_index=True,
+        )
+
+        raw.to_csv(
+            path,
+            sep=";",
+            index=False,
+        )
+
+        with self.assertRaisesRegex(
+            QuantowerImportError,
+            "conflicting duplicate timestamp",
+        ):
+            read_quantower_csv(
+                path,
+                symbol="NQ",
+            )
+
     def test_bad_one_minute_interval_is_rejected(
         self,
     ) -> None:

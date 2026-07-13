@@ -98,6 +98,7 @@ class RawFileRecord:
     rows: int
     first_timestamp_utc: str
     last_timestamp_utc: str
+    duplicate_rows_removed: int = 0
     archived_path: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -274,6 +275,78 @@ def _validate_ohlcv(
         )
 
 
+def _deduplicate_identical_timestamp_rows(
+    frame: pd.DataFrame,
+    *,
+    path: Path,
+    symbol: str,
+) -> tuple[pd.DataFrame, int]:
+    if not frame.index.has_duplicates:
+        return frame, 0
+
+    columns = [
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+    ]
+
+    pieces: list[pd.DataFrame] = []
+    removed = 0
+
+    for timestamp, group in frame.groupby(
+        level=0,
+        sort=True,
+    ):
+        if len(group) == 1:
+            pieces.append(group)
+            continue
+
+        values = group[columns].astype(float).to_numpy()
+        reference = np.repeat(
+            values[[0]],
+            repeats=len(values),
+            axis=0,
+        )
+
+        if not np.allclose(
+            values,
+            reference,
+            atol=1e-12,
+            rtol=0.0,
+        ):
+            preview = (
+                group[columns]
+                .head(4)
+                .to_dict(orient="records")
+            )
+
+            raise QuantowerImportError(
+                f"{path.name} contains conflicting duplicate "
+                f"timestamp {timestamp.isoformat()} for "
+                f"{symbol}. The duplicate bars have different "
+                f"OHLCV values: {preview}"
+            )
+
+        pieces.append(
+            group.iloc[[0]]
+        )
+        removed += len(group) - 1
+
+    deduplicated = pd.concat(
+        pieces,
+        axis=0,
+    ).sort_index()
+
+    if deduplicated.index.has_duplicates:
+        raise QuantowerImportError(
+            f"{path.name} duplicate cleanup failed."
+        )
+
+    return deduplicated, removed
+
+
 def read_quantower_csv(
     path: Path,
     *,
@@ -368,10 +441,13 @@ def read_quantower_csv(
 
     numeric.index.name = "timestamp"
 
-    if numeric.index.has_duplicates:
-        raise QuantowerImportError(
-            f"{path.name} contains duplicate timestamps."
+    numeric, duplicate_rows_removed = (
+        _deduplicate_identical_timestamp_rows(
+            numeric,
+            path=path,
+            symbol=normalized_symbol,
         )
+    )
 
     if not numeric.index.is_monotonic_increasing:
         numeric = numeric.sort_index()
@@ -393,6 +469,9 @@ def read_quantower_csv(
         ),
         last_timestamp_utc=(
             numeric.index[-1].isoformat()
+        ),
+        duplicate_rows_removed=(
+            duplicate_rows_removed
         ),
     )
 
@@ -1438,6 +1517,18 @@ def build_processed_dataset(
         ),
         "mnq_overlap_rows_deduplicated": (
             mnq_import.duplicate_overlap_rows_removed
+        ),
+        "nq_within_file_rows_deduplicated": int(
+            sum(
+                record.duplicate_rows_removed
+                for record in nq_import.files
+            )
+        ),
+        "mnq_within_file_rows_deduplicated": int(
+            sum(
+                record.duplicate_rows_removed
+                for record in mnq_import.files
+            )
         ),
         "potential_front_month_mismatch_sessions_excluded": int(
             (
