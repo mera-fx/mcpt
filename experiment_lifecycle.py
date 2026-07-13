@@ -173,15 +173,17 @@ EXPERIMENT_LIFECYCLE: dict[
         ),
         stage="PRE_REGISTERED",
         stage_reason=(
-            "The QQQ opening-range hypothesis, session rules, "
-            "parameter grid, data split, session-aware permutation "
-            "method and pass/fail gates were locked before data "
-            "download, strategy implementation or result inspection."
+            "The QQQ opening-range hypothesis and all research "
+            "rules were locked before implementation. The historical "
+            "SIP downloader, session-aware ORB engine and protected "
+            "in-sample quick-screen workflow are now implemented; "
+            "no EXP-004 result has been viewed."
         ),
         next_action=(
-            "Build the historical QQQ SIP downloader and the "
-            "session-aware ORB engine. Run only the protected "
-            "in-sample quick screen before any OOS result is exposed."
+            "Commit the implementation, configure Alpaca market-data "
+            "credentials, download only the locked 2019–2022 "
+            "in-sample SIP bars, then run the protected quick screen "
+            "exactly once. Do not expose OOS results."
         ),
         market_name="QQQ ETF",
         timeframe="5 minutes",

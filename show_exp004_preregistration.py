@@ -74,8 +74,10 @@ def main() -> None:
     print("Next action")
     print("-----------")
     print(
-        "Build the QQQ SIP downloader and session-aware "
-        "ORB engine. Do not expose OOS results."
+        "Configure Alpaca credentials, download only the "
+        "locked in-sample SIP bars, then run the protected "
+        "EXP-004 quick screen exactly once. Do not expose "
+        "OOS results."
     )
 
     print()

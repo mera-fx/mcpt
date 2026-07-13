@@ -21,7 +21,18 @@ def assert_full_research_allowed(
     config: ResearchConfig,
     lifecycle: ExperimentLifecycle,
 ) -> None:
-    """Prevent premature or unprotected EXP-003 OOS disclosure."""
+    """Protect experiment-specific research disclosure rules."""
+
+    if config.experiment_id == "EXP-004":
+        raise RuntimeError(
+            "EXP-004 uses a session-aware intraday research engine. "
+            "Direct use of run_research_lab.py is blocked while its "
+            f"lifecycle stage is {lifecycle.stage}. Download only "
+            "the locked in-sample data with "
+            "download_exp004_qqq_is_data.py, then run "
+            "run_exp004_quick_screen.py. OOS access requires a "
+            "separate protected full-validation workflow."
+        )
 
     if config.experiment_id != "EXP-003":
         return

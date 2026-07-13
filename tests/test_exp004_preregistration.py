@@ -83,7 +83,7 @@ class Exp004PreregistrationTests(
             method,
         )
 
-    def test_human_document_and_no_implementation(
+    def test_human_document_and_implementation_record(
         self,
     ) -> None:
         root = Path(
@@ -102,11 +102,20 @@ class Exp004PreregistrationTests(
             / "exp_004.py"
         )
 
+        implementation_record = (
+            root
+            / "research"
+            / "EXP-004_implementation_record.md"
+        )
+
         self.assertTrue(
             document.exists()
         )
-        self.assertFalse(
+        self.assertTrue(
             implementation.exists()
+        )
+        self.assertTrue(
+            implementation_record.exists()
         )
 
         content = document.read_text(
@@ -120,6 +129,17 @@ class Exp004PreregistrationTests(
         self.assertIn(
             "QQQ-only discovery",
             content,
+        )
+
+        record_content = (
+            implementation_record.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        self.assertIn(
+            "Out-of-sample access:** Prohibited",
+            record_content,
         )
 
 
