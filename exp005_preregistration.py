@@ -16,7 +16,7 @@ EXP005_PREREGISTRATION: dict[str, Any] = {
     ),
     "locked_date": "2026-07-13",
     "research_status": "PRE_REGISTERED",
-    "implementation_status": "NOT_IMPLEMENTED",
+    "implementation_status": "DATA_IMPORTER_IMPLEMENTED",
     "results_viewed": "NONE",
     "source_validation_samples_viewed": True,
     "source_amendment": {
@@ -137,7 +137,15 @@ EXP005_PREREGISTRATION: dict[str, Any] = {
             "aggregation": "Time - Time",
             "bar_size": "1 minute",
             "data_type": "trade/last",
-            "full_quick_export_completed": False,
+            "full_quick_export_completed_at_preregistration": False,
+            "protected_importer_implemented": True,
+            "protected_importer": (
+                "import_exp005_quantower_quick_data.py"
+            ),
+            "incoming_folders": {
+                "NQ": "data/EXP-005/incoming/NQ",
+                "MNQ": "data/EXP-005/incoming/MNQ",
+            },
             "confirmation_export_prohibited": True,
             "raw_files_are_immutable": True,
             "multiple_chunks_allowed": True,
@@ -445,9 +453,10 @@ def validate_exp005_preregistration(
 
     if current.get(
         "implementation_status"
-    ) != "NOT_IMPLEMENTED":
+    ) != "DATA_IMPORTER_IMPLEMENTED":
         raise ValueError(
-            "EXP-005 cannot be implemented in this update."
+            "EXP-005 protected data importer must be implemented "
+            "before the full quick-period export."
         )
 
     if current.get(
@@ -614,10 +623,24 @@ def validate_exp005_preregistration(
     ]
 
     if acquisition[
-        "full_quick_export_completed"
+        "full_quick_export_completed_at_preregistration"
     ] is not False:
         raise ValueError(
-            "Full EXP-005 quick data cannot be recorded yet."
+            "EXP-005 preregistration must precede full export."
+        )
+
+    if acquisition[
+        "protected_importer_implemented"
+    ] is not True:
+        raise ValueError(
+            "EXP-005 protected importer is missing."
+        )
+
+    if acquisition[
+        "protected_importer"
+    ] != "import_exp005_quantower_quick_data.py":
+        raise ValueError(
+            "EXP-005 protected importer identity changed."
         )
 
     if acquisition[

@@ -217,11 +217,11 @@ EXPERIMENT_LIFECYCLE: dict[
             "unchanged."
         ),
         next_action=(
-            "Implement the protected Quantower CSV importer and "
-            "then export only NQ and MNQ front-month history for "
-            "2019-05-06 through 2022-12-30. Keep 2023–2025 "
-            "unexported and locked unless every quick-transfer "
-            "gate passes."
+            "Commit the protected Quantower CSV importer, then "
+            "export NQ and MNQ front-month history once for "
+            "2019-05-06 through 2022-12-30 and run the importer. "
+            "Keep 2023–2025 unexported and locked unless every "
+            "quick-transfer gate passes."
         ),
         market_name="NQ / MNQ futures",
         timeframe="5 minutes",

@@ -47,6 +47,10 @@ class Exp005PreregistrationTests(
             ]["parameter_combinations"],
             1,
         )
+        self.assertEqual(
+            record["implementation_status"],
+            "DATA_IMPORTER_IMPLEMENTED",
+        )
 
     def test_free_rithmic_source_is_locked(
         self,
@@ -161,8 +165,19 @@ class Exp005PreregistrationTests(
         )
         self.assertFalse(
             acquisition[
-                "full_quick_export_completed"
+                "full_quick_export_completed_at_preregistration"
             ]
+        )
+        self.assertTrue(
+            acquisition[
+                "protected_importer_implemented"
+            ]
+        )
+        self.assertEqual(
+            acquisition[
+                "protected_importer"
+            ],
+            "import_exp005_quantower_quick_data.py",
         )
 
     def test_contract_costs_are_consistent(

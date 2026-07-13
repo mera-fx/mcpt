@@ -5,8 +5,8 @@
 **Status:** PRE_REGISTERED  
 **Originally locked:** 2026-07-13  
 **Source amendment:** EXP-005-A1, locked 2026-07-13  
-**Implementation:** Not implemented  
-**Full quick-transfer data exported:** No  
+**Implementation:** Protected data importer implemented  
+**Full quick-transfer data exported at this implementation commit:** No  
 **Source-validation samples inspected:** Yes  
 **Strategy results viewed:** None
 
@@ -108,6 +108,28 @@ timestamp interpretation and file quality.
 
 No ORB trades, returns, Profit Factors, parameter comparisons or
 pass/fail decisions were calculated from these samples.
+
+
+## Protected importer
+
+The protected importer is implemented before the complete research
+period is exported:
+
+```text
+prepare_exp005_quantower_import.py
+import_exp005_quantower_quick_data.py
+exp005_quantower_import.py
+```
+
+It accepts one full export per symbol or multiple overlapping chunks,
+archives exact raw bytes by SHA-256, rejects confirmation-period rows,
+uses the already-validated QQQ full-session list, requires all expected
+full sessions to be present in both symbols, validates exactly 390
+cash-session minutes, checks NQ/MNQ alignment and aggregates locally to
+78 five-minute bars.
+
+It calculates no ORB trades, performance statistics or pass/fail
+decision.
 
 ## 5. Session rules
 

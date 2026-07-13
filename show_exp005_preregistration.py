@@ -39,6 +39,10 @@ def main() -> None:
         "Optimization enabled: "
         f"{record['optimization']['enabled']}"
     )
+    print(
+        "Implementation: "
+        f"{record['implementation_status']}"
+    )
 
     print()
     print("Fixed signal")
@@ -118,9 +122,9 @@ def main() -> None:
     print("Next action")
     print("-----------")
     print(
-        "Build the protected Quantower CSV importer, then "
-        "export only the 2019–2022 NQ and MNQ front-month "
-        "quick period. Do not export 2023–2025."
+        "Commit the protected importer, prepare the incoming "
+        "folders, then export NQ and MNQ once for 2019-05-06 "
+        "through 2022-12-30. Do not export 2023–2025."
     )
 
     print()
