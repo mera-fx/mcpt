@@ -16,6 +16,7 @@ from exp005_confirmation_import import (
     CONFIRMATION_END,
     CONFIRMATION_START,
     INCOMING_ROOT,
+    RECHECK_ROOT,
     PROCESSED_ROOT,
     RESULTS_ROOT,
     build_confirmation_dataset,
@@ -183,6 +184,17 @@ def csvs(
     )
 
 
+def recheck_csvs(
+    symbol: str,
+) -> list[Path]:
+    return sorted(
+        (RECHECK_ROOT / symbol).glob(
+            "*.csv"
+        ),
+        key=lambda item: item.name.lower(),
+    )
+
+
 def validate_stage() -> None:
     lifecycle = get_experiment_lifecycle(
         "EXP-005"
@@ -314,6 +326,12 @@ def main() -> None:
 
     nq_paths = csvs("NQ")
     mnq_paths = csvs("MNQ")
+    nq_recheck_paths = recheck_csvs(
+        "NQ"
+    )
+    mnq_recheck_paths = recheck_csvs(
+        "MNQ"
+    )
 
     print()
     print(
@@ -337,6 +355,14 @@ def main() -> None:
     )
     print(f"NQ files:     {len(nq_paths)}")
     print(f"MNQ files:    {len(mnq_paths)}")
+    print(
+        "NQ rechecks:  "
+        f"{len(nq_recheck_paths)}"
+    )
+    print(
+        "MNQ rechecks: "
+        f"{len(mnq_recheck_paths)}"
+    )
     print(f"Git commit:   {git['short_commit']}")
     print()
 
@@ -346,10 +372,22 @@ def main() -> None:
             "in the confirmation incoming folders."
         )
 
+    if (
+        len(nq_recheck_paths) != 1
+        or len(mnq_recheck_paths) != 1
+    ):
+        raise FileNotFoundError(
+            "Place exactly one locked 2024-11-06 "
+            "recheck CSV in each confirmation recheck "
+            "folder."
+        )
+
     try:
         processed = build_confirmation_dataset(
             nq_paths=nq_paths,
             mnq_paths=mnq_paths,
+            nq_recheck_paths=nq_recheck_paths,
+            mnq_recheck_paths=mnq_recheck_paths,
             archive_files=True,
         )
     except base.IncompleteExportError as error:

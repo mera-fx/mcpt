@@ -7,9 +7,14 @@ import hashlib
 from pathlib import Path
 from typing import Any, Iterable, Iterator
 
+import numpy as np
 import pandas as pd
 
 import exp005_quantower_import as base
+from exp005_confirmation_recheck_resolution import (
+    get_exp005_confirmation_recheck_resolution,
+    validate_exp005_confirmation_recheck_resolution,
+)
 from exp005_quick_transfer_result import (
     EXPECTED_FILE_SHA256 as QUICK_RESULT_SHA256,
     verify_local_quick_transfer_decision,
@@ -26,6 +31,7 @@ CONFIRMATION_ROOT = (
     / "confirmation"
 )
 INCOMING_ROOT = CONFIRMATION_ROOT / "incoming"
+RECHECK_ROOT = CONFIRMATION_ROOT / "recheck"
 RAW_ROOT = CONFIRMATION_ROOT / "raw"
 PROCESSED_ROOT = CONFIRMATION_ROOT / "processed"
 RESULTS_ROOT = (
@@ -211,6 +217,227 @@ def confirmation_period_context(
         base._cash_only = old_cash_only
 
 
+
+def load_confirmation_recheck_corrections(
+    paths: Iterable[Path],
+    *,
+    symbol: str,
+) -> tuple[
+    pd.DataFrame,
+    tuple[base.RawFileRecord, ...],
+]:
+    validate_exp005_confirmation_recheck_resolution()
+    normalized_symbol = symbol.strip().upper()
+
+    if normalized_symbol not in {"NQ", "MNQ"}:
+        raise base.QuantowerImportError(
+            "Confirmation rechecks accept only NQ or MNQ."
+        )
+
+    record = (
+        get_exp005_confirmation_recheck_resolution()
+    )
+    expected = record[
+        "recheck_files"
+    ][normalized_symbol]
+
+    path_list = sorted(
+        {
+            Path(path).resolve()
+            for path in paths
+        },
+        key=lambda item: str(item).lower(),
+    )
+
+    if len(path_list) != len(expected):
+        raise base.QuantowerImportError(
+            f"{normalized_symbol} requires exactly "
+            f"{len(expected)} locked confirmation "
+            "recheck CSV file."
+        )
+
+    expected_hashes = {
+        item["sha256"]: item
+        for item in expected.values()
+    }
+    seen_hashes: set[str] = set()
+    rows: list[pd.DataFrame] = []
+    records: list[
+        base.RawFileRecord
+    ] = []
+
+    for path in path_list:
+        digest = base.sha256_file(
+            path
+        )
+
+        if digest not in expected_hashes:
+            raise base.QuantowerImportError(
+                f"Unexpected {normalized_symbol} confirmation "
+                f"recheck file hash: {path.name}."
+            )
+
+        if digest in seen_hashes:
+            raise base.QuantowerImportError(
+                f"Duplicate {normalized_symbol} confirmation "
+                "recheck file."
+            )
+
+        frame, file_record = base.read_quantower_csv(
+            path,
+            symbol=normalized_symbol,
+            source_role=(
+                "CONFIRMATION_RECHECK_CORRECTION"
+            ),
+        )
+        specification = expected_hashes[
+            digest
+        ]
+
+        if frame.index.has_duplicates:
+            raise base.QuantowerImportError(
+                f"{path.name} contains confirmation "
+                "recheck duplicates."
+            )
+
+        if len(frame) != specification[
+            "raw_rows"
+        ]:
+            raise base.QuantowerImportError(
+                f"{path.name} confirmation recheck row "
+                "count changed."
+            )
+
+        if frame.index.nunique() != specification[
+            "unique_timestamps"
+        ]:
+            raise base.QuantowerImportError(
+                f"{path.name} confirmation recheck unique "
+                "timestamp count changed."
+            )
+
+        if (
+            frame.index[0].isoformat()
+            != specification["first_timestamp_utc"]
+            or frame.index[-1].isoformat()
+            != specification["last_timestamp_utc"]
+        ):
+            raise base.QuantowerImportError(
+                f"{path.name} confirmation recheck "
+                "boundaries changed."
+            )
+
+        expected_full_index = pd.date_range(
+            start=pd.Timestamp(
+                specification["first_timestamp_utc"]
+            ),
+            end=pd.Timestamp(
+                specification["last_timestamp_utc"]
+            ),
+            freq="1min",
+        )
+        missing = expected_full_index.difference(
+            frame.index
+        )
+        expected_missing = pd.date_range(
+            start=pd.Timestamp(
+                specification[
+                    "expected_missing_start_utc"
+                ]
+            ),
+            end=pd.Timestamp(
+                specification[
+                    "expected_missing_end_utc"
+                ]
+            ),
+            freq="1min",
+        )
+
+        if (
+            len(missing)
+            != specification[
+                "expected_missing_minutes"
+            ]
+            or not missing.equals(
+                expected_missing
+            )
+        ):
+            raise base.QuantowerImportError(
+                f"{path.name} confirmation recheck missing "
+                "minute profile changed."
+            )
+
+        timestamp = pd.Timestamp(
+            specification["timestamp_utc"]
+        )
+        expected_bar = specification[
+            "bar"
+        ]
+
+        if timestamp not in frame.index:
+            raise base.QuantowerImportError(
+                f"{path.name} is missing its locked "
+                f"confirmation correction timestamp "
+                f"{timestamp}."
+            )
+
+        actual = frame.loc[
+            [timestamp],
+            [
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+            ],
+        ].astype(float)
+        expected_values = np.array(
+            [
+                expected_bar["open"],
+                expected_bar["high"],
+                expected_bar["low"],
+                expected_bar["close"],
+                expected_bar["volume"],
+            ],
+            dtype=float,
+        )
+
+        if not np.allclose(
+            actual.to_numpy()[0],
+            expected_values,
+            atol=1e-12,
+            rtol=0.0,
+        ):
+            raise base.QuantowerImportError(
+                f"{path.name} confirmation correction "
+                "bar changed."
+            )
+
+        rows.append(actual)
+        records.append(file_record)
+        seen_hashes.add(digest)
+
+    if seen_hashes != set(
+        expected_hashes
+    ):
+        raise base.QuantowerImportError(
+            f"{normalized_symbol} confirmation recheck "
+            "set is incomplete."
+        )
+
+    corrections = pd.concat(
+        rows,
+        axis=0,
+    ).sort_index()
+
+    if corrections.index.has_duplicates:
+        raise base.QuantowerImportError(
+            f"{normalized_symbol} confirmation correction "
+            "timestamps are duplicated."
+        )
+
+    return corrections, tuple(records)
+
 def _combine_exclusions(
     frames: Iterable[pd.DataFrame],
 ) -> pd.DataFrame:
@@ -241,6 +468,8 @@ def build_confirmation_dataset(
     *,
     nq_paths: Iterable[Path],
     mnq_paths: Iterable[Path],
+    nq_recheck_paths: Iterable[Path],
+    mnq_recheck_paths: Iterable[Path],
     archive_files: bool = True,
 ) -> base.ProcessedDataset:
     verify_local_quick_transfer_decision()
@@ -249,13 +478,30 @@ def build_confirmation_dataset(
     )
 
     with confirmation_period_context():
+        (
+            nq_corrections,
+            nq_recheck_records,
+        ) = load_confirmation_recheck_corrections(
+            nq_recheck_paths,
+            symbol="NQ",
+        )
+        (
+            mnq_corrections,
+            mnq_recheck_records,
+        ) = load_confirmation_recheck_corrections(
+            mnq_recheck_paths,
+            symbol="MNQ",
+        )
+
         nq_import = base.load_symbol_chunks(
             nq_paths,
             symbol="NQ",
+            corrections=nq_corrections,
         )
         mnq_import = base.load_symbol_chunks(
             mnq_paths,
             symbol="MNQ",
+            corrections=mnq_corrections,
         )
 
         nq = base.extract_complete_sessions(
@@ -319,6 +565,60 @@ def build_confirmation_dataset(
             symbol="MNQ",
         )
 
+
+    expected_duplicate_profile = {
+        "NQ": {
+            "within_file_rows_removed": 100,
+            "non_research_conflicting_rows_removed": 73,
+            "research_volume_only_conflicts_resolved": 26,
+            "research_ohlc_conflicts_resolved_by_recheck": 1,
+        },
+        "MNQ": {
+            "within_file_rows_removed": 100,
+            "non_research_conflicting_rows_removed": 73,
+            "research_volume_only_conflicts_resolved": 26,
+            "research_ohlc_conflicts_resolved_by_recheck": 1,
+        },
+    }
+
+    for symbol, imported in (
+        ("NQ", nq_import),
+        ("MNQ", mnq_import),
+    ):
+        observed = {
+            "within_file_rows_removed": int(
+                sum(
+                    item.duplicate_rows_removed
+                    for item in imported.files
+                )
+            ),
+            "non_research_conflicting_rows_removed": int(
+                sum(
+                    item.non_research_conflicting_duplicate_rows_removed
+                    for item in imported.files
+                )
+            ),
+            "research_volume_only_conflicts_resolved": int(
+                sum(
+                    item.research_volume_only_conflicts_resolved
+                    for item in imported.files
+                )
+            ),
+            "research_ohlc_conflicts_resolved_by_recheck": int(
+                sum(
+                    item.research_ohlc_conflicts_resolved_by_recheck
+                    for item in imported.files
+                )
+            ),
+        }
+
+        if observed != expected_duplicate_profile[
+            symbol
+        ]:
+            raise base.QuantowerImportError(
+                f"{symbol} confirmation duplicate profile "
+                f"changed. Observed: {observed}."
+            )
     if not aligned.nq_1m.index.equals(
         aligned.mnq_1m.index
     ):
@@ -338,6 +638,8 @@ def build_confirmation_dataset(
     original_records = (
         *nq_import.files,
         *mnq_import.files,
+        *nq_recheck_records,
+        *mnq_recheck_records,
     )
 
     manifest = (
@@ -433,6 +735,15 @@ def build_confirmation_dataset(
         "mnq_source_files": len(
             mnq_import.files
         ),
+        "nq_confirmation_recheck_files": len(
+            nq_recheck_records
+        ),
+        "mnq_confirmation_recheck_files": len(
+            mnq_recheck_records
+        ),
+        "confirmation_recheck_record_id": (
+            "EXP-005-DQ3"
+        ),
         "nq_overlap_rows_deduplicated": int(
             nq_import.duplicate_overlap_rows_removed
         ),
@@ -460,6 +771,30 @@ def build_confirmation_dataset(
         "mnq_research_volume_only_conflicts_resolved": int(
             sum(
                 item.research_volume_only_conflicts_resolved
+                for item in mnq_import.files
+            )
+        ),
+        "nq_research_ohlc_conflicts_resolved_by_recheck": int(
+            sum(
+                item.research_ohlc_conflicts_resolved_by_recheck
+                for item in nq_import.files
+            )
+        ),
+        "mnq_research_ohlc_conflicts_resolved_by_recheck": int(
+            sum(
+                item.research_ohlc_conflicts_resolved_by_recheck
+                for item in mnq_import.files
+            )
+        ),
+        "nq_non_research_conflicting_duplicate_rows_removed": int(
+            sum(
+                item.non_research_conflicting_duplicate_rows_removed
+                for item in nq_import.files
+            )
+        ),
+        "mnq_non_research_conflicting_duplicate_rows_removed": int(
+            sum(
+                item.non_research_conflicting_duplicate_rows_removed
                 for item in mnq_import.files
             )
         ),
