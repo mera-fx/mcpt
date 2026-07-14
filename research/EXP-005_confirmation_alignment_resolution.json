@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "experiment_id": "EXP-005",
+  "record_id": "EXP-005-DQ5",
+  "locked_date": "2026-07-14",
+  "status": "LOCKED_BEFORE_FULL_VALIDATION_RESULTS",
+  "purpose": "Freeze the exact nine NQ/MNQ confirmation sessions excluded by the unchanged cross-symbol alignment safeguard. Three sessions show persistent full-session divergence and six show isolated price divergence above the locked maximum threshold. Both symbols are excluded together. No bar is repaired, filled, selected, or invented.",
+  "source_audit": {
+    "details_file": "results/EXP-005/confirmation_data/alignment_audit/potential_front_month_mismatch_sessions.csv",
+    "details_sha256": "deb9d23a2407c9fef4c98e5e28ba5ea1b08c618a4caffe37baa13c3be80b3cf9",
+    "summary_file": "results/EXP-005/confirmation_data/alignment_audit/potential_front_month_mismatch_summary.json",
+    "summary_sha256": "5d525a21634a1f3d4014587d99f576ca326924271ddd5de6488c6f3d50decc91",
+    "calculated_at_utc": "2026-07-14T14:17:49+00:00"
+  },
+  "protections": {
+    "quick_transfer_result_frozen": true,
+    "confirmation_strategy_results_calculated": false,
+    "full_validation_results_calculated": false,
+    "quick_transfer_rerun": false,
+    "source_files_modified": false,
+    "bars_synthesized": 0,
+    "strategy_rules_changed": false,
+    "costs_changed": false,
+    "gates_changed": false
+  },
+  "alignment_policy": {
+    "paired_session_exclusion": true,
+    "maximum_allowed_median_close_difference_points": 5.0,
+    "maximum_allowed_single_close_difference_points": 20.0,
+    "unrecorded_alignment_exclusion": "STOP",
+    "changed_alignment_metric": "STOP",
+    "repair_isolated_price_bar": false,
+    "overclaim_provider_roll_mechanism": false
+  },
+  "excluded_sessions": {
+    "2023-03-14": {
+      "category": "PERSISTENT_CROSS_SYMBOL_DIVERGENCE",
+      "median_close_difference": 132.25,
+      "maximum_close_difference": 135.0,
+      "maximum_difference_timestamp_utc": "2023-03-14T15:12:00+00:00",
+      "minutes_difference_over_5_points": 390,
+      "minutes_difference_over_20_points": 390
+    },
+    "2023-12-12": {
+      "category": "PERSISTENT_CROSS_SYMBOL_DIVERGENCE",
+      "median_close_difference": 211.25,
+      "maximum_close_difference": 213.25,
+      "maximum_difference_timestamp_utc": "2023-12-12T20:58:00+00:00",
+      "minutes_difference_over_5_points": 390,
+      "minutes_difference_over_20_points": 390
+    },
+    "2024-03-12": {
+      "category": "PERSISTENT_CROSS_SYMBOL_DIVERGENCE",
+      "median_close_difference": 247.5,
+      "maximum_close_difference": 250.0,
+      "maximum_difference_timestamp_utc": "2024-03-12T19:50:00+00:00",
+      "minutes_difference_over_5_points": 390,
+      "minutes_difference_over_20_points": 390
+    },
+    "2025-03-24": {
+      "category": "ISOLATED_CROSS_SYMBOL_PRICE_DIVERGENCE",
+      "median_close_difference": 0.25,
+      "maximum_close_difference": 29.75,
+      "maximum_difference_timestamp_utc": "2025-03-24T13:44:00+00:00",
+      "minutes_difference_over_5_points": 1,
+      "minutes_difference_over_20_points": 1
+    },
+    "2025-04-01": {
+      "category": "ISOLATED_CROSS_SYMBOL_PRICE_DIVERGENCE",
+      "median_close_difference": 0.25,
+      "maximum_close_difference": 31.25,
+      "maximum_difference_timestamp_utc": "2025-04-01T13:59:00+00:00",
+      "minutes_difference_over_5_points": 1,
+      "minutes_difference_over_20_points": 1
+    },
+    "2025-04-09": {
+      "category": "ISOLATED_CROSS_SYMBOL_PRICE_DIVERGENCE",
+      "median_close_difference": 0.75,
+      "maximum_close_difference": 27.75,
+      "maximum_difference_timestamp_utc": "2025-04-09T17:19:00+00:00",
+      "minutes_difference_over_5_points": 6,
+      "minutes_difference_over_20_points": 1
+    },
+    "2025-05-19": {
+      "category": "ISOLATED_CROSS_SYMBOL_PRICE_DIVERGENCE",
+      "median_close_difference": 0.25,
+      "maximum_close_difference": 30.25,
+      "maximum_difference_timestamp_utc": "2025-05-19T14:06:00+00:00",
+      "minutes_difference_over_5_points": 1,
+      "minutes_difference_over_20_points": 1
+    },
+    "2025-07-01": {
+      "category": "ISOLATED_CROSS_SYMBOL_PRICE_DIVERGENCE",
+      "median_close_difference": 0.25,
+      "maximum_close_difference": 32.75,
+      "maximum_difference_timestamp_utc": "2025-07-01T13:59:00+00:00",
+      "minutes_difference_over_5_points": 1,
+      "minutes_difference_over_20_points": 1
+    },
+    "2025-10-24": {
+      "category": "ISOLATED_CROSS_SYMBOL_PRICE_DIVERGENCE",
+      "median_close_difference": 0.25,
+      "maximum_close_difference": 30.75,
+      "maximum_difference_timestamp_utc": "2025-10-24T13:59:00+00:00",
+      "minutes_difference_over_5_points": 2,
+      "minutes_difference_over_20_points": 1
+    }
+  },
+  "result": {
+    "calendar_full_sessions": 744,
+    "provider_unavailable_sessions_excluded": 2,
+    "complete_retry_sessions_restored": 1,
+    "common_complete_sessions_before_alignment": 742,
+    "persistent_cross_symbol_divergence_sessions_excluded": 3,
+    "isolated_cross_symbol_divergence_sessions_excluded": 6,
+    "alignment_sessions_excluded": 9,
+    "expected_included_sessions": 733,
+    "expected_one_minute_rows_per_symbol": 285870,
+    "expected_five_minute_rows_per_symbol": 57174,
+    "included_invalid_sessions": 0,
+    "included_alignment_mismatch_sessions": 0,
+    "bars_synthesized": 0
+  },
+  "document": "research/EXP-005_confirmation_alignment_resolution.md"
+}

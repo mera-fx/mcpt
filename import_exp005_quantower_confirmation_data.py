@@ -283,15 +283,37 @@ def verify_existing_import() -> dict[str, Any]:
             "provider_complete_sessions_restored"
         ) != 1
         or audit.get(
-            "included_sessions"
-        ) != 742
-        or audit.get(
             "bars_synthesized"
         ) != 0
     ):
         raise RuntimeError(
             "Confirmation missing-session resolution "
             "fields changed."
+        )
+
+    if (
+        audit.get(
+            "confirmation_alignment_record_id"
+        ) != "EXP-005-DQ5"
+        or audit.get(
+            "potential_front_month_mismatch_sessions_excluded"
+        ) != 9
+        or audit.get(
+            "persistent_cross_symbol_divergence_sessions_excluded"
+        ) != 3
+        or audit.get(
+            "isolated_cross_symbol_divergence_sessions_excluded"
+        ) != 6
+        or audit.get(
+            "included_front_month_mismatch_sessions"
+        ) != 0
+        or audit.get(
+            "included_sessions"
+        ) != 733
+    ):
+        raise RuntimeError(
+            "Confirmation alignment resolution fields "
+            "changed."
         )
 
     for name, path in OUTPUT_FILES.items():

@@ -20,6 +20,10 @@ from exp005_confirmation_missing_session_resolution import (
     restore_locked_confirmation_session,
     validate_locked_confirmation_missing_sessions,
 )
+from exp005_confirmation_alignment_resolution import (
+    validate_exp005_confirmation_alignment_resolution,
+    validate_locked_confirmation_alignment_exclusions,
+)
 from exp005_quick_transfer_result import (
     EXPECTED_FILE_SHA256 as QUICK_RESULT_SHA256,
     verify_local_quick_transfer_decision,
@@ -56,7 +60,7 @@ CALENDAR_FILE = (
 )
 CALENDAR_SHA256 = "3ca50dfd41e9e069c4a848ca63845ebc9a308a19245da85fe669808c831867b2"
 EXPECTED_FULL_SESSIONS = 744
-EXPECTED_INCLUDED_SESSIONS = 742
+EXPECTED_INCLUDED_SESSIONS = 733
 EXPECTED_ONE_MINUTE_ROWS_PER_SYMBOL = (
     EXPECTED_INCLUDED_SESSIONS
     * base.EXPECTED_ONE_MINUTE_BARS
@@ -591,6 +595,13 @@ def build_confirmation_dataset(
             mnq,
         )
 
+        validate_exp005_confirmation_alignment_resolution()
+        locked_alignment_exclusions = (
+            validate_locked_confirmation_alignment_exclusions(
+                exclusions=aligned.excluded_mismatch_sessions,
+            )
+        )
+
         nq_5m = base.aggregate_to_five_minutes(
             aligned.nq_1m
         )
@@ -721,7 +732,7 @@ def build_confirmation_dataset(
             locked_missing_exclusions,
             nq.unexpected_sessions,
             mnq.unexpected_sessions,
-            aligned.excluded_mismatch_sessions,
+            locked_alignment_exclusions,
         )
     )
 
@@ -753,7 +764,7 @@ def build_confirmation_dataset(
 
     mismatch_excluded = int(
         len(
-            aligned.excluded_mismatch_sessions
+            locked_alignment_exclusions
         )
     )
 
@@ -836,6 +847,16 @@ def build_confirmation_dataset(
         ),
         "confirmation_missing_session_record_id": (
             "EXP-005-DQ4"
+        ),
+        "confirmation_alignment_record_id": (
+            "EXP-005-DQ5"
+        ),
+        "persistent_cross_symbol_divergence_sessions_excluded": 3,
+        "isolated_cross_symbol_divergence_sessions_excluded": 6,
+        "confirmation_alignment_exclusion_dates": (
+            locked_alignment_exclusions[
+                "session_date"
+            ].astype(str).tolist()
         ),
         "provider_unavailable_sessions_excluded": 2,
         "provider_complete_sessions_restored": 1,
