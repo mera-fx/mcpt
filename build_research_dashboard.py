@@ -539,6 +539,24 @@ def _experiment_section(
     )
 
     metrics = record["metrics"]
+    compact_drawdown_percent = safe_float(
+        metrics.get("max_drawdown_percent")
+    )
+    compact_drawdown_usd = safe_float(
+        metrics.get("max_drawdown_usd")
+    )
+
+    if not np.isnan(compact_drawdown_percent):
+        compact_drawdown_value = format_percent(
+            compact_drawdown_percent
+        )
+    elif not np.isnan(compact_drawdown_usd):
+        compact_drawdown_value = format_currency(
+            compact_drawdown_usd
+        )
+    else:
+        compact_drawdown_value = "—"
+
     compact_metrics = "".join(
         (
             _metric_card(
@@ -556,9 +574,7 @@ def _experiment_section(
             ),
             _metric_card(
                 "Max drawdown",
-                format_currency(
-                    metrics.get("max_drawdown_usd")
-                ),
+                compact_drawdown_value,
             ),
             _metric_card(
                 "Trades",
@@ -833,12 +849,18 @@ main {{
   scroll-margin-top: 82px;
   overflow: hidden;
 }}
+/* compact-layout-alignment-v1 */
 .experiment-summary {{
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(260px, 1.4fr) auto minmax(420px, 1fr);
+  grid-template-columns:
+    minmax(320px, 1.35fr)
+    minmax(390px, 1fr)
+    auto;
   gap: 18px;
   align-items: center;
-  padding: 16px 18px;
+  min-height: 94px;
+  padding: 14px 18px 14px 48px;
   cursor: pointer;
   list-style: none;
 }}
@@ -847,10 +869,13 @@ main {{
 }}
 .experiment-summary::before {{
   content: "▸";
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--accent);
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 900;
-  margin-right: -10px;
 }}
 .experiment-details[open] > .experiment-summary::before {{
   content: "▾";
@@ -858,34 +883,55 @@ main {{
 .experiment-summary:hover {{
   background: rgba(255,255,255,0.025);
 }}
+.summary-main {{
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}}
 .summary-main h2 {{
   margin: 2px 0;
-  font-size: 1.15rem;
+  font-size: 1.08rem;
 }}
 .summary-main .market-line {{
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }}
 .summary-side {{
+  grid-column: 3;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 7px;
+  gap: 6px;
 }}
 .artifact-count {{
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
 }}
 .compact-metrics {{
+  grid-column: 2;
+  grid-row: 1;
   display: grid;
-  grid-template-columns: repeat(4, minmax(95px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(4, minmax(82px, 1fr));
+  gap: 7px;
+  min-width: 0;
 }}
 .compact-metrics .metric-card {{
-  padding: 8px 10px;
+  min-width: 0;
+  padding: 7px 9px;
+  border-radius: 10px;
+}}
+.compact-metrics .metric-label {{
+  font-size: 0.67rem;
+  white-space: nowrap;
 }}
 .compact-metrics .metric-value {{
-  font-size: 0.95rem;
+  margin-top: 1px;
+  font-size: 0.9rem;
+  white-space: nowrap;
 }}
 .experiment-body {{
   border-top: 1px solid var(--line);
@@ -1105,12 +1151,25 @@ td code {{
   }}
   .experiment-summary {{
     grid-template-columns: 1fr;
+    gap: 10px;
+    min-height: 0;
+    padding: 14px 14px 14px 44px;
+  }}
+  .summary-main,
+  .compact-metrics,
+  .summary-side {{
+    grid-column: 1;
+    grid-row: auto;
+  }}
+  .summary-main .market-line {{
+    white-space: normal;
   }}
   .summary-side {{
     align-items: flex-start;
   }}
   .compact-metrics {{
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(105px, 1fr));
+    width: 100%;
   }}
   .search-panel {{
     align-items: stretch;
