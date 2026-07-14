@@ -416,6 +416,171 @@ def _artifact_card(
 """
 
 
+ARTIFACT_GROUP_ORDER = (
+    "Main reports",
+    "Decisions and lifecycle",
+    "Performance results",
+    "Data quality and audits",
+    "Research definitions",
+    "Charts and supporting files",
+)
+
+ARTIFACT_GROUP_DESCRIPTIONS = {
+    "Main reports": (
+        "Visual reports and dashboards intended for normal reading."
+    ),
+    "Decisions and lifecycle": (
+        "Frozen decisions, formal reviews and paper-testing records."
+    ),
+    "Performance results": (
+        "Summaries, trade ledgers, yearly results, cost tests and MCPT data."
+    ),
+    "Data quality and audits": (
+        "Import audits, duplicate checks, missing-session records and resolutions."
+    ),
+    "Research definitions": (
+        "Preregistrations, implementation records and explanatory research notes."
+    ),
+    "Charts and supporting files": (
+        "Charts, structured records and other supporting saved files."
+    ),
+}
+
+
+def artifact_group_name(
+    artifact: ResearchArtifact,
+) -> str:
+    category = artifact.category
+    searchable = (
+        artifact.project_relative_path.lower()
+        + " "
+        + artifact.label.lower()
+    )
+
+    if category == "Visual report":
+        return "Main reports"
+
+    if category in {
+        "Decision record",
+        "Review record",
+        "Paper-testing record",
+    }:
+        return "Decisions and lifecycle"
+
+    if category == "Data-quality record":
+        return "Data quality and audits"
+
+    if category in {
+        "Preregistration",
+        "Research note",
+    }:
+        return "Research definitions"
+
+    if category in {
+        "Trade ledger",
+        "Yearly results",
+        "Cost sensitivity",
+        "Summary table",
+        "Results table",
+    }:
+        return "Performance results"
+
+    if any(
+        token in searchable
+        for token in (
+            "quick_transfer_result",
+            "full_validation_result",
+            "full_validation_decision",
+            "mcpt",
+            "equity_curve",
+            "yearly_results",
+            "cost_sensitivity",
+            "trade",
+            "summary",
+        )
+    ):
+        return "Performance results"
+
+    if any(
+        token in searchable
+        for token in (
+            "audit",
+            "duplicate",
+            "missing_session",
+            "recheck",
+            "resolution",
+            "alignment",
+            "import_audit",
+        )
+    ):
+        return "Data quality and audits"
+
+    return "Charts and supporting files"
+
+
+def _artifact_groups_html(
+    artifacts: list[ResearchArtifact],
+    *,
+    dashboard_directory: Path,
+    previews: dict[str, Path | None],
+) -> str:
+    grouped: dict[str, list[ResearchArtifact]] = {
+        name: []
+        for name in ARTIFACT_GROUP_ORDER
+    }
+
+    for artifact in artifacts:
+        grouped[artifact_group_name(artifact)].append(
+            artifact
+        )
+
+    sections: list[str] = []
+
+    for group_name in ARTIFACT_GROUP_ORDER:
+        group = grouped[group_name]
+        if not group:
+            continue
+
+        cards = "".join(
+            _artifact_card(
+                artifact,
+                dashboard_directory=dashboard_directory,
+                preview_file=previews.get(
+                    artifact.project_relative_path
+                ),
+            )
+            for artifact in group
+        )
+        group_search = " ".join(
+            (
+                group_name,
+                ARTIFACT_GROUP_DESCRIPTIONS[group_name],
+                *(
+                    artifact.project_relative_path
+                    for artifact in group
+                ),
+            )
+        ).lower()
+
+        sections.append(
+            f"""
+<details class="artifact-group"
+  data-search="{html.escape(group_search)}">
+  <summary class="artifact-group-summary">
+    <span>
+      <strong>{html.escape(group_name)}</strong>
+      <small>{html.escape(ARTIFACT_GROUP_DESCRIPTIONS[group_name])}</small>
+    </span>
+    <span class="group-count">{len(group):,}</span>
+  </summary>
+  <div class="artifact-grid">{cards}</div>
+</details>
+"""
+        )
+
+    return "".join(sections)
+
+
 def _record_metrics_html(
     record: dict[str, Any],
 ) -> str:
@@ -527,15 +692,10 @@ def _experiment_section(
         if value
     )
 
-    artifact_cards = "".join(
-        _artifact_card(
-            artifact,
-            dashboard_directory=dashboard_directory,
-            preview_file=previews.get(
-                artifact.project_relative_path
-            ),
-        )
-        for artifact in artifacts
+    artifact_groups = _artifact_groups_html(
+        artifacts,
+        dashboard_directory=dashboard_directory,
+        previews=previews,
     )
 
     metrics = record["metrics"]
@@ -644,7 +804,7 @@ def _experiment_section(
 
     <details class="artifact-details">
       <summary>Reports, decisions, audits and saved files</summary>
-      <div class="artifact-grid">{artifact_cards}</div>
+      <div class="artifact-groups">{artifact_groups}</div>
     </details>
   </div>
 </details>
@@ -1051,6 +1211,60 @@ summary {{
   font-weight: 800;
   margin-bottom: 14px;
 }}
+.artifact-groups {{
+  display: grid;
+  gap: 10px;
+}}
+.artifact-group {{
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  overflow: hidden;
+}}
+.artifact-group-summary {{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  margin: 0;
+  cursor: pointer;
+  list-style: none;
+}}
+.artifact-group-summary::-webkit-details-marker {{
+  display: none;
+}}
+.artifact-group-summary::before {{
+  content: "▸";
+  color: var(--accent);
+  font-weight: 900;
+  margin-right: -4px;
+}}
+.artifact-group[open] > .artifact-group-summary::before {{
+  content: "▾";
+}}
+.artifact-group-summary > span:first-of-type {{
+  display: grid;
+  gap: 2px;
+  flex: 1;
+}}
+.artifact-group-summary small {{
+  color: var(--muted);
+  font-weight: 400;
+}}
+.group-count {{
+  min-width: 34px;
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px 8px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}}
+.artifact-group > .artifact-grid {{
+  border-top: 1px solid var(--line);
+  padding: 12px;
+}}
 .artifact-grid {{
   display: grid;
   grid-template-columns: repeat(3, minmax(250px, 1fr));
@@ -1259,6 +1473,9 @@ const experimentDetails = Array.from(
 const artifactDetails = Array.from(
   document.querySelectorAll(".artifact-details")
 );
+const artifactGroups = Array.from(
+  document.querySelectorAll(".artifact-group")
+);
 const library = document.getElementById("all-files");
 
 document.getElementById("expand-all").addEventListener("click", () => {{
@@ -1266,6 +1483,9 @@ document.getElementById("expand-all").addEventListener("click", () => {{
     element.open = true;
   }});
   artifactDetails.forEach((element) => {{
+    element.open = true;
+  }});
+  artifactGroups.forEach((element) => {{
     element.open = true;
   }});
   library.open = true;
@@ -1276,6 +1496,9 @@ document.getElementById("collapse-all").addEventListener("click", () => {{
     element.open = false;
   }});
   artifactDetails.forEach((element) => {{
+    element.open = false;
+  }});
+  artifactGroups.forEach((element) => {{
     element.open = false;
   }});
   library.open = false;
@@ -1321,11 +1544,24 @@ input.addEventListener("input", () => {{
       if (fileDetails && hasVisibleArtifact) {{
         fileDetails.open = true;
       }}
+      experiment.querySelectorAll(".artifact-group").forEach((group) => {{
+        const groupHasVisibleArtifact = Boolean(
+          group.querySelector(".artifact-card:not(.hidden)")
+        );
+        group.classList.toggle(
+          "hidden",
+          !groupHasVisibleArtifact
+        );
+        group.open = groupHasVisibleArtifact;
+      }});
     }});
     library.open = true;
   }} else {{
     experimentDetails.forEach((experiment) => {{
       experiment.classList.remove("hidden");
+    }});
+    artifactGroups.forEach((group) => {{
+      group.classList.remove("hidden");
     }});
   }}
 }});

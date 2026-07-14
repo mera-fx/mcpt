@@ -763,6 +763,55 @@ def _generic_summary_metrics(
     }
 
 
+
+
+def _research_lab_report_metrics(
+    project_dir: Path,
+    experiment_id: str,
+) -> dict[str, Any]:
+    metadata_path = (
+        Path(project_dir)
+        / "reports"
+        / f"{experiment_id}-research-lab"
+        / "report_metadata.json"
+    )
+    payload = _read_json(metadata_path)
+
+    if not payload:
+        return {}
+
+    if payload.get("experiment_id") != experiment_id:
+        return {}
+
+    metrics = payload.get("primary_metrics")
+    if not isinstance(metrics, dict):
+        return {}
+
+    allowed = {
+        "primary_symbol",
+        "profit_factor",
+        "net_profit_usd",
+        "total_return_percent",
+        "win_rate_percent",
+        "max_drawdown_usd",
+        "max_drawdown_percent",
+        "total_trades",
+        "mcpt_p_value",
+        "result_decision",
+        "review_decision",
+        "drawdown_percent_note",
+    }
+
+    output = {
+        key: value
+        for key, value in metrics.items()
+        if key in allowed
+    }
+    output["metric_source"] = (
+        "Polished saved-results report"
+    )
+    return output
+
 def load_experiment_metrics(
     project_dir: Path,
     experiment_id: str,
@@ -786,6 +835,13 @@ def load_experiment_metrics(
 
     if full_metrics:
         metrics.update(full_metrics)
+
+    report_metrics = _research_lab_report_metrics(
+        project_dir,
+        experiment_id,
+    )
+    if report_metrics:
+        metrics.update(report_metrics)
 
     review_path = (
         project_dir
@@ -826,10 +882,13 @@ def load_experiment_metrics(
         )
     ):
         metrics["drawdown_percent_note"] = (
-            "Not defined: the futures test has no "
-            "locked starting-capital basis."
+            "Build the polished EXP-005 report to apply "
+            "the explicit starting-capital basis."
         )
     else:
-        metrics["drawdown_percent_note"] = ""
+        metrics.setdefault(
+            "drawdown_percent_note",
+            "",
+        )
 
     return metrics
