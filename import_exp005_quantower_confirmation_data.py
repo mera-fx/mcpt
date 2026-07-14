@@ -17,6 +17,7 @@ from exp005_confirmation_import import (
     CONFIRMATION_START,
     INCOMING_ROOT,
     RECHECK_ROOT,
+    SESSION_RETRY_ROOT,
     PROCESSED_ROOT,
     RESULTS_ROOT,
     build_confirmation_dataset,
@@ -195,6 +196,20 @@ def recheck_csvs(
     )
 
 
+def session_retry_csvs(
+    symbol: str,
+) -> list[Path]:
+    return sorted(
+        (
+            SESSION_RETRY_ROOT
+            / symbol
+        ).glob(
+            "*.csv"
+        ),
+        key=lambda item: item.name.lower(),
+    )
+
+
 def validate_stage() -> None:
     lifecycle = get_experiment_lifecycle(
         "EXP-005"
@@ -255,6 +270,28 @@ def verify_existing_import() -> dict[str, Any]:
     ) != CALENDAR_SHA256:
         raise RuntimeError(
             "Confirmation calendar fingerprint changed."
+        )
+
+    if (
+        audit.get(
+            "confirmation_missing_session_record_id"
+        ) != "EXP-005-DQ4"
+        or audit.get(
+            "provider_unavailable_sessions_excluded"
+        ) != 2
+        or audit.get(
+            "provider_complete_sessions_restored"
+        ) != 1
+        or audit.get(
+            "included_sessions"
+        ) != 742
+        or audit.get(
+            "bars_synthesized"
+        ) != 0
+    ):
+        raise RuntimeError(
+            "Confirmation missing-session resolution "
+            "fields changed."
         )
 
     for name, path in OUTPUT_FILES.items():
@@ -332,6 +369,16 @@ def main() -> None:
     mnq_recheck_paths = recheck_csvs(
         "MNQ"
     )
+    nq_session_retry_paths = (
+        session_retry_csvs(
+            "NQ"
+        )
+    )
+    mnq_session_retry_paths = (
+        session_retry_csvs(
+            "MNQ"
+        )
+    )
 
     print()
     print(
@@ -363,13 +410,26 @@ def main() -> None:
         "MNQ rechecks: "
         f"{len(mnq_recheck_paths)}"
     )
+    print(
+        "NQ session retries:  "
+        f"{len(nq_session_retry_paths)}"
+    )
+    print(
+        "MNQ session retries: "
+        f"{len(mnq_session_retry_paths)}"
+    )
     print(f"Git commit:   {git['short_commit']}")
     print()
 
-    if not nq_paths or not mnq_paths:
+    if (
+        len(nq_paths) != 1
+        or len(mnq_paths) != 1
+    ):
         raise FileNotFoundError(
-            "Place at least one NQ CSV and one MNQ CSV "
-            "in the confirmation incoming folders."
+            "Keep exactly one full confirmation export "
+            "in each incoming folder. Move the six locked "
+            "one-day session retries into the dedicated "
+            "session_retry folders."
         )
 
     if (
@@ -382,12 +442,28 @@ def main() -> None:
             "folder."
         )
 
+    if (
+        len(nq_session_retry_paths) != 3
+        or len(mnq_session_retry_paths) != 3
+    ):
+        raise FileNotFoundError(
+            "Place exactly three SHA-256-locked "
+            "confirmation session retry CSV files in "
+            "each session_retry folder."
+        )
+
     try:
         processed = build_confirmation_dataset(
             nq_paths=nq_paths,
             mnq_paths=mnq_paths,
             nq_recheck_paths=nq_recheck_paths,
             mnq_recheck_paths=mnq_recheck_paths,
+            nq_session_retry_paths=(
+                nq_session_retry_paths
+            ),
+            mnq_session_retry_paths=(
+                mnq_session_retry_paths
+            ),
             archive_files=True,
         )
     except base.IncompleteExportError as error:
@@ -481,6 +557,14 @@ def main() -> None:
     print(
         f"MNQ five-minute rows: "
         f"{audit['included_mnq_five_minute_rows']:,}"
+    )
+    print(
+        "Provider-unavailable sessions excluded: "
+        f"{audit['provider_unavailable_sessions_excluded']}"
+    )
+    print(
+        "Complete retry sessions restored: "
+        f"{audit['provider_complete_sessions_restored']}"
     )
     print(
         "Potential front-month mismatch sessions "

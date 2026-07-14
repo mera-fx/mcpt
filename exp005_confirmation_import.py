@@ -15,6 +15,11 @@ from exp005_confirmation_recheck_resolution import (
     get_exp005_confirmation_recheck_resolution,
     validate_exp005_confirmation_recheck_resolution,
 )
+from exp005_confirmation_missing_session_resolution import (
+    load_confirmation_session_retry_evidence,
+    restore_locked_confirmation_session,
+    validate_locked_confirmation_missing_sessions,
+)
 from exp005_quick_transfer_result import (
     EXPECTED_FILE_SHA256 as QUICK_RESULT_SHA256,
     verify_local_quick_transfer_decision,
@@ -32,6 +37,10 @@ CONFIRMATION_ROOT = (
 )
 INCOMING_ROOT = CONFIRMATION_ROOT / "incoming"
 RECHECK_ROOT = CONFIRMATION_ROOT / "recheck"
+SESSION_RETRY_ROOT = (
+    CONFIRMATION_ROOT
+    / "session_retry"
+)
 RAW_ROOT = CONFIRMATION_ROOT / "raw"
 PROCESSED_ROOT = CONFIRMATION_ROOT / "processed"
 RESULTS_ROOT = (
@@ -47,12 +56,13 @@ CALENDAR_FILE = (
 )
 CALENDAR_SHA256 = "3ca50dfd41e9e069c4a848ca63845ebc9a308a19245da85fe669808c831867b2"
 EXPECTED_FULL_SESSIONS = 744
+EXPECTED_INCLUDED_SESSIONS = 742
 EXPECTED_ONE_MINUTE_ROWS_PER_SYMBOL = (
-    EXPECTED_FULL_SESSIONS
+    EXPECTED_INCLUDED_SESSIONS
     * base.EXPECTED_ONE_MINUTE_BARS
 )
 EXPECTED_FIVE_MINUTE_ROWS_PER_SYMBOL = (
-    EXPECTED_FULL_SESSIONS
+    EXPECTED_INCLUDED_SESSIONS
     * base.EXPECTED_FIVE_MINUTE_BARS
 )
 
@@ -438,6 +448,25 @@ def load_confirmation_recheck_corrections(
 
     return corrections, tuple(records)
 
+def _without_session_dates(
+    frame: pd.DataFrame,
+    session_dates: set[str],
+) -> pd.DataFrame:
+    if frame.empty:
+        return frame.copy()
+
+    if "session_date" not in frame.columns:
+        return frame.copy()
+
+    return frame.loc[
+        ~frame[
+            "session_date"
+        ].astype(str).isin(
+            session_dates
+        )
+    ].copy()
+
+
 def _combine_exclusions(
     frames: Iterable[pd.DataFrame],
 ) -> pd.DataFrame:
@@ -470,6 +499,8 @@ def build_confirmation_dataset(
     mnq_paths: Iterable[Path],
     nq_recheck_paths: Iterable[Path],
     mnq_recheck_paths: Iterable[Path],
+    nq_session_retry_paths: Iterable[Path],
+    mnq_session_retry_paths: Iterable[Path],
     archive_files: bool = True,
 ) -> base.ProcessedDataset:
     verify_local_quick_transfer_decision()
@@ -493,6 +524,19 @@ def build_confirmation_dataset(
             symbol="MNQ",
         )
 
+        nq_session_retry = (
+            load_confirmation_session_retry_evidence(
+                nq_session_retry_paths,
+                symbol="NQ",
+            )
+        )
+        mnq_session_retry = (
+            load_confirmation_session_retry_evidence(
+                mnq_session_retry_paths,
+                symbol="MNQ",
+            )
+        )
+
         nq_import = base.load_symbol_chunks(
             nq_paths,
             symbol="NQ",
@@ -502,6 +546,21 @@ def build_confirmation_dataset(
             mnq_paths,
             symbol="MNQ",
             corrections=mnq_corrections,
+        )
+
+        (
+            nq_import,
+            nq_restored_original_bars,
+        ) = restore_locked_confirmation_session(
+            nq_import,
+            nq_session_retry,
+        )
+        (
+            mnq_import,
+            mnq_restored_original_bars,
+        ) = restore_locked_confirmation_session(
+            mnq_import,
+            mnq_session_retry,
         )
 
         nq = base.extract_complete_sessions(
@@ -521,20 +580,11 @@ def build_confirmation_dataset(
             )
         )
 
-        if not missing_expected.empty:
-            preview = ", ".join(
-                missing_expected[
-                    "session_date"
-                ].head(10)
+        locked_missing_exclusions = (
+            validate_locked_confirmation_missing_sessions(
+                missing_expected=missing_expected,
             )
-
-            raise base.IncompleteExportError(
-                "The full EXP-005 confirmation export is "
-                f"incomplete. {len(missing_expected)} expected "
-                "full sessions are missing from NQ, MNQ or both. "
-                f"First: {preview}.",
-                missing_sessions=missing_expected,
-            )
+        )
 
         aligned = base.align_nq_mnq(
             nq,
@@ -640,6 +690,8 @@ def build_confirmation_dataset(
         *mnq_import.files,
         *nq_recheck_records,
         *mnq_recheck_records,
+        *nq_session_retry.records,
+        *mnq_session_retry.records,
     )
 
     manifest = (
@@ -651,10 +703,22 @@ def build_confirmation_dataset(
         else tuple(original_records)
     )
 
+    locked_missing_dates = {
+        "2025-09-24",
+        "2025-11-07",
+    }
+
     excluded = _combine_exclusions(
         (
-            nq.incomplete_sessions,
-            mnq.incomplete_sessions,
+            _without_session_dates(
+                nq.incomplete_sessions,
+                locked_missing_dates,
+            ),
+            _without_session_dates(
+                mnq.incomplete_sessions,
+                locked_missing_dates,
+            ),
+            locked_missing_exclusions,
             nq.unexpected_sessions,
             mnq.unexpected_sessions,
             aligned.excluded_mismatch_sessions,
@@ -666,6 +730,26 @@ def build_confirmation_dataset(
             "session_date"
         ].nunique()
     )
+
+    if included_sessions != EXPECTED_INCLUDED_SESSIONS:
+        raise base.IncompleteExportError(
+            "EXP-005 confirmation included-session count "
+            f"changed: {included_sessions}."
+        )
+
+    if (
+        len(aligned.nq_1m)
+        != EXPECTED_ONE_MINUTE_ROWS_PER_SYMBOL
+        or len(aligned.mnq_1m)
+        != EXPECTED_ONE_MINUTE_ROWS_PER_SYMBOL
+        or len(nq_5m)
+        != EXPECTED_FIVE_MINUTE_ROWS_PER_SYMBOL
+        or len(mnq_5m)
+        != EXPECTED_FIVE_MINUTE_ROWS_PER_SYMBOL
+    ):
+        raise base.IncompleteExportError(
+            "EXP-005 confirmation processed row counts changed."
+        )
 
     mismatch_excluded = int(
         len(
@@ -743,6 +827,26 @@ def build_confirmation_dataset(
         ),
         "confirmation_recheck_record_id": (
             "EXP-005-DQ3"
+        ),
+        "nq_confirmation_session_retry_files": len(
+            nq_session_retry.records
+        ),
+        "mnq_confirmation_session_retry_files": len(
+            mnq_session_retry.records
+        ),
+        "confirmation_missing_session_record_id": (
+            "EXP-005-DQ4"
+        ),
+        "provider_unavailable_sessions_excluded": 2,
+        "provider_complete_sessions_restored": 1,
+        "restored_session_dates": [
+            "2025-12-31"
+        ],
+        "restored_original_nq_cash_bars": (
+            nq_restored_original_bars
+        ),
+        "restored_original_mnq_cash_bars": (
+            mnq_restored_original_bars
         ),
         "nq_overlap_rows_deduplicated": int(
             nq_import.duplicate_overlap_rows_removed
