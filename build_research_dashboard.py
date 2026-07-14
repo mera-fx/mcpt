@@ -538,10 +538,53 @@ def _experiment_section(
         for artifact in artifacts
     )
 
+    metrics = record["metrics"]
+    compact_metrics = "".join(
+        (
+            _metric_card(
+                "Profit factor",
+                format_number(
+                    metrics.get("profit_factor"),
+                    3,
+                ),
+            ),
+            _metric_card(
+                "Win rate",
+                format_percent(
+                    metrics.get("win_rate_percent")
+                ),
+            ),
+            _metric_card(
+                "Max drawdown",
+                format_currency(
+                    metrics.get("max_drawdown_usd")
+                ),
+            ),
+            _metric_card(
+                "Trades",
+                format_integer(
+                    metrics.get("total_trades")
+                ),
+            ),
+        )
+    )
+    experiment_search = " ".join(
+        (
+            experiment_id,
+            record["experiment_name"],
+            record["market_name"],
+            record["timeframe"],
+            record["strategy_name"],
+            record["status_label"],
+        )
+    ).lower()
+
     return f"""
-<section class="experiment-section" id="{html.escape(experiment_id.lower())}">
-  <div class="experiment-header">
-    <div>
+<details class="experiment-section experiment-details"
+  id="{html.escape(experiment_id.lower())}"
+  data-search="{html.escape(experiment_search)}">
+  <summary class="experiment-summary">
+    <div class="summary-main">
       <div class="experiment-id">{html.escape(experiment_id)}</div>
       <h2>{html.escape(record["experiment_name"])}</h2>
       <p class="market-line">
@@ -550,37 +593,45 @@ def _experiment_section(
         · {html.escape(record["strategy_name"])}
       </p>
     </div>
-    <span class="stage {status_class(record["status"])}">
-      {html.escape(record["status_label"])}
-    </span>
-  </div>
-
-  <p>{html.escape(record["hypothesis"])}</p>
-
-  <div class="decision-row">{decision_badges}</div>
-  <div class="metrics-grid">{_record_metrics_html(record)}</div>
-
-  <div class="lifecycle-grid">
-    <div>
-      <h3>Why it is at this stage</h3>
-      <p>{html.escape(record["stage_reason"])}</p>
+    <div class="summary-side">
+      <span class="stage {status_class(record["status"])}">
+        {html.escape(record["status_label"])}
+      </span>
+      <span class="artifact-count">
+        {len(artifacts):,} files
+      </span>
     </div>
-    <div>
-      <h3>Next action</h3>
-      <p>{html.escape(record["next_action"])}</p>
+    <div class="compact-metrics">{compact_metrics}</div>
+  </summary>
+
+  <div class="experiment-body">
+    <p>{html.escape(record["hypothesis"])}</p>
+
+    <div class="decision-row">{decision_badges}</div>
+    <div class="metrics-grid">{_record_metrics_html(record)}</div>
+
+    <div class="lifecycle-grid">
+      <div>
+        <h3>Why it is at this stage</h3>
+        <p>{html.escape(record["stage_reason"])}</p>
+      </div>
+      <div>
+        <h3>Next action</h3>
+        <p>{html.escape(record["next_action"])}</p>
+      </div>
     </div>
-  </div>
 
-  <div class="section-actions">
-    {primary_button}
-    <span>{len(artifacts):,} linked artifacts</span>
-  </div>
+    <div class="section-actions">
+      {primary_button}
+      <span>{len(artifacts):,} linked artifacts</span>
+    </div>
 
-  <details open>
-    <summary>Reports, decisions, audits and saved files</summary>
-    <div class="artifact-grid">{artifact_cards}</div>
-  </details>
-</section>
+    <details class="artifact-details">
+      <summary>Reports, decisions, audits and saved files</summary>
+      <div class="artifact-grid">{artifact_cards}</div>
+    </details>
+  </div>
+</details>
 """
 
 
@@ -749,26 +800,96 @@ main {{
 .stat span {{ color: var(--muted); }}
 .search-panel {{
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  margin: 22px 0;
+  margin: 18px 0;
 }}
 .search-panel input {{
   width: 100%;
   border: 1px solid var(--line);
   background: var(--panel);
   color: var(--text);
-  padding: 13px 15px;
-  border-radius: 12px;
+  padding: 11px 13px;
+  border-radius: 11px;
   font: inherit;
+}}
+.search-panel button {{
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+}}
+.search-panel button:hover {{
+  border-color: var(--accent);
 }}
 .experiment-section {{
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 22px;
-  padding: 24px;
-  margin: 22px 0;
+  border-radius: 18px;
+  margin: 12px 0;
   scroll-margin-top: 82px;
+  overflow: hidden;
+}}
+.experiment-summary {{
+  display: grid;
+  grid-template-columns: minmax(260px, 1.4fr) auto minmax(420px, 1fr);
+  gap: 18px;
+  align-items: center;
+  padding: 16px 18px;
+  cursor: pointer;
+  list-style: none;
+}}
+.experiment-summary::-webkit-details-marker {{
+  display: none;
+}}
+.experiment-summary::before {{
+  content: "▸";
+  color: var(--accent);
+  font-size: 1.15rem;
+  font-weight: 900;
+  margin-right: -10px;
+}}
+.experiment-details[open] > .experiment-summary::before {{
+  content: "▾";
+}}
+.experiment-summary:hover {{
+  background: rgba(255,255,255,0.025);
+}}
+.summary-main h2 {{
+  margin: 2px 0;
+  font-size: 1.15rem;
+}}
+.summary-main .market-line {{
+  margin: 0;
+  font-size: 0.82rem;
+}}
+.summary-side {{
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+}}
+.artifact-count {{
+  color: var(--muted);
+  font-size: 0.78rem;
+}}
+.compact-metrics {{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(95px, 1fr));
+  gap: 8px;
+}}
+.compact-metrics .metric-card {{
+  padding: 8px 10px;
+}}
+.compact-metrics .metric-value {{
+  font-size: 0.95rem;
+}}
+.experiment-body {{
+  border-top: 1px solid var(--line);
+  padding: 20px;
 }}
 .experiment-header {{
   display: flex;
@@ -923,8 +1044,19 @@ summary {{
 .library {{
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 22px;
-  padding: 22px;
+  border-radius: 18px;
+  overflow: hidden;
+  margin-top: 18px;
+}}
+.library > summary {{
+  cursor: pointer;
+  font-size: 1.05rem;
+  font-weight: 800;
+  padding: 16px 18px;
+}}
+.library-body {{
+  border-top: 1px solid var(--line);
+  padding: 18px;
   overflow: auto;
 }}
 table {{
@@ -971,6 +1103,19 @@ td code {{
   .artifact-grid {{
     grid-template-columns: 1fr;
   }}
+  .experiment-summary {{
+    grid-template-columns: 1fr;
+  }}
+  .summary-side {{
+    align-items: flex-start;
+  }}
+  .compact-metrics {{
+    grid-template-columns: repeat(2, 1fr);
+  }}
+  .search-panel {{
+    align-items: stretch;
+    flex-direction: column;
+  }}
   .experiment-header {{
     flex-direction: column;
   }}
@@ -1008,31 +1153,38 @@ td code {{
 <div class="search-panel">
   <input id="artifact-search" type="search"
     placeholder="Search reports, decisions, audits, trades, experiment IDs...">
+  <button id="expand-all" type="button">Expand all</button>
+  <button id="collapse-all" type="button">Collapse all</button>
 </div>
 
 {sections}
 
-<section class="library" id="all-files">
-  <h2>Complete report and research library</h2>
-  <p class="footer-note">
-    The dashboard scans the reports, results and research folders.
-    Raw market-data folders are intentionally excluded.
-  </p>
-  <table>
-    <thead>
-      <tr>
-        <th>Experiment</th>
-        <th>Type</th>
-        <th>Name</th>
-        <th>Location</th>
-        <th>Open</th>
-      </tr>
-    </thead>
-    <tbody>
-      {''.join(artifact_rows)}
-    </tbody>
-  </table>
-</section>
+<details class="library" id="all-files">
+  <summary>
+    Complete report and research library
+    ({total_artifacts:,} files)
+  </summary>
+  <div class="library-body">
+    <p class="footer-note">
+      The dashboard scans the reports, results and research folders.
+      Raw market-data folders are intentionally excluded.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Experiment</th>
+          <th>Type</th>
+          <th>Name</th>
+          <th>Location</th>
+          <th>Open</th>
+        </tr>
+      </thead>
+      <tbody>
+        {''.join(artifact_rows)}
+      </tbody>
+    </table>
+  </div>
+</details>
 
 <p class="footer-note">
   Generated from saved local files. No strategy, MCPT, optimization,
@@ -1042,12 +1194,81 @@ td code {{
 
 <script>
 const input = document.getElementById("artifact-search");
+const experimentDetails = Array.from(
+  document.querySelectorAll(".experiment-details")
+);
+const artifactDetails = Array.from(
+  document.querySelectorAll(".artifact-details")
+);
+const library = document.getElementById("all-files");
+
+document.getElementById("expand-all").addEventListener("click", () => {{
+  experimentDetails.forEach((element) => {{
+    element.open = true;
+  }});
+  artifactDetails.forEach((element) => {{
+    element.open = true;
+  }});
+  library.open = true;
+}});
+
+document.getElementById("collapse-all").addEventListener("click", () => {{
+  experimentDetails.forEach((element) => {{
+    element.open = false;
+  }});
+  artifactDetails.forEach((element) => {{
+    element.open = false;
+  }});
+  library.open = false;
+}});
+
+function openHashTarget() {{
+  if (!window.location.hash) {{
+    return;
+  }}
+  const target = document.querySelector(window.location.hash);
+  if (target && target.tagName === "DETAILS") {{
+    target.open = true;
+  }}
+}}
+
+window.addEventListener("hashchange", openHashTarget);
+openHashTarget();
+
 input.addEventListener("input", () => {{
   const query = input.value.trim().toLowerCase();
+
   document.querySelectorAll("[data-search]").forEach((element) => {{
     const visible = !query || element.dataset.search.includes(query);
     element.classList.toggle("hidden", !visible);
   }});
+
+  if (query) {{
+    experimentDetails.forEach((experiment) => {{
+      const hasVisibleArtifact = Boolean(
+        experiment.querySelector(".artifact-card:not(.hidden)")
+      );
+      const experimentMatches = (
+        experiment.dataset.search || ""
+      ).includes(query);
+      experiment.classList.toggle(
+        "hidden",
+        !(hasVisibleArtifact || experimentMatches)
+      );
+      if (hasVisibleArtifact || experimentMatches) {{
+        experiment.open = true;
+      }}
+      const fileDetails = experiment.querySelector(".artifact-details");
+      if (fileDetails && hasVisibleArtifact) {{
+        fileDetails.open = true;
+      }}
+    }});
+    library.open = true;
+  }} else {{
+    experimentDetails.forEach((experiment) => {{
+      experiment.classList.remove("hidden");
+    }});
+  }}
 }});
 </script>
 </body>
