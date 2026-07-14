@@ -206,22 +206,22 @@ EXPERIMENT_LIFECYCLE: dict[
             "transfer from QQQ to Nasdaq-100 futures and remain "
             "profitable after contract-specific futures costs."
         ),
-        stage="PRE_REGISTERED",
+        stage="FULL_VALIDATION",
         stage_reason=(
-            "EXP-005 is a no-optimization cross-market transfer "
-            "test. Source amendment EXP-005-A1 replaced the paid "
-            "source with zero-additional-cost Lucid/Rithmic "
-            "front-month CSV exports before the complete quick "
-            "period was exported or strategy results were viewed. "
-            "Signal rules, periods, costs, MCPT and gates remain "
-            "unchanged."
+            "The protected 2019–2022 quick transfer passed all ten "
+            "locked gates. NQ Profit Factor was 1.1340, MNQ Profit "
+            "Factor was 1.1202, NQ net profit was $94,660.00, MNQ "
+            "net profit was $8,549.50, and the 25-permutation NQ "
+            "MCPT p-value was 0.076923. No optimization was performed, "
+            "zero invalid or roll-switch sessions were included, and "
+            "the 2023–2025 confirmation period was not accessed."
         ),
         next_action=(
-            "Commit the protected Quantower CSV importer, then "
-            "export NQ and MNQ front-month history once for "
-            "2019-05-06 through 2022-12-30 and run the importer. "
-            "Keep 2023–2025 unexported and locked unless every "
-            "quick-transfer gate passes."
+            "Freeze the quick-transfer result, export NQ and MNQ "
+            "provider-front-month one-minute data once for 2023-01-03 "
+            "through 2025-12-31, run the protected confirmation "
+            "importer, then execute the preregistered full validation "
+            "with 1,000 NQ permutations. Do not rerun the quick transfer."
         ),
         market_name="NQ / MNQ futures",
         timeframe="5 minutes",

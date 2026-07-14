@@ -17,7 +17,7 @@ from experiment_lifecycle import (
 
 
 class LifecycleRegistryTests(unittest.TestCase):
-    def test_exp005_lifecycle_mentions_free_source(
+    def test_exp005_lifecycle_records_quick_pass(
         self,
     ) -> None:
         record = get_experiment_lifecycle(
@@ -25,15 +25,17 @@ class LifecycleRegistryTests(unittest.TestCase):
         )
 
         self.assertIn(
-            "Lucid/Rithmic",
+            "quick transfer passed",
             record.stage_reason,
         )
+
         self.assertIn(
-            "2019-05-06",
+            "2023-01-03",
             record.next_action,
         )
+
         self.assertIn(
-            "unexported",
+            "1,000 NQ permutations",
             record.next_action,
         )
 
@@ -107,7 +109,7 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.next_action,
         )
 
-    def test_exp005_is_preregistered(
+    def test_exp005_is_in_full_validation(
         self,
     ) -> None:
         record = get_experiment_lifecycle(
@@ -116,7 +118,7 @@ class LifecycleRegistryTests(unittest.TestCase):
 
         self.assertEqual(
             record.stage,
-            "PRE_REGISTERED",
+            "FULL_VALIDATION",
         )
 
         self.assertEqual(

@@ -43,13 +43,13 @@ def main() -> None:
     print("-------------------------")
     print(
         "EXP-003 continues automatic paper testing. "
-        "EXP-004 is preserved as a rejected QQQ basic-ORB "
-        "result with OOS still locked. EXP-005 is "
-        "preregistered as a no-optimization NQ/MNQ transfer, "
-        "and its protected zero-cost Quantower CSV importer "
-        "is implemented before the complete quick-period "
-        "export. Structured ORB optimization remains a "
-        "separate future research path."
+        "EXP-004 remains a rejected QQQ basic-ORB result. "
+        "EXP-005 passed its protected 2019–2022 NQ/MNQ "
+        "quick transfer with no optimization and has advanced "
+        "to full validation. The 2023–2025 confirmation data "
+        "may now be exported once and imported through the "
+        "protected confirmation workflow. Structured ORB "
+        "optimization remains a separate future path."
     )
 
 
