@@ -7,7 +7,6 @@ import os
 from pathlib import Path
 from typing import Any
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -17,6 +16,14 @@ from experiment_lifecycle import (
     get_experiment_lifecycle,
     list_experiment_lifecycles,
 )
+from research_dashboard_library import (
+    ResearchArtifact,
+    build_artifact_preview,
+    choose_primary_report,
+    discover_artifacts,
+    load_experiment_metrics,
+    relative_link,
+)
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -25,11 +32,11 @@ PROJECT_DIR = Path(__file__).resolve().parent
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
-            "Build a visual dashboard covering all configured "
-            "research experiments."
+            "Build one local research hub containing "
+            "every experiment report, decision, audit "
+            "and saved result file."
         )
     )
-
     parser.add_argument(
         "--open",
         action="store_true",
@@ -38,14 +45,12 @@ def parse_arguments() -> argparse.Namespace:
             "Supported on Windows through os.startfile."
         ),
     )
-
     return parser.parse_args()
 
 
 def resolve(path: Path) -> Path:
     if path.is_absolute():
         return path
-
     return PROJECT_DIR / path
 
 
@@ -56,7 +61,6 @@ def read_csv_optional(
 ) -> pd.DataFrame | None:
     if not path.exists():
         return None
-
     return pd.read_csv(
         path,
         index_col=index_col,
@@ -69,9 +73,10 @@ def read_json_optional(
     if not path.exists():
         return {}
 
-    return json.loads(
+    value = json.loads(
         path.read_text(encoding="utf-8")
     )
+    return value if isinstance(value, dict) else {}
 
 
 def get_row(
@@ -80,10 +85,8 @@ def get_row(
 ) -> pd.Series | None:
     if table is None or table.empty:
         return None
-
     if row_name not in table.index:
         return None
-
     return table.loc[row_name]
 
 
@@ -100,24 +103,24 @@ def value_from_row(
         return float("nan")
 
 
+def safe_float(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float("nan")
+
+
 def format_number(
     value: Any,
     decimals: int = 3,
 ) -> str:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return "N/A"
-
+    number = safe_float(value)
     if np.isnan(number):
-        return "N/A"
-
+        return "—"
     if np.isposinf(number):
         return "∞"
-
     if np.isneginf(number):
-        return "-∞"
-
+        return "−∞"
     return f"{number:,.{decimals}f}"
 
 
@@ -125,176 +128,39 @@ def format_percent(
     value: Any,
     decimals: int = 2,
 ) -> str:
-    try:
-        number = float(value)
-    except (TypeError, ValueError):
-        return "N/A"
-
+    number = safe_float(value)
     if np.isnan(number):
-        return "N/A"
-
+        return "—"
     return f"{number:,.{decimals}f}%"
 
 
-def status_class(status: str) -> str:
-    return status.lower().replace(" ", "-")
-
-
-def relative_link(
-    source_directory: Path,
-    target: Path,
+def format_currency(
+    value: Any,
 ) -> str:
-    return Path(
-        os.path.relpath(
-            target,
-            source_directory,
-        )
-    ).as_posix()
+    number = safe_float(value)
+    if np.isnan(number):
+        return "—"
+    sign = "−" if number < 0 else ""
+    return f"{sign}${abs(number):,.2f}"
 
 
-def build_experiment_record(
-    config,
-) -> dict[str, Any]:
-    results_directory = (
-        resolve(config.results_folder)
-        / config.experiment_id
-    )
-
-    report_file = (
-        resolve(config.reports_folder)
-        / f"{config.experiment_id}-research-lab"
-        / "report.html"
-    )
-
-    summary = read_csv_optional(
-        results_directory / "summary.csv",
-        index_col=0,
-    )
-
-    diagnostics = read_csv_optional(
-        results_directory
-        / "trade_diagnostics_summary.csv",
-        index_col=0,
-    )
-
-    metadata = read_json_optional(
-        results_directory / "run_metadata.json"
-    )
-
-    fixed = get_row(
-        summary,
-        "Fixed parameters",
-    )
-
-    walkforward = get_row(
-        summary,
-        "Walk-forward",
-    )
-
-    fixed_diagnostics = get_row(
-        diagnostics,
-        "Fixed parameters",
-    )
-
-    lifecycle = get_experiment_lifecycle(
-        config.experiment_id,
-        experiment_name=config.experiment_name,
-        hypothesis=config.hypothesis,
-        market_name=config.market_name,
-        timeframe=config.timeframe,
-        strategy_name=config.strategy_name,
-    )
-
-    has_results = fixed is not None
-
-    return {
-        "experiment_id": config.experiment_id,
-        "experiment_name": config.experiment_name,
-        "hypothesis": config.hypothesis,
-        "market_name": config.market_name,
-        "timeframe": config.timeframe,
-        "strategy_name": config.strategy_name,
-        "status": lifecycle.stage,
-        "status_label": format_stage_label(
-            lifecycle.stage
-        ),
-        "stage_reason": lifecycle.stage_reason,
-        "next_action": lifecycle.next_action,
-        "preregistration_file": (
-            str(lifecycle.preregistration_file)
-            if lifecycle.preregistration_file
-            is not None
-            else ""
-        ),
-        "configured": True,
-        "has_results": has_results,
-        "report_exists": report_file.exists(),
-        "report_file": report_file,
-        "fixed_return_percent": value_from_row(
-            fixed,
-            "total_return_percent",
-        ),
-        "fixed_max_drawdown_percent": value_from_row(
-            fixed,
-            "max_drawdown_percent",
-        ),
-        "fixed_trade_profit_factor": value_from_row(
-            fixed,
-            "trade_profit_factor",
-        ),
-        "fixed_trades": value_from_row(
-            fixed,
-            "total_trades",
-        ),
-        "walkforward_return_percent": value_from_row(
-            walkforward,
-            "total_return_percent",
-        ),
-        "walkforward_max_drawdown_percent": value_from_row(
-            walkforward,
-            "max_drawdown_percent",
-        ),
-        "walkforward_trade_profit_factor": value_from_row(
-            walkforward,
-            "trade_profit_factor",
-        ),
-        "walkforward_trades": value_from_row(
-            walkforward,
-            "total_trades",
-        ),
-        "mcpt_p_value": metadata.get(
-            "mcpt_p_value",
-            np.nan,
-        ),
-        "best_in_sample_bar_profit_factor": metadata.get(
-            "best_in_sample_bar_profit_factor",
-            np.nan,
-        ),
-        "best_in_sample_parameters": metadata.get(
-            "best_in_sample_parameters",
-            {},
-        ),
-        "average_winner_percent": value_from_row(
-            fixed_diagnostics,
-            "average_winner_percent",
-        ),
-        "average_loser_percent": value_from_row(
-            fixed_diagnostics,
-            "average_loser_percent",
-        ),
-        "payoff_ratio": value_from_row(
-            fixed_diagnostics,
-            "payoff_ratio",
-        ),
-        "largest_loss_percent": value_from_row(
-            fixed_diagnostics,
-            "largest_loss_percent",
-        ),
-    }
+def format_integer(
+    value: Any,
+) -> str:
+    number = safe_float(value)
+    if np.isnan(number):
+        return "—"
+    return f"{int(round(number)):,}"
 
 
-def build_lifecycle_only_record(
+def status_class(status: str) -> str:
+    return status.lower().replace("_", "-")
+
+
+def _base_record(
+    *,
     lifecycle,
+    configured: bool,
 ) -> dict[str, Any]:
     return {
         "experiment_id": lifecycle.experiment_id,
@@ -311,11 +177,10 @@ def build_lifecycle_only_record(
         "next_action": lifecycle.next_action,
         "preregistration_file": (
             str(lifecycle.preregistration_file)
-            if lifecycle.preregistration_file
-            is not None
+            if lifecycle.preregistration_file is not None
             else ""
         ),
-        "configured": False,
+        "configured": configured,
         "has_results": False,
         "report_exists": False,
         "report_file": Path(),
@@ -334,698 +199,857 @@ def build_lifecycle_only_record(
         "average_loser_percent": np.nan,
         "payoff_ratio": np.nan,
         "largest_loss_percent": np.nan,
+        "artifacts": [],
+        "primary_report": None,
+        "metrics": {},
     }
 
 
+def build_experiment_record(
+    config,
+) -> dict[str, Any]:
+    lifecycle = get_experiment_lifecycle(
+        config.experiment_id,
+        experiment_name=config.experiment_name,
+        hypothesis=config.hypothesis,
+        market_name=config.market_name,
+        timeframe=config.timeframe,
+        strategy_name=config.strategy_name,
+    )
+    record = _base_record(
+        lifecycle=lifecycle,
+        configured=True,
+    )
+
+    results_directory = (
+        resolve(config.results_folder)
+        / config.experiment_id
+    )
+    summary = read_csv_optional(
+        results_directory / "summary.csv",
+        index_col=0,
+    )
+    diagnostics = read_csv_optional(
+        results_directory
+        / "trade_diagnostics_summary.csv",
+        index_col=0,
+    )
+    metadata = read_json_optional(
+        results_directory / "run_metadata.json"
+    )
+
+    fixed = get_row(
+        summary,
+        "Fixed parameters",
+    )
+    walkforward = get_row(
+        summary,
+        "Walk-forward",
+    )
+    fixed_diagnostics = get_row(
+        diagnostics,
+        "Fixed parameters",
+    )
+
+    record.update(
+        {
+            "has_results": fixed is not None,
+            "fixed_return_percent": value_from_row(
+                fixed,
+                "total_return_percent",
+            ),
+            "fixed_max_drawdown_percent": value_from_row(
+                fixed,
+                "max_drawdown_percent",
+            ),
+            "fixed_trade_profit_factor": value_from_row(
+                fixed,
+                "trade_profit_factor",
+            ),
+            "fixed_trades": value_from_row(
+                fixed,
+                "total_trades",
+            ),
+            "walkforward_return_percent": value_from_row(
+                walkforward,
+                "total_return_percent",
+            ),
+            "walkforward_max_drawdown_percent": value_from_row(
+                walkforward,
+                "max_drawdown_percent",
+            ),
+            "walkforward_trade_profit_factor": value_from_row(
+                walkforward,
+                "trade_profit_factor",
+            ),
+            "walkforward_trades": value_from_row(
+                walkforward,
+                "total_trades",
+            ),
+            "mcpt_p_value": metadata.get(
+                "mcpt_p_value",
+                np.nan,
+            ),
+            "best_in_sample_bar_profit_factor": metadata.get(
+                "best_in_sample_bar_profit_factor",
+                np.nan,
+            ),
+            "best_in_sample_parameters": metadata.get(
+                "best_in_sample_parameters",
+                {},
+            ),
+            "average_winner_percent": value_from_row(
+                fixed_diagnostics,
+                "average_winner_percent",
+            ),
+            "average_loser_percent": value_from_row(
+                fixed_diagnostics,
+                "average_loser_percent",
+            ),
+            "payoff_ratio": value_from_row(
+                fixed_diagnostics,
+                "payoff_ratio",
+            ),
+            "largest_loss_percent": value_from_row(
+                fixed_diagnostics,
+                "largest_loss_percent",
+            ),
+        }
+    )
+    return record
 
 
-def build_charts(
-    records: list[dict[str, Any]],
+def build_lifecycle_only_record(
+    lifecycle,
+) -> dict[str, Any]:
+    return _base_record(
+        lifecycle=lifecycle,
+        configured=False,
+    )
+
+
+def _metric_card(
+    label: str,
+    value: str,
+    *,
+    note: str = "",
+) -> str:
+    note_html = (
+        f'<div class="metric-note">{html.escape(note)}</div>'
+        if note
+        else ""
+    )
+    return (
+        '<div class="metric-card">'
+        f'<div class="metric-label">{html.escape(label)}</div>'
+        f'<div class="metric-value">{html.escape(value)}</div>'
+        f"{note_html}"
+        "</div>"
+    )
+
+
+def _artifact_links(
+    artifact: ResearchArtifact,
+    *,
     dashboard_directory: Path,
-) -> None:
-    completed = [
-        record
-        for record in records
-        if record["has_results"]
+    preview_file: Path | None,
+) -> str:
+    source_href = relative_link(
+        dashboard_directory,
+        artifact.path,
+    )
+    links = [
+        (
+            f'<a href="{html.escape(source_href)}">'
+            "Open original</a>"
+        )
     ]
 
-    if not completed:
-        return
+    if preview_file is not None:
+        preview_href = relative_link(
+            dashboard_directory,
+            preview_file,
+        )
+        links.insert(
+            0,
+            (
+                f'<a href="{html.escape(preview_href)}">'
+                "Preview</a>"
+            ),
+        )
 
-    labels = [
-        record["experiment_id"]
-        for record in completed
+    return " · ".join(links)
+
+
+def _artifact_card(
+    artifact: ResearchArtifact,
+    *,
+    dashboard_directory: Path,
+    preview_file: Path | None,
+) -> str:
+    size_kb = artifact.size_bytes / 1024
+    searchable = " ".join(
+        (
+            artifact.experiment_id,
+            artifact.label,
+            artifact.category,
+            artifact.project_relative_path,
+        )
+    ).lower()
+
+    return f"""
+<article class="artifact-card" data-search="{html.escape(searchable)}">
+  <div class="artifact-topline">
+    <span class="artifact-category">{html.escape(artifact.category)}</span>
+    <span class="artifact-size">{size_kb:,.1f} KB</span>
+  </div>
+  <h4>{html.escape(artifact.label)}</h4>
+  <code>{html.escape(artifact.project_relative_path)}</code>
+  <div class="artifact-links">
+    {_artifact_links(
+        artifact,
+        dashboard_directory=dashboard_directory,
+        preview_file=preview_file,
+    )}
+  </div>
+</article>
+"""
+
+
+def _record_metrics_html(
+    record: dict[str, Any],
+) -> str:
+    metrics = record["metrics"]
+    drawdown_percent = metrics.get(
+        "max_drawdown_percent",
+        np.nan,
+    )
+    drawdown_note = metrics.get(
+        "drawdown_percent_note",
+        "",
+    )
+
+    cards = [
+        _metric_card(
+            "Profit factor",
+            format_number(
+                metrics.get("profit_factor"),
+                3,
+            ),
+        ),
+        _metric_card(
+            "Net profit",
+            format_currency(
+                metrics.get("net_profit_usd")
+            ),
+        ),
+        _metric_card(
+            "Win rate",
+            format_percent(
+                metrics.get("win_rate_percent")
+            ),
+        ),
+        _metric_card(
+            "Max drawdown",
+            format_currency(
+                metrics.get("max_drawdown_usd")
+            ),
+        ),
+        _metric_card(
+            "Max drawdown %",
+            format_percent(drawdown_percent),
+            note=drawdown_note,
+        ),
+        _metric_card(
+            "Trades",
+            format_integer(
+                metrics.get("total_trades")
+            ),
+        ),
+        _metric_card(
+            "MCPT p-value",
+            format_number(
+                metrics.get("mcpt_p_value"),
+                4,
+            ),
+        ),
     ]
 
-    positions = np.arange(len(completed))
-    width = 0.36
+    return "".join(cards)
 
-    # Fixed and walk-forward return comparison.
-    fixed_returns = [
-        record["fixed_return_percent"]
-        for record in completed
+
+def _experiment_section(
+    record: dict[str, Any],
+    *,
+    dashboard_directory: Path,
+    previews: dict[str, Path | None],
+) -> str:
+    experiment_id = record["experiment_id"]
+    artifacts: list[ResearchArtifact] = record[
+        "artifacts"
     ]
+    primary = record["primary_report"]
 
-    walkforward_returns = [
-        record["walkforward_return_percent"]
-        for record in completed
-    ]
+    if primary is not None:
+        primary_href = relative_link(
+            dashboard_directory,
+            primary.path,
+        )
+        primary_button = (
+            f'<a class="primary-button" '
+            f'href="{html.escape(primary_href)}">'
+            "Open primary visual report</a>"
+        )
+    else:
+        primary_button = (
+            '<span class="disabled-button">'
+            "No visual report found</span>"
+        )
 
-    plt.figure(figsize=(13, 7))
-
-    plt.bar(
-        positions - width / 2,
-        fixed_returns,
-        width=width,
-        label="Fixed parameters",
+    review_decision = record["metrics"].get(
+        "review_decision",
+        "",
+    )
+    result_decision = record["metrics"].get(
+        "result_decision",
+        "",
+    )
+    decision_badges = "".join(
+        (
+            f'<span class="decision-badge">'
+            f'{html.escape(label)}: '
+            f'{html.escape(str(value))}</span>'
+        )
+        for label, value in (
+            ("Result", result_decision),
+            ("Review", review_decision),
+        )
+        if value
     )
 
-    plt.bar(
-        positions + width / 2,
-        walkforward_returns,
-        width=width,
-        label="Walk-forward",
+    artifact_cards = "".join(
+        _artifact_card(
+            artifact,
+            dashboard_directory=dashboard_directory,
+            preview_file=previews.get(
+                artifact.project_relative_path
+            ),
+        )
+        for artifact in artifacts
     )
 
-    plt.axhline(0, linewidth=1)
-    plt.xticks(positions, labels)
-    plt.title("Out-of-Sample Total Return by Experiment")
-    plt.xlabel("Experiment")
-    plt.ylabel("Total Return (%)")
-    plt.grid(axis="y", alpha=0.2)
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(
-        dashboard_directory / "01_oos_returns.png",
-        dpi=140,
-        bbox_inches="tight",
-    )
-    plt.close()
+    return f"""
+<section class="experiment-section" id="{html.escape(experiment_id.lower())}">
+  <div class="experiment-header">
+    <div>
+      <div class="experiment-id">{html.escape(experiment_id)}</div>
+      <h2>{html.escape(record["experiment_name"])}</h2>
+      <p class="market-line">
+        {html.escape(record["market_name"])}
+        · {html.escape(record["timeframe"])}
+        · {html.escape(record["strategy_name"])}
+      </p>
+    </div>
+    <span class="stage {status_class(record["status"])}">
+      {html.escape(record["status_label"])}
+    </span>
+  </div>
 
-    # Fixed and walk-forward trade Profit Factor.
-    fixed_pf = [
-        record["fixed_trade_profit_factor"]
-        for record in completed
-    ]
+  <p>{html.escape(record["hypothesis"])}</p>
 
-    walkforward_pf = [
-        record["walkforward_trade_profit_factor"]
-        for record in completed
-    ]
+  <div class="decision-row">{decision_badges}</div>
+  <div class="metrics-grid">{_record_metrics_html(record)}</div>
 
-    plt.figure(figsize=(13, 7))
+  <div class="lifecycle-grid">
+    <div>
+      <h3>Why it is at this stage</h3>
+      <p>{html.escape(record["stage_reason"])}</p>
+    </div>
+    <div>
+      <h3>Next action</h3>
+      <p>{html.escape(record["next_action"])}</p>
+    </div>
+  </div>
 
-    plt.bar(
-        positions - width / 2,
-        fixed_pf,
-        width=width,
-        label="Fixed parameters",
-    )
+  <div class="section-actions">
+    {primary_button}
+    <span>{len(artifacts):,} linked artifacts</span>
+  </div>
 
-    plt.bar(
-        positions + width / 2,
-        walkforward_pf,
-        width=width,
-        label="Walk-forward",
-    )
-
-    plt.axhline(
-        1.0,
-        linewidth=1,
-        linestyle="--",
-        label="PF = 1.0",
-    )
-
-    plt.xticks(positions, labels)
-    plt.title("Completed-Trade Profit Factor by Experiment")
-    plt.xlabel("Experiment")
-    plt.ylabel("Trade Profit Factor")
-    plt.grid(axis="y", alpha=0.2)
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(
-        dashboard_directory / "02_trade_profit_factor.png",
-        dpi=140,
-        bbox_inches="tight",
-    )
-    plt.close()
-
-    # Fixed and walk-forward drawdown.
-    fixed_drawdown = [
-        record["fixed_max_drawdown_percent"]
-        for record in completed
-    ]
-
-    walkforward_drawdown = [
-        record["walkforward_max_drawdown_percent"]
-        for record in completed
-    ]
-
-    plt.figure(figsize=(13, 7))
-
-    plt.bar(
-        positions - width / 2,
-        fixed_drawdown,
-        width=width,
-        label="Fixed parameters",
-    )
-
-    plt.bar(
-        positions + width / 2,
-        walkforward_drawdown,
-        width=width,
-        label="Walk-forward",
-    )
-
-    plt.axhline(0, linewidth=1)
-    plt.xticks(positions, labels)
-    plt.title("Maximum Drawdown by Experiment")
-    plt.xlabel("Experiment")
-    plt.ylabel("Maximum Drawdown (%)")
-    plt.grid(axis="y", alpha=0.2)
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(
-        dashboard_directory / "03_max_drawdown.png",
-        dpi=140,
-        bbox_inches="tight",
-    )
-    plt.close()
+  <details open>
+    <summary>Reports, decisions, audits and saved files</summary>
+    <div class="artifact-grid">{artifact_cards}</div>
+  </details>
+</section>
+"""
 
 
 def build_dashboard_html(
     records: list[dict[str, Any]],
     dashboard_directory: Path,
+    previews: dict[str, Path | None] | None = None,
 ) -> str:
-    completed_count = sum(
-        bool(record["has_results"])
+    previews = previews or {}
+    total_artifacts = sum(
+        len(record["artifacts"])
         for record in records
     )
-
-    rejected_count = sum(
-        record["status"] == "REJECTED"
-        for record in records
-    )
-
-    accepted_count = sum(
+    accepted = sum(
         record["status"]
         == "ACCEPTED_FOR_PAPER_TESTING"
         for record in records
     )
+    rejected = sum(
+        record["status"] == "REJECTED"
+        for record in records
+    )
+    active = len(records) - accepted - rejected
 
-    active_count = sum(
-        record["status"] in {
-            "IDEA",
-            "PRE_REGISTERED",
-            "QUICK_SCREEN",
-            "FULL_VALIDATION",
-            "REVIEW",
-        }
+    nav = "".join(
+        (
+            f'<a href="#{html.escape(record["experiment_id"].lower())}">'
+            f'{html.escape(record["experiment_id"])}</a>'
+        )
         for record in records
     )
 
-    cards_html = ""
-
-    for record in records:
-        status = record["status"]
-
-        report_link = ""
-
-        if record["report_exists"]:
-            href = relative_link(
-                dashboard_directory,
-                record["report_file"],
-            )
-
-            report_link = (
-                f'<a class="report-link" '
-                f'href="{html.escape(href)}">'
-                f'Open full report</a>'
-            )
-        else:
-            missing_text = (
-                "Experiment not configured yet"
-                if not record["configured"]
-                else "Full report not generated"
-            )
-
-            report_link = (
-                '<span class="report-missing">'
-                f'{html.escape(missing_text)}</span>'
-            )
-
-        parameters_text = json.dumps(
-            record["best_in_sample_parameters"],
-            sort_keys=True,
+    sections = "".join(
+        _experiment_section(
+            record,
+            dashboard_directory=dashboard_directory,
+            previews=previews,
         )
+        for record in records
+    )
 
-        cards_html += f"""
-<section class="experiment-card">
-    <div class="experiment-heading">
-        <div>
-            <div class="experiment-id">
-                {html.escape(record["experiment_id"])}
-            </div>
-            <h2>
-                {html.escape(record["experiment_name"])}
-            </h2>
-        </div>
-
-        <span class="status {status_class(status)}">
-            {html.escape(record["status_label"])}
-        </span>
-    </div>
-
-    <p class="hypothesis">
-        {html.escape(record["hypothesis"])}
-    </p>
-
-    <div class="meta">
-        {html.escape(record["market_name"])} ·
-        {html.escape(record["timeframe"])} ·
-        {html.escape(record["strategy_name"])}
-    </div>
-
-    <div class="metrics-grid">
-        <div class="metric">
-            <span>Best IS Bar PF</span>
-            <strong>
-                {format_number(
-                    record["best_in_sample_bar_profit_factor"],
-                    4,
-                )}
-            </strong>
-        </div>
-
-        <div class="metric">
-            <span>MCPT p-value</span>
-            <strong>
-                {format_number(
-                    record["mcpt_p_value"],
-                    4,
-                )}
-            </strong>
-        </div>
-
-        <div class="metric">
-            <span>Fixed OOS Return</span>
-            <strong>
-                {format_percent(
-                    record["fixed_return_percent"]
-                )}
-            </strong>
-        </div>
-
-        <div class="metric">
-            <span>Fixed Trade PF</span>
-            <strong>
-                {format_number(
-                    record["fixed_trade_profit_factor"]
-                )}
-            </strong>
-        </div>
-
-        <div class="metric">
-            <span>Walk-Forward Return</span>
-            <strong>
-                {format_percent(
-                    record["walkforward_return_percent"]
-                )}
-            </strong>
-        </div>
-
-        <div class="metric">
-            <span>Walk-Forward PF</span>
-            <strong>
-                {format_number(
-                    record["walkforward_trade_profit_factor"]
-                )}
-            </strong>
-        </div>
-
-        <div class="metric">
-            <span>Payoff Ratio</span>
-            <strong>
-                {format_number(
-                    record["payoff_ratio"]
-                )}
-            </strong>
-        </div>
-
-        <div class="metric">
-            <span>Largest Fixed Loss</span>
-            <strong>
-                {format_percent(
-                    record["largest_loss_percent"]
-                )}
-            </strong>
-        </div>
-    </div>
-
-    <div class="parameters">
-        <strong>Best in-sample parameters:</strong>
-        <code>{html.escape(parameters_text)}</code>
-    </div>
-
-    <div class="decision-reason">
-        <strong>Stage rationale:</strong>
-        {html.escape(record["stage_reason"])}
-    </div>
-
-    <div class="decision-reason">
-        <strong>Next action:</strong>
-        {html.escape(record["next_action"])}
-    </div>
-
-    <div class="card-footer">
-        {report_link}
-    </div>
-</section>
-"""
-
-    rows_html = ""
-
+    artifact_rows = []
     for record in records:
-        rows_html += f"""
-<tr>
-    <td>{html.escape(record["experiment_id"])}</td>
-    <td>{html.escape(record["experiment_name"])}</td>
-    <td>
-        <span class="status small {status_class(record["status"])}">
-            {html.escape(record["status_label"])}
-        </span>
-    </td>
-    <td>{format_number(record["mcpt_p_value"], 4)}</td>
-    <td>{format_percent(record["fixed_return_percent"])}</td>
-    <td>{format_number(record["fixed_trade_profit_factor"])}</td>
-    <td>{format_percent(record["fixed_max_drawdown_percent"])}</td>
-    <td>{format_percent(record["walkforward_return_percent"])}</td>
-    <td>{format_number(record["walkforward_trade_profit_factor"])}</td>
-    <td>{format_number(record["payoff_ratio"])}</td>
-    <td>{format_percent(record["largest_loss_percent"])}</td>
+        for artifact in record["artifacts"]:
+            preview = previews.get(
+                artifact.project_relative_path
+            )
+            searchable = " ".join(
+                (
+                    artifact.experiment_id,
+                    artifact.label,
+                    artifact.category,
+                    artifact.project_relative_path,
+                )
+            ).lower()
+            artifact_rows.append(
+                f"""
+<tr data-search="{html.escape(searchable)}">
+  <td>{html.escape(artifact.experiment_id)}</td>
+  <td>{html.escape(artifact.category)}</td>
+  <td>{html.escape(artifact.label)}</td>
+  <td><code>{html.escape(artifact.project_relative_path)}</code></td>
+  <td>{_artifact_links(
+      artifact,
+      dashboard_directory=dashboard_directory,
+      preview_file=preview,
+  )}</td>
 </tr>
 """
+            )
 
-    chart_section = ""
-
-    if completed_count > 0:
-        chart_section = """
-<h2 class="section-title">Cross-Experiment Comparisons</h2>
-
-<img class="chart"
-     src="01_oos_returns.png"
-     alt="Out-of-sample returns">
-
-<img class="chart"
-     src="02_trade_profit_factor.png"
-     alt="Trade Profit Factor">
-
-<img class="chart"
-     src="03_max_drawdown.png"
-     alt="Maximum drawdown">
-"""
-
-    return f"""<!DOCTYPE html>
+    return f"""<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Research Dashboard</title>
-
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quantitative Research Hub</title>
 <style>
 :root {{
-    color-scheme: dark;
+  color-scheme: light dark;
+  --bg: #081120;
+  --panel: #101b2e;
+  --panel-2: #15243b;
+  --text: #e8eef8;
+  --muted: #9cacbf;
+  --line: #2a3b56;
+  --accent: #7dd3fc;
+  --positive: #86efac;
+  --negative: #fca5a5;
+  --warning: #fde68a;
 }}
-
+* {{ box-sizing: border-box; }}
+html {{ scroll-behavior: smooth; }}
 body {{
-    margin: 0;
-    background: #090909;
-    color: #eeeeee;
-    font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  background:
+    radial-gradient(circle at top right, #123155 0, transparent 28%),
+    var(--bg);
+  color: var(--text);
+  font-family: Inter, Segoe UI, Arial, sans-serif;
+  line-height: 1.5;
 }}
-
-.page {{
-    max-width: 1500px;
-    margin: auto;
-    padding: 35px;
+a {{
+  color: var(--accent);
+  text-decoration: none;
 }}
-
-h1 {{
-    font-size: 42px;
-    margin-bottom: 5px;
+a:hover {{ text-decoration: underline; }}
+header {{
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(14px);
+  background: rgba(8, 17, 32, 0.91);
+  border-bottom: 1px solid var(--line);
 }}
-
-.subtitle {{
-    color: #aaaaaa;
-    margin-bottom: 30px;
+.header-inner {{
+  width: min(1550px, calc(100% - 32px));
+  margin: 0 auto;
+  display: flex;
+  gap: 22px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
 }}
-
-.summary-grid {{
-    display: grid;
-    grid-template-columns:
-        repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px;
-    margin: 25px 0 35px;
+.brand {{ font-weight: 800; }}
+nav {{
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
 }}
-
-.summary-card {{
-    background: #151515;
-    border: 1px solid #303030;
-    border-radius: 10px;
-    padding: 20px;
+main {{
+  width: min(1550px, calc(100% - 32px));
+  margin: 32px auto 72px;
 }}
-
-.summary-card span {{
-    color: #aaaaaa;
-    font-size: 14px;
+.hero {{
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: 28px;
+  background: linear-gradient(135deg, #132642, #0d182a);
+  margin-bottom: 24px;
 }}
-
-.summary-card strong {{
-    display: block;
-    font-size: 30px;
-    margin-top: 8px;
+.hero h1 {{
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 5vw, 3.7rem);
 }}
-
-.section-title {{
-    margin-top: 45px;
-    border-bottom: 1px solid #333333;
-    padding-bottom: 8px;
+.hero p {{
+  color: var(--muted);
+  max-width: 900px;
 }}
-
-.experiment-grid {{
-    display: grid;
-    grid-template-columns:
-        repeat(auto-fit, minmax(460px, 1fr));
-    gap: 22px;
+.stats {{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  gap: 12px;
+  margin-top: 20px;
 }}
-
-.experiment-card {{
-    background: #141414;
-    border: 1px solid #333333;
-    border-radius: 12px;
-    padding: 24px;
+.stat {{
+  background: rgba(255,255,255,0.035);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
 }}
-
-.experiment-heading {{
-    display: flex;
-    justify-content: space-between;
-    gap: 20px;
-    align-items: flex-start;
+.stat strong {{
+  display: block;
+  font-size: 1.5rem;
 }}
-
+.stat span {{ color: var(--muted); }}
+.search-panel {{
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 22px 0;
+}}
+.search-panel input {{
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  padding: 13px 15px;
+  border-radius: 12px;
+  font: inherit;
+}}
+.experiment-section {{
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 24px;
+  margin: 22px 0;
+  scroll-margin-top: 82px;
+}}
+.experiment-header {{
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  align-items: flex-start;
+}}
 .experiment-id {{
-    color: #aaaaaa;
-    font-size: 14px;
-    letter-spacing: 1px;
+  color: var(--accent);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
 }}
-
-.experiment-card h2 {{
-    margin: 5px 0 10px;
-    font-size: 24px;
+.experiment-header h2 {{
+  margin: 3px 0;
+  font-size: clamp(1.45rem, 3vw, 2.15rem);
 }}
-
-.hypothesis {{
-    line-height: 1.55;
+.market-line {{ color: var(--muted); }}
+.stage, .decision-badge {{
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-weight: 700;
+  white-space: nowrap;
 }}
-
-.meta {{
-    color: #aaaaaa;
-    margin-bottom: 18px;
+.stage.accepted-for-paper-testing {{
+  color: var(--positive);
 }}
-
+.stage.rejected {{ color: var(--negative); }}
+.stage.review, .stage.full-validation {{
+  color: var(--warning);
+}}
+.decision-row {{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 13px 0;
+}}
+.decision-badge {{
+  font-size: 0.82rem;
+  color: var(--positive);
+}}
 .metrics-grid {{
-    display: grid;
-    grid-template-columns:
-        repeat(2, minmax(0, 1fr));
-    gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(125px, 1fr));
+  gap: 10px;
+  margin: 20px 0;
 }}
-
-.metric {{
-    background: #1c1c1c;
-    border: 1px solid #303030;
-    border-radius: 8px;
-    padding: 13px;
+.metric-card {{
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  min-width: 0;
 }}
-
-.metric span {{
-    color: #aaaaaa;
-    display: block;
-    font-size: 13px;
+.metric-label {{
+  color: var(--muted);
+  font-size: 0.78rem;
 }}
-
-.metric strong {{
-    display: block;
-    margin-top: 5px;
-    font-size: 19px;
+.metric-value {{
+  font-weight: 800;
+  font-size: 1.1rem;
+  margin-top: 3px;
 }}
-
-.status {{
-    border-radius: 999px;
-    font-weight: bold;
-    padding: 8px 12px;
-    white-space: nowrap;
+.metric-note {{
+  color: var(--muted);
+  font-size: 0.68rem;
+  margin-top: 5px;
 }}
-
-.status.small {{
-    display: inline-block;
-    padding: 5px 9px;
-    font-size: 12px;
+.lifecycle-grid {{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
 }}
-
-.status.rejected {{
-    background: #3a1515;
-    color: #ff8d8d;
+.lifecycle-grid > div {{
+  background: rgba(255,255,255,0.025);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
 }}
-
-.status.accepted-for-paper-testing {{
-    background: #12351f;
-    color: #8ee2aa;
+.lifecycle-grid h3 {{
+  margin-top: 0;
+  font-size: 0.95rem;
 }}
-
-.status.review {{
-    background: #40330f;
-    color: #ffd36e;
+.section-actions {{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 18px 0;
+  color: var(--muted);
 }}
-
-.status.idea,
-.status.pre-registered,
-.status.quick-screen,
-.status.full-validation {{
-    background: #142c40;
-    color: #8ecbff;
+.primary-button, .disabled-button {{
+  display: inline-block;
+  border-radius: 11px;
+  padding: 10px 14px;
+  font-weight: 800;
 }}
-
-.parameters,
-.decision-reason {{
-    margin-top: 18px;
-    line-height: 1.5;
+.primary-button {{
+  background: var(--accent);
+  color: #06233a;
 }}
-
-code {{
-    background: #222222;
-    border-radius: 4px;
-    padding: 3px 6px;
+.disabled-button {{
+  border: 1px solid var(--line);
+  color: var(--muted);
 }}
-
-.card-footer {{
-    margin-top: 22px;
+details {{
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
 }}
-
-.report-link {{
-    display: inline-block;
-    background: #eeeeee;
-    color: #111111;
-    text-decoration: none;
-    font-weight: bold;
-    border-radius: 7px;
-    padding: 10px 14px;
+summary {{
+  cursor: pointer;
+  font-weight: 800;
+  margin-bottom: 14px;
 }}
-
-.report-missing {{
-    color: #888888;
+.artifact-grid {{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(250px, 1fr));
+  gap: 12px;
 }}
-
-.chart {{
-    width: 100%;
-    background: #ffffff;
-    border: 1px solid #333333;
-    border-radius: 10px;
-    margin: 15px 0 30px;
+.artifact-card {{
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  min-width: 0;
 }}
-
-.table-wrap {{
-    overflow-x: auto;
+.artifact-card h4 {{
+  margin: 9px 0;
 }}
-
+.artifact-card code {{
+  display: block;
+  color: var(--muted);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+}}
+.artifact-topline {{
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}}
+.artifact-category {{
+  color: var(--accent);
+  font-weight: 700;
+}}
+.artifact-links {{
+  margin-top: 12px;
+}}
+.library {{
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 22px;
+  overflow: auto;
+}}
 table {{
-    width: 100%;
-    border-collapse: collapse;
-    background: #151515;
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 950px;
 }}
-
-th,
-td {{
-    border: 1px solid #333333;
-    padding: 10px;
-    text-align: center;
-    white-space: nowrap;
+th, td {{
+  border-bottom: 1px solid var(--line);
+  padding: 10px;
+  text-align: left;
+  vertical-align: top;
 }}
-
 th {{
-    background: #222222;
+  position: sticky;
+  top: 58px;
+  background: var(--panel);
+}}
+td code {{
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}}
+.hidden {{ display: none !important; }}
+.footer-note {{
+  color: var(--muted);
+  margin-top: 24px;
+}}
+@media (max-width: 1200px) {{
+  .metrics-grid {{
+    grid-template-columns: repeat(4, 1fr);
+  }}
+  .artifact-grid {{
+    grid-template-columns: repeat(2, 1fr);
+  }}
+}}
+@media (max-width: 760px) {{
+  .header-inner {{
+    align-items: flex-start;
+    flex-direction: column;
+  }}
+  .stats,
+  .metrics-grid,
+  .lifecycle-grid,
+  .artifact-grid {{
+    grid-template-columns: 1fr;
+  }}
+  .experiment-header {{
+    flex-direction: column;
+  }}
 }}
 </style>
 </head>
-
 <body>
-<div class="page">
+<header>
+  <div class="header-inner">
+    <div class="brand">Quantitative Research Hub</div>
+    <nav>
+      <a href="#top">Overview</a>
+      {nav}
+      <a href="#all-files">All files</a>
+    </nav>
+  </div>
+</header>
 
-<h1>Quantitative Research Dashboard</h1>
+<main id="top">
+<section class="hero">
+  <h1>Everything in one place</h1>
+  <p>
+    Open visual reports, review decisions, audits, trade ledgers,
+    cost tables, preregistrations and research notes from one local page.
+    This dashboard reads saved files only; it does not rerun research.
+  </p>
+  <div class="stats">
+    <div class="stat"><strong>{len(records)}</strong><span>Experiments</span></div>
+    <div class="stat"><strong>{total_artifacts}</strong><span>Linked artifacts</span></div>
+    <div class="stat"><strong>{accepted}</strong><span>Accepted for paper testing</span></div>
+    <div class="stat"><strong>{active}</strong><span>Active or under review</span></div>
+  </div>
+</section>
 
-<div class="subtitle">
-Research stages, next actions and validation results in one place.
+<div class="search-panel">
+  <input id="artifact-search" type="search"
+    placeholder="Search reports, decisions, audits, trades, experiment IDs...">
 </div>
 
-<div class="summary-grid">
-    <div class="summary-card">
-        <span>Registered experiments</span>
-        <strong>{len(records)}</strong>
-    </div>
+{sections}
 
-    <div class="summary-card">
-        <span>Experiments with results</span>
-        <strong>{completed_count}</strong>
-    </div>
+<section class="library" id="all-files">
+  <h2>Complete report and research library</h2>
+  <p class="footer-note">
+    The dashboard scans the reports, results and research folders.
+    Raw market-data folders are intentionally excluded.
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>Experiment</th>
+        <th>Type</th>
+        <th>Name</th>
+        <th>Location</th>
+        <th>Open</th>
+      </tr>
+    </thead>
+    <tbody>
+      {''.join(artifact_rows)}
+    </tbody>
+  </table>
+</section>
 
-    <div class="summary-card">
-        <span>Active pipeline</span>
-        <strong>{active_count}</strong>
-    </div>
+<p class="footer-note">
+  Generated from saved local files. No strategy, MCPT, optimization,
+  confirmation import or paper simulator was rerun.
+</p>
+</main>
 
-    <div class="summary-card">
-        <span>Accepted for paper testing</span>
-        <strong>{accepted_count}</strong>
-    </div>
-
-    <div class="summary-card">
-        <span>Rejected</span>
-        <strong>{rejected_count}</strong>
-    </div>
-</div>
-
-<h2 class="section-title">Experiment Cards</h2>
-
-<div class="experiment-grid">
-{cards_html}
-</div>
-
-<h2 class="section-title">Comparison Table</h2>
-
-<div class="table-wrap">
-<table>
-<thead>
-<tr>
-    <th>ID</th>
-    <th>Experiment</th>
-    <th>Status</th>
-    <th>MCPT p</th>
-    <th>Fixed Return</th>
-    <th>Fixed PF</th>
-    <th>Fixed DD</th>
-    <th>WF Return</th>
-    <th>WF PF</th>
-    <th>Payoff</th>
-    <th>Largest Loss</th>
-</tr>
-</thead>
-<tbody>
-{rows_html}
-</tbody>
-</table>
-</div>
-
-{chart_section}
-
-</div>
+<script>
+const input = document.getElementById("artifact-search");
+input.addEventListener("input", () => {{
+  const query = input.value.trim().toLowerCase();
+  document.querySelectorAll("[data-search]").forEach((element) => {{
+    const visible = !query || element.dataset.search.includes(query);
+    element.classList.toggle("hidden", !visible);
+  }});
+}});
+</script>
 </body>
 </html>
 """
@@ -1033,31 +1057,20 @@ Research stages, next actions and validation results in one place.
 
 def main() -> None:
     arguments = parse_arguments()
-
     configs = list_experiments()
-
-    if not configs:
-        raise RuntimeError(
-            "No experiment configuration files were found."
-        )
-
     configured_records = [
         build_experiment_record(config)
         for config in configs
     ]
-
     configured_ids = {
         record["experiment_id"]
         for record in configured_records
     }
-
     lifecycle_only_records = [
-        build_lifecycle_only_record(record)
-        for record in list_experiment_lifecycles()
-        if record.experiment_id
-        not in configured_ids
+        build_lifecycle_only_record(lifecycle)
+        for lifecycle in list_experiment_lifecycles()
+        if lifecycle.experiment_id not in configured_ids
     ]
-
     records = sorted(
         configured_records
         + lifecycle_only_records,
@@ -1066,105 +1079,205 @@ def main() -> None:
         ),
     )
 
-    reports_root = resolve(
-        configs[0].reports_folder
+    if not records:
+        raise RuntimeError(
+            "No experiment records were found."
+        )
+
+    experiment_ids = [
+        record["experiment_id"]
+        for record in records
+    ]
+    artifacts = discover_artifacts(
+        PROJECT_DIR,
+        experiment_ids,
     )
 
-    results_root = resolve(
-        configs[0].results_folder
-    )
-
+    reports_root = PROJECT_DIR / "reports"
+    results_root = PROJECT_DIR / "results"
     dashboard_directory = (
         reports_root / "research_dashboard"
     )
-
     dashboard_directory.mkdir(
         parents=True,
         exist_ok=True,
     )
-
     results_root.mkdir(
         parents=True,
         exist_ok=True,
     )
 
-    build_charts(
-        records,
-        dashboard_directory,
-    )
+    previews: dict[str, Path | None] = {}
+    for artifact in artifacts:
+        previews[
+            artifact.project_relative_path
+        ] = build_artifact_preview(
+            artifact,
+            dashboard_directory,
+        )
 
-    dashboard_html = build_dashboard_html(
-        records,
-        dashboard_directory,
-    )
+    for record in records:
+        experiment_artifacts = [
+            artifact
+            for artifact in artifacts
+            if artifact.experiment_id
+            == record["experiment_id"]
+        ]
+        primary = choose_primary_report(
+            experiment_artifacts,
+            record["experiment_id"],
+        )
+        metrics = load_experiment_metrics(
+            PROJECT_DIR,
+            record["experiment_id"],
+        )
+
+        record["artifacts"] = experiment_artifacts
+        record["primary_report"] = primary
+        record["metrics"] = metrics
+        record["report_exists"] = (
+            primary is not None
+        )
+        record["report_file"] = (
+            primary.path
+            if primary is not None
+            else Path()
+        )
+        record["has_results"] = (
+            record["has_results"]
+            or bool(metrics.get("metric_source"))
+            or any(
+                artifact.category
+                in {
+                    "Visual report",
+                    "Decision record",
+                    "Summary table",
+                }
+                for artifact in experiment_artifacts
+            )
+        )
+
+        if not np.isnan(
+            safe_float(
+                metrics.get("mcpt_p_value")
+            )
+        ):
+            record["mcpt_p_value"] = metrics[
+                "mcpt_p_value"
+            ]
 
     dashboard_file = (
         dashboard_directory / "index.html"
     )
-
     dashboard_file.write_text(
-        dashboard_html,
+        build_dashboard_html(
+            records,
+            dashboard_directory,
+            previews,
+        ),
         encoding="utf-8",
     )
 
-    export_columns = [
-        "experiment_id",
-        "experiment_name",
-        "status",
-        "status_label",
-        "configured",
-        "strategy_name",
-        "mcpt_p_value",
-        "best_in_sample_bar_profit_factor",
-        "fixed_return_percent",
-        "fixed_max_drawdown_percent",
-        "fixed_trade_profit_factor",
-        "fixed_trades",
-        "walkforward_return_percent",
-        "walkforward_max_drawdown_percent",
-        "walkforward_trade_profit_factor",
-        "walkforward_trades",
-        "average_winner_percent",
-        "average_loser_percent",
-        "payoff_ratio",
-        "largest_loss_percent",
-        "stage_reason",
-        "next_action",
-        "preregistration_file",
-    ]
+    dashboard_rows = []
+    for record in records:
+        metrics = record["metrics"]
+        dashboard_rows.append(
+            {
+                "experiment_id": record[
+                    "experiment_id"
+                ],
+                "experiment_name": record[
+                    "experiment_name"
+                ],
+                "status": record["status"],
+                "status_label": record[
+                    "status_label"
+                ],
+                "market_name": record[
+                    "market_name"
+                ],
+                "timeframe": record["timeframe"],
+                "strategy_name": record[
+                    "strategy_name"
+                ],
+                "artifact_count": len(
+                    record["artifacts"]
+                ),
+                "primary_report": (
+                    record["primary_report"]
+                    .project_relative_path
+                    if record[
+                        "primary_report"
+                    ] is not None
+                    else ""
+                ),
+                "profit_factor": metrics.get(
+                    "profit_factor"
+                ),
+                "net_profit_usd": metrics.get(
+                    "net_profit_usd"
+                ),
+                "win_rate_percent": metrics.get(
+                    "win_rate_percent"
+                ),
+                "max_drawdown_usd": metrics.get(
+                    "max_drawdown_usd"
+                ),
+                "max_drawdown_percent": metrics.get(
+                    "max_drawdown_percent"
+                ),
+                "total_trades": metrics.get(
+                    "total_trades"
+                ),
+                "mcpt_p_value": metrics.get(
+                    "mcpt_p_value"
+                ),
+                "result_decision": metrics.get(
+                    "result_decision"
+                ),
+                "review_decision": metrics.get(
+                    "review_decision"
+                ),
+                "stage_reason": record[
+                    "stage_reason"
+                ],
+                "next_action": record[
+                    "next_action"
+                ],
+            }
+        )
 
-    pd.DataFrame(records)[
-        export_columns
-    ].to_csv(
-        results_root / "research_dashboard.csv",
+    pd.DataFrame(
+        dashboard_rows
+    ).to_csv(
+        results_root
+        / "research_dashboard.csv",
+        index=False,
+    )
+
+    pd.DataFrame(
+        [
+            artifact.to_dict()
+            for artifact in artifacts
+        ]
+    ).to_csv(
+        results_root
+        / "research_dashboard_artifacts.csv",
         index=False,
     )
 
     print()
-    print("Research dashboard created.")
-    print()
+    print("Research hub dashboard created.")
     print(f"Experiments: {len(records)}")
-    print(
-        "With results: "
-        f"{sum(record['has_results'] for record in records)}"
-    )
-    print(
-        "Rejected: "
-        f"{sum(record['status'] == 'REJECTED' for record in records)}"
-    )
-    print(
-        "Accepted for paper testing: "
-        f"{sum(
-            record['status']
-            == 'ACCEPTED_FOR_PAPER_TESTING'
-            for record in records
-        )}"
-    )
-    print()
+    print(f"Linked artifacts: {len(artifacts)}")
     print(f"Dashboard: {dashboard_file}")
     print(
-        "Dashboard CSV: "
+        "Experiment summary: "
         f"{results_root / 'research_dashboard.csv'}"
+    )
+    print(
+        "Artifact library: "
+        f"{results_root / 'research_dashboard_artifacts.csv'}"
     )
 
     if arguments.open:
@@ -1172,8 +1285,8 @@ def main() -> None:
             os.startfile(dashboard_file)
         else:
             print(
-                "--open is only automatically supported "
-                "on Windows."
+                "--open is automatically supported "
+                "on Windows only."
             )
 
 
