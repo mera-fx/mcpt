@@ -206,22 +206,23 @@ EXPERIMENT_LIFECYCLE: dict[
             "transfer from QQQ to Nasdaq-100 futures and remain "
             "profitable after contract-specific futures costs."
         ),
-        stage="FULL_VALIDATION",
+        stage="REVIEW",
         stage_reason=(
-            "The protected 2019–2022 quick transfer passed all ten "
-            "locked gates. NQ Profit Factor was 1.1340, MNQ Profit "
-            "Factor was 1.1202, NQ net profit was $94,660.00, MNQ "
-            "net profit was $8,549.50, and the 25-permutation NQ "
-            "MCPT p-value was 0.076923. No optimization was performed, "
-            "zero invalid or roll-switch sessions were included, and "
-            "the 2023–2025 confirmation period was not accessed."
+            "The protected 2023–2025 confirmation full validation "
+            "passed every locked gate. NQ Profit Factor was 1.1811, "
+            "MNQ Profit Factor was 1.1629, NQ net profit was "
+            "$116,715.00, MNQ net profit was $10,607.50, and the "
+            "1,000-permutation NQ MCPT p-value was 0.037962. All "
+            "three NQ calendar years were profitable, no optimization "
+            "was performed, and zero invalid or front-month-mismatch "
+            "sessions were included."
         ),
         next_action=(
-            "Freeze the quick-transfer result, export NQ and MNQ "
-            "provider-front-month one-minute data once for 2023-01-03 "
-            "through 2025-12-31, run the protected confirmation "
-            "importer, then execute the preregistered full validation "
-            "with 1,000 NQ permutations. Do not rerun the quick transfer."
+            "Freeze the full-validation result and run the separate "
+            "read-only operational-quality review. Do not rerun the "
+            "strategy, MCPT, quick transfer or confirmation import. "
+            "A passing review may advance only to paper testing under "
+            "the unchanged fixed rules."
         ),
         market_name="NQ / MNQ futures",
         timeframe="5 minutes",

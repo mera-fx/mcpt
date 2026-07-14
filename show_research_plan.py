@@ -44,12 +44,12 @@ def main() -> None:
     print(
         "EXP-003 continues automatic paper testing. "
         "EXP-004 remains a rejected QQQ basic-ORB result. "
-        "EXP-005 passed its protected 2019–2022 NQ/MNQ "
-        "quick transfer with no optimization and has advanced "
-        "to full validation. The 2023–2025 confirmation data "
-        "may now be exported once and imported through the "
-        "protected confirmation workflow. Structured ORB "
-        "optimization remains a separate future path."
+        "EXP-005 passed its protected 2023–2025 full "
+        "validation with no optimization and has advanced "
+        "to a separate read-only operational review. "
+        "No strategy, MCPT or data workflow may be rerun. "
+        "Structured ORB optimization remains a separate "
+        "future path."
     )
 
 

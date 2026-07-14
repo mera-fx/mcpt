@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "experiment_id": "EXP-005",
+  "stage": "FULL_VALIDATION",
+  "calculated_at_utc": "2026-07-14T14:59:18+00:00",
+  "git": {
+    "commit": "1dc8b32f2eba1b19e19d3162d5f0acd2f820593e",
+    "short_commit": "1dc8b32",
+    "working_tree_clean": true
+  },
+  "data": {
+    "confirmation_import_audit": "C:\\Users\\hocke\\Documents\\mcpt\\results\\EXP-005\\confirmation_data\\quantower_confirmation_import_audit.json",
+    "confirmation_import_commit": "53a740aedb63e2a7508e3e010f5370be49cf816a",
+    "included_sessions": 733,
+    "included_invalid_sessions": 0,
+    "included_roll_switch_sessions": 0,
+    "provider_unavailable_sessions_excluded": 2,
+    "provider_complete_sessions_restored": 1,
+    "potential_front_month_mismatch_sessions_excluded": 9,
+    "fingerprints": {
+      "NQ_1m": "d91cf3123e0edea67dcb2a89fb2baf2c27d1e76f091d9bc2aeb4b34e61e92cd1",
+      "MNQ_1m": "f08ee6b3e5f9d9243077cecd4b32229136dc74fabe6b9e9d75c110362a4c23f7",
+      "NQ_5m": "4a50a121b79fe50cd8b3042e7b2e88472908689b89880f2da56374fba5d4a340",
+      "MNQ_5m": "a10db6f4112bf467f18dbd3de7f1b334a08c0f6f971bb7bec4e3edd3d083c51a"
+    }
+  },
+  "fixed_rules": {
+    "opening_range_minutes": 15,
+    "direction_mode": "both",
+    "parameter_combinations": 1,
+    "optimization": false
+  },
+  "results": {
+    "NQ": {
+      "symbol": "NQ",
+      "included_sessions": 733,
+      "completed_trades": 724,
+      "long_trades": 367,
+      "short_trades": 357,
+      "gross_pnl_usd": 127575.0,
+      "transaction_costs_usd": 10860.0,
+      "net_profit_usd": 116715.0,
+      "gross_profit_usd": 761100.0,
+      "gross_loss_usd": 644385.0,
+      "trade_profit_factor": 1.1811261900882237,
+      "win_rate_percent": 43.370165745856355,
+      "average_trade_usd": 161.2085635359116,
+      "median_trade_usd": -667.5,
+      "maximum_drawdown_usd": -36175.0,
+      "slippage_ticks_per_side": 1.0,
+      "round_trip_cost_usd": 15.0
+    },
+    "MNQ": {
+      "symbol": "MNQ",
+      "included_sessions": 733,
+      "completed_trades": 724,
+      "long_trades": 368,
+      "short_trades": 356,
+      "gross_pnl_usd": 12779.5,
+      "transaction_costs_usd": 2172.0,
+      "net_profit_usd": 10607.5,
+      "gross_profit_usd": 75743.5,
+      "gross_loss_usd": 65136.0,
+      "trade_profit_factor": 1.1628515720953083,
+      "win_rate_percent": 43.232044198895025,
+      "average_trade_usd": 14.651243093922652,
+      "median_trade_usd": -67.5,
+      "maximum_drawdown_usd": -3674.0,
+      "slippage_ticks_per_side": 1.0,
+      "round_trip_cost_usd": 3.0
+    },
+    "profitable_nq_calendar_years": 3
+  },
+  "mcpt": {
+    "market": "NQ",
+    "permutations": 1000,
+    "p_value": 0.03796203796203796,
+    "permutations_at_least_real": 37,
+    "run_info": {
+      "requested_workers": 0,
+      "workers_used": 8,
+      "resumed_permutations": 0,
+      "newly_completed_permutations": 1000,
+      "checkpoint_file": "C:\\Users\\hocke\\Documents\\mcpt\\results\\EXP-005\\full_validation\\mcpt_checkpoint_1000.json",
+      "signature": "559ef2e59ae1ce73c6ad38a38ed9adfe7af3c56efc16255a90a83385603dfe1b",
+      "source_engine_version": "exp005_session_mcpt_v2"
+    }
+  },
+  "evaluation": {
+    "decision": "PASS_TO_REVIEW",
+    "passed": true,
+    "gates": {
+      "nq_trade_profit_factor": {
+        "actual": 1.1811261900882237,
+        "operator": ">",
+        "threshold": 1.05,
+        "passed": true
+      },
+      "mnq_trade_profit_factor": {
+        "actual": 1.1628515720953083,
+        "operator": ">",
+        "threshold": 1.0,
+        "passed": true
+      },
+      "nq_net_profit_usd": {
+        "actual": 116715.0,
+        "operator": ">",
+        "threshold": 0.0,
+        "passed": true
+      },
+      "mnq_net_profit_usd": {
+        "actual": 10607.5,
+        "operator": ">",
+        "threshold": 0.0,
+        "passed": true
+      },
+      "nq_mcpt_p_value": {
+        "actual": 0.03796203796203796,
+        "operator": "<=",
+        "threshold": 0.05,
+        "passed": true
+      },
+      "nq_completed_trades": {
+        "actual": 724,
+        "operator": ">=",
+        "threshold": 500,
+        "passed": true
+      },
+      "profitable_nq_calendar_years": {
+        "actual": 3,
+        "operator": ">=",
+        "threshold": 2,
+        "passed": true
+      },
+      "included_invalid_sessions": {
+        "actual": 0,
+        "operator": "<=",
+        "threshold": 0,
+        "passed": true
+      },
+      "included_roll_switch_sessions": {
+        "actual": 0,
+        "operator": "<=",
+        "threshold": 0,
+        "passed": true
+      }
+    },
+    "failed_gates": []
+  },
+  "confirmation_period_accessed": true,
+  "confirmation_results_calculated": true,
+  "quick_transfer_rerun": false,
+  "source_experiment_reopened": false,
+  "automatic_lifecycle_source_edit": false,
+  "next_stage_if_passed": "REVIEW"
+}

@@ -17,27 +17,24 @@ from experiment_lifecycle import (
 
 
 class LifecycleRegistryTests(unittest.TestCase):
-    def test_exp005_lifecycle_records_quick_pass(
-        self,
-    ) -> None:
-        record = get_experiment_lifecycle(
-            "EXP-005"
-        )
-
-        self.assertIn(
-            "quick transfer passed",
-            record.stage_reason,
-        )
-
-        self.assertIn(
-            "2023-01-03",
-            record.next_action,
-        )
-
-        self.assertIn(
-            "1,000 NQ permutations",
-            record.next_action,
-        )
+    def test_exp005_lifecycle_records_full_pass(
+            self,
+        ) -> None:
+            record = get_experiment_lifecycle(
+                "EXP-005"
+            )
+            self.assertIn(
+                "full validation",
+                record.stage_reason.lower(),
+            )
+            self.assertIn(
+                "0.037962",
+                record.stage_reason,
+            )
+            self.assertIn(
+                "read-only",
+                record.next_action.lower(),
+            )
 
     def test_registry_is_valid_and_unique(
         self,
@@ -109,31 +106,27 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.next_action,
         )
 
-    def test_exp005_is_in_full_validation(
-        self,
-    ) -> None:
-        record = get_experiment_lifecycle(
-            "EXP-005"
-        )
-
-        self.assertEqual(
-            record.stage,
-            "FULL_VALIDATION",
-        )
-
-        self.assertEqual(
-            record.market_name,
-            "NQ / MNQ futures",
-        )
-
-        self.assertEqual(
-            record.timeframe,
-            "5 minutes",
-        )
-
-        self.assertIsNotNone(
-            record.preregistration_file
-        )
+    def test_exp005_is_in_review(
+            self,
+        ) -> None:
+            record = get_experiment_lifecycle(
+                "EXP-005"
+            )
+            self.assertEqual(
+                record.stage,
+                "REVIEW",
+            )
+            self.assertEqual(
+                record.market_name,
+                "NQ / MNQ futures",
+            )
+            self.assertEqual(
+                record.timeframe,
+                "5 minutes",
+            )
+            self.assertIsNotNone(
+                record.preregistration_file
+            )
 
     def test_unregistered_config_defaults_to_idea(
         self,
