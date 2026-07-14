@@ -1,0 +1,214 @@
+{
+  "schema_version": 1,
+  "experiment_id": "EXP-005",
+  "stage": "REVIEW",
+  "calculated_at_utc": "2026-07-14T15:44:11+00:00",
+  "git": {
+    "commit": "5888a0bf54fa0f87fe76a71914b62d6a9e20bf10",
+    "short_commit": "5888a0b",
+    "working_tree_clean": true
+  },
+  "review_type": "READ_ONLY_OPERATIONAL_QUALITY_REVIEW",
+  "source_full_validation": {
+    "decision": "PASS_TO_REVIEW",
+    "implementation_commit": "1dc8b32f2eba1b19e19d3162d5f0acd2f820593e",
+    "included_sessions": 733,
+    "nq_mcpt_permutations": 1000,
+    "nq_mcpt_p_value": 0.03796203796203796
+  },
+  "evaluation": {
+    "decision": "ACCEPT_FOR_PAPER_TESTING",
+    "passed": true,
+    "checks": {
+      "full_validation_integrity": {
+        "actual": {
+          "decision": "PASS_TO_REVIEW",
+          "passed": true,
+          "failed_gates": [],
+          "permutations": 1000,
+          "p_value": 0.03796203796203796
+        },
+        "operator": "all required",
+        "threshold": {
+          "decision": "PASS_TO_REVIEW",
+          "permutations": 1000,
+          "maximum_mcpt_p_value": 0.05
+        },
+        "passed": true
+      },
+      "fixed_rule_integrity": {
+        "actual": {
+          "opening_range_minutes": 15,
+          "direction_mode": "both",
+          "parameter_combinations": 1,
+          "optimization": false
+        },
+        "operator": "==",
+        "threshold": {
+          "opening_range_minutes": 15,
+          "direction_mode": "both",
+          "parameter_combinations": 1,
+          "optimization": false
+        },
+        "passed": true
+      },
+      "data_integrity": {
+        "actual": {
+          "included_sessions": 733,
+          "included_invalid_sessions": 0,
+          "included_mismatch_sessions": 0,
+          "mismatch_sessions_excluded": 9
+        },
+        "operator": "all required",
+        "threshold": {
+          "included_sessions": 733,
+          "maximum_included_invalid_sessions": 0,
+          "maximum_included_mismatch_sessions": 0
+        },
+        "passed": true
+      },
+      "cross_period_replication": {
+        "actual": [
+          {
+            "period": "quick",
+            "symbol": "NQ",
+            "profit_factor": 1.1340460933904486,
+            "net_profit_usd": 94660.0
+          },
+          {
+            "period": "quick",
+            "symbol": "MNQ",
+            "profit_factor": 1.120163319231472,
+            "net_profit_usd": 8549.5
+          },
+          {
+            "period": "confirmation",
+            "symbol": "NQ",
+            "profit_factor": 1.1811261900882237,
+            "net_profit_usd": 116715.0
+          },
+          {
+            "period": "confirmation",
+            "symbol": "MNQ",
+            "profit_factor": 1.1628515720953083,
+            "net_profit_usd": 10607.5
+          }
+        ],
+        "operator": "PF > 1 and net > 0",
+        "threshold": {
+          "minimum_profit_factor_strict": 1.0,
+          "minimum_net_profit_usd_strict": 0.0
+        },
+        "passed": true
+      },
+      "all_confirmation_years_profitable": {
+        "actual": {
+          "2023": 34565.0,
+          "2024": 22745.0,
+          "2025": 59405.0
+        },
+        "operator": "> 0 for each required year",
+        "threshold": [
+          2023,
+          2024,
+          2025
+        ],
+        "passed": true
+      },
+      "two_tick_cost_resilience": {
+        "actual": {
+          "NQ": {
+            "profit_factor": 1.1688165493419278,
+            "net_profit_usd": 109475.0
+          },
+          "MNQ": {
+            "profit_factor": 1.1507849329488764,
+            "net_profit_usd": 9883.5
+          }
+        },
+        "operator": "PF > 1 and net > 0",
+        "threshold": {
+          "slippage_ticks_per_side": 2.0,
+          "minimum_profit_factor_strict": 1.0,
+          "minimum_net_profit_usd_strict": 0.0
+        },
+        "passed": true
+      },
+      "average_trade_cost_buffer": {
+        "actual": {
+          "NQ": 10.747237569060774,
+          "MNQ": 4.883747697974218
+        },
+        "operator": ">=",
+        "threshold": 2.0,
+        "passed": true
+      },
+      "drawdown_efficiency": {
+        "actual": {
+          "NQ": 3.2263994471319974,
+          "MNQ": 2.8871801850843766
+        },
+        "operator": ">=",
+        "threshold": 2.0,
+        "passed": true
+      },
+      "contract_implementation_consistency": {
+        "actual": {
+          "trade_count_difference": 0,
+          "profit_factor_difference": 0.01827461799291541,
+          "scaled_net_profit_difference": 0.09116223278927302
+        },
+        "operator": "<=",
+        "threshold": {
+          "maximum_trade_count_difference": 2,
+          "maximum_profit_factor_difference": 0.1,
+          "maximum_scaled_net_profit_difference": 0.2,
+          "nq_to_mnq_multiplier_ratio": 10.0
+        },
+        "passed": true
+      },
+      "direction_balance": {
+        "actual": {
+          "NQ": {
+            "long_share": 0.5069060773480663,
+            "short_share": 0.4930939226519337
+          },
+          "MNQ": {
+            "long_share": 0.5082872928176796,
+            "short_share": 0.49171270718232046
+          }
+        },
+        "operator": ">=",
+        "threshold": 0.4,
+        "passed": true
+      },
+      "tail_loss_concentration": {
+        "actual": {
+          "NQ": 0.03636025047137969,
+          "MNQ": 0.03606300663227708
+        },
+        "operator": "<=",
+        "threshold": 0.2,
+        "passed": true
+      },
+      "largest_loss_drawdown_share": {
+        "actual": {
+          "NQ": 0.14623358673116793,
+          "MNQ": 0.14412084921066956
+        },
+        "operator": "<=",
+        "threshold": 0.3,
+        "passed": true
+      }
+    },
+    "failed_checks": []
+  },
+  "strategy_rerun": false,
+  "mcpt_rerun": false,
+  "parameter_change": false,
+  "cost_change": false,
+  "data_change": false,
+  "quick_transfer_rerun": false,
+  "automatic_lifecycle_source_edit": false,
+  "next_stage_if_passed": "ACCEPTED_FOR_PAPER_TESTING"
+}

@@ -206,23 +206,22 @@ EXPERIMENT_LIFECYCLE: dict[
             "transfer from QQQ to Nasdaq-100 futures and remain "
             "profitable after contract-specific futures costs."
         ),
-        stage="REVIEW",
+        stage="ACCEPTED_FOR_PAPER_TESTING",
         stage_reason=(
-            "The protected 2023–2025 confirmation full validation "
-            "passed every locked gate. NQ Profit Factor was 1.1811, "
-            "MNQ Profit Factor was 1.1629, NQ net profit was "
-            "$116,715.00, MNQ net profit was $10,607.50, and the "
-            "1,000-permutation NQ MCPT p-value was 0.037962. All "
-            "three NQ calendar years were profitable, no optimization "
-            "was performed, and zero invalid or front-month-mismatch "
-            "sessions were included."
+            "The protected quick transfer and independent 2023–2025 "
+            "full validation passed their locked gates. The separate "
+            "read-only review then passed all 12 locked operational-quality "
+            "checks, including two-tick cost resilience, all-year "
+            "profitability, NQ/MNQ consistency, direction balance and "
+            "loss-concentration controls. No strategy, MCPT, data import, "
+            "parameter, cost or gate was rerun or changed."
         ),
         next_action=(
-            "Freeze the full-validation result and run the separate "
-            "read-only operational-quality review. Do not rerun the "
-            "strategy, MCPT, quick transfer or confirmation import. "
-            "A passing review may advance only to paper testing under "
-            "the unchanged fixed rules."
+            "Operate the locked paper-only end-of-day NQ/MNQ replay for "
+            "at least 12 calendar weeks and 40 completed NQ paper trades. "
+            "Use completed Quantower one-minute exports, exact audit "
+            "reconciliation and the unchanged fixed ORB rules. Do not "
+            "connect an order API or use live capital."
         ),
         market_name="NQ / MNQ futures",
         timeframe="5 minutes",

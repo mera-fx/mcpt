@@ -44,12 +44,12 @@ def main() -> None:
     print(
         "EXP-003 continues automatic paper testing. "
         "EXP-004 remains a rejected QQQ basic-ORB result. "
-        "EXP-005 passed its protected 2023–2025 full "
-        "validation with no optimization and has advanced "
-        "to a separate read-only operational review. "
-        "No strategy, MCPT or data workflow may be rerun. "
-        "Structured ORB optimization remains a separate "
-        "future path."
+        "EXP-005 passed its protected quick transfer, full "
+        "validation and all 12 read-only review checks, and is "
+        "accepted for a locked paper-only NQ/MNQ observation. "
+        "The next implementation uses completed daily Quantower "
+        "exports and requires both 12 calendar weeks and 40 "
+        "completed NQ paper trades. No live orders are authorized."
     )
 
 

@@ -17,22 +17,26 @@ from experiment_lifecycle import (
 
 
 class LifecycleRegistryTests(unittest.TestCase):
-    def test_exp005_lifecycle_records_full_pass(
+    def test_exp005_lifecycle_records_review_acceptance(
             self,
         ) -> None:
             record = get_experiment_lifecycle(
                 "EXP-005"
             )
             self.assertIn(
-                "full validation",
-                record.stage_reason.lower(),
-            )
-            self.assertIn(
-                "0.037962",
+                "12 locked operational-quality",
                 record.stage_reason,
             )
             self.assertIn(
-                "read-only",
+                "12 calendar weeks",
+                record.next_action,
+            )
+            self.assertIn(
+                "40 completed NQ",
+                record.next_action,
+            )
+            self.assertIn(
+                "paper-only",
                 record.next_action.lower(),
             )
 
@@ -106,7 +110,7 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.next_action,
         )
 
-    def test_exp005_is_in_review(
+    def test_exp005_is_accepted_for_paper_testing(
             self,
         ) -> None:
             record = get_experiment_lifecycle(
@@ -114,7 +118,7 @@ class LifecycleRegistryTests(unittest.TestCase):
             )
             self.assertEqual(
                 record.stage,
-                "REVIEW",
+                "ACCEPTED_FOR_PAPER_TESTING",
             )
             self.assertEqual(
                 record.market_name,
