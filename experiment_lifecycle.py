@@ -232,8 +232,43 @@ EXPERIMENT_LIFECYCLE: dict[
             "research/EXP-005_preregistration.md"
         ),
     ),
-}
 
+"EXP-006": ExperimentLifecycle(
+    experiment_id="EXP-006",
+    experiment_name=(
+        "NQ/MNQ Structured ORB Optimization"
+    ),
+    hypothesis=(
+        "A small, structured set of opening-range "
+        "length, final-entry time and direction "
+        "choices may improve risk-adjusted NQ/MNQ "
+        "ORB performance without a large parameter "
+        "search."
+    ),
+    stage="PRE_REGISTERED",
+    stage_reason=(
+        "The exact 27-combination grid, anchored "
+        "walk-forward process, stability rules, "
+        "selection-aware 1,000-permutation MCPT and "
+        "decision gates were locked before any "
+        "EXP-006 result was calculated."
+    ),
+    next_action=(
+        "Implement and test the protected EXP-006 "
+        "optimizer. Commit the implementation before "
+        "running it. Keep EXP-005 frozen as the "
+        "paper-testing control."
+    ),
+    market_name="NQ / MNQ futures",
+    timeframe="5 minutes",
+    strategy_name=(
+        "structured_opening_range_breakout"
+    ),
+    preregistration_file=Path(
+        "research/EXP-006_preregistration.md"
+    ),
+),
+}
 
 def normalize_experiment_id(
     value: str,
