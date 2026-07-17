@@ -310,6 +310,47 @@ EXPERIMENT_LIFECYCLE: dict[
             "research/EXP-007_preregistration.md"
         ),
     ),
+
+    "EXP-008": ExperimentLifecycle(
+        experiment_id="EXP-008",
+        experiment_name=(
+            "NQ/MNQ Structured Long-Only ORB "
+            "Exit-Geometry Optimization"
+        ),
+        hypothesis=(
+            "A small, structured search over "
+            "opening-range length, profit-target "
+            "distance and forced-flat time may identify "
+            "a stable long-only NQ/MNQ ORB geometry "
+            "with stronger post-cost evidence than the "
+            "fixed EXP-007 baseline."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "All 27 opening-range, target and time-exit "
+            "combinations; candidate-selection rules; "
+            "neighbor checks; five anchored folds; "
+            "selection-aware 1,000-permutation MCPT; "
+            "cost checks and decision gates were locked "
+            "before any EXP-008 result was calculated."
+        ),
+        next_action=(
+            "Implement and test the protected 27-candidate "
+            "EXP-008 workflow. Commit the implementation "
+            "before running it. Do not change the grid, "
+            "selection procedure, seed or gates."
+        ),
+        market_name="NQ / MNQ futures",
+        timeframe=(
+            "5-minute signal / 1-minute execution"
+        ),
+        strategy_name=(
+            "structured_long_only_orb_exit_geometry"
+        ),
+        preregistration_file=Path(
+            "research/EXP-008_preregistration.md"
+        ),
+    ),
 }
 
 def normalize_experiment_id(
