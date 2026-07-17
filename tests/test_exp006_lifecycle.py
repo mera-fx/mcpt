@@ -10,7 +10,7 @@ from experiment_lifecycle import (
 class Exp006LifecycleTests(
     unittest.TestCase
 ):
-    def test_exp006_is_preregistered(
+    def test_exp006_is_rejected(
         self,
     ) -> None:
         record = get_experiment_lifecycle(
@@ -18,18 +18,14 @@ class Exp006LifecycleTests(
         )
         self.assertEqual(
             record.stage,
-            "PRE_REGISTERED",
-        )
-        self.assertEqual(
-            record.market_name,
-            "NQ / MNQ futures",
-        )
-        self.assertEqual(
-            record.timeframe,
-            "5 minutes",
+            "REJECTED",
         )
         self.assertIn(
-            "27-combination",
+            "0.017995",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "0.020000",
             record.stage_reason,
         )
 

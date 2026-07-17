@@ -233,41 +233,81 @@ EXPERIMENT_LIFECYCLE: dict[
         ),
     ),
 
-"EXP-006": ExperimentLifecycle(
-    experiment_id="EXP-006",
-    experiment_name=(
-        "NQ/MNQ Structured ORB Optimization"
+
+    "EXP-006": ExperimentLifecycle(
+        experiment_id="EXP-006",
+        experiment_name=(
+            "NQ/MNQ Structured ORB Optimization"
+        ),
+        hypothesis=(
+            "A small, structured set of opening-range "
+            "length, final-entry time and direction "
+            "choices may improve risk-adjusted NQ/MNQ "
+            "ORB performance without a large parameter "
+            "search."
+        ),
+        stage="REJECTED",
+        stage_reason=(
+            "The protected 27-combination optimization "
+            "selected the 15-minute, 10:30, both-direction "
+            "candidate. It passed every locked check except "
+            "the NQ Profit Factor improvement gate: "
+            "0.017995 versus the required 0.020000."
+        ),
+        next_action=(
+            "Preserve EXP-006 as a completed negative result. "
+            "Keep EXP-005 unchanged as the accepted control. "
+            "Do not loosen the failed gate or rerun EXP-006."
+        ),
+        market_name="NQ / MNQ futures",
+        timeframe="5 minutes",
+        strategy_name=(
+            "structured_opening_range_breakout"
+        ),
+        preregistration_file=Path(
+            "research/EXP-006_preregistration.md"
+        ),
     ),
-    hypothesis=(
-        "A small, structured set of opening-range "
-        "length, final-entry time and direction "
-        "choices may improve risk-adjusted NQ/MNQ "
-        "ORB performance without a large parameter "
-        "search."
+
+    "EXP-007": ExperimentLifecycle(
+        experiment_id="EXP-007",
+        experiment_name=(
+            "NQ/MNQ Fixed 30-Minute Long-Only "
+            "1R Opening Range Breakout"
+        ),
+        hypothesis=(
+            "A fixed long-only NQ opening-range "
+            "breakout using the first 30 minutes, "
+            "a stop at the opening-range low, a 1R "
+            "target and a 14:00 New York time exit "
+            "may generate a positive post-cost "
+            "intraday edge."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "The exact fixed entry, stop, target, "
+            "time exit, intrabar ambiguity rules, "
+            "cost model, temporal checks, 1,000-"
+            "permutation MCPT and absolute decision "
+            "gates were locked before any EXP-007 "
+            "result was calculated."
+        ),
+        next_action=(
+            "Implement and test the protected fixed-"
+            "rule EXP-007 replication. Commit the "
+            "implementation before running it. Do not "
+            "optimize exits, filters or position sizing "
+            "inside EXP-007."
+        ),
+        market_name="NQ / MNQ futures",
+        timeframe="5-minute signal / 1-minute execution",
+        strategy_name=(
+            "fixed_30m_long_only_1r_orb"
+        ),
+        preregistration_file=Path(
+            "research/EXP-007_preregistration.md"
+        ),
     ),
-    stage="PRE_REGISTERED",
-    stage_reason=(
-        "The exact 27-combination grid, anchored "
-        "walk-forward process, stability rules, "
-        "selection-aware 1,000-permutation MCPT and "
-        "decision gates were locked before any "
-        "EXP-006 result was calculated."
-    ),
-    next_action=(
-        "Implement and test the protected EXP-006 "
-        "optimizer. Commit the implementation before "
-        "running it. Keep EXP-005 frozen as the "
-        "paper-testing control."
-    ),
-    market_name="NQ / MNQ futures",
-    timeframe="5 minutes",
-    strategy_name=(
-        "structured_opening_range_breakout"
-    ),
-    preregistration_file=Path(
-        "research/EXP-006_preregistration.md"
-    ),
-),
 }
 
 def normalize_experiment_id(
