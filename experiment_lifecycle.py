@@ -311,6 +311,7 @@ EXPERIMENT_LIFECYCLE: dict[
         ),
     ),
 
+    
     "EXP-008": ExperimentLifecycle(
         experiment_id="EXP-008",
         experiment_name=(
@@ -325,20 +326,21 @@ EXPERIMENT_LIFECYCLE: dict[
             "with stronger post-cost evidence than the "
             "fixed EXP-007 baseline."
         ),
-        stage="PRE_REGISTERED",
+        stage="REJECTED",
         stage_reason=(
-            "All 27 opening-range, target and time-exit "
-            "combinations; candidate-selection rules; "
-            "neighbor checks; five anchored folds; "
-            "selection-aware 1,000-permutation MCPT; "
-            "cost checks and decision gates were locked "
-            "before any EXP-008 result was calculated."
+            "The protected 27-candidate optimization "
+            "selected the stable 45-minute, 1.5R, "
+            "15:55 candidate and passed twelve of "
+            "thirteen locked gates, but failed the "
+            "selection-aware NQ MCPT requirement: "
+            "p=0.138861 versus the maximum 0.050000."
         ),
         next_action=(
-            "Implement and test the protected 27-candidate "
-            "EXP-008 workflow. Commit the implementation "
-            "before running it. Do not change the grid, "
-            "selection procedure, seed or gates."
+            "Preserve EXP-008 as a completed negative "
+            "historical result. Do not alter its grid, "
+            "selection procedure, seed, permutation "
+            "count or decision gates. Any further "
+            "research must be separately preregistered."
         ),
         market_name="NQ / MNQ futures",
         timeframe=(
