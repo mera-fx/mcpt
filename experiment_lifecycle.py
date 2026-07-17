@@ -269,6 +269,7 @@ EXPERIMENT_LIFECYCLE: dict[
         ),
     ),
 
+    
     "EXP-007": ExperimentLifecycle(
         experiment_id="EXP-007",
         experiment_name=(
@@ -283,24 +284,25 @@ EXPERIMENT_LIFECYCLE: dict[
             "may generate a positive post-cost "
             "intraday edge."
         ),
-        stage="PRE_REGISTERED",
+        stage="REJECTED",
         stage_reason=(
-            "The exact fixed entry, stop, target, "
-            "time exit, intrabar ambiguity rules, "
-            "cost model, temporal checks, 1,000-"
-            "permutation MCPT and absolute decision "
-            "gates were locked before any EXP-007 "
-            "result was calculated."
+            "The protected fixed replication produced "
+            "positive NQ and MNQ results and passed nine "
+            "of ten locked gates, but failed the required "
+            "NQ session-aware MCPT gate: p=0.055944 "
+            "versus the maximum 0.050000."
         ),
         next_action=(
-            "Implement and test the protected fixed-"
-            "rule EXP-007 replication. Commit the "
-            "implementation before running it. Do not "
-            "optimize exits, filters or position sizing "
-            "inside EXP-007."
+            "Preserve EXP-007 as a completed negative "
+            "historical result. Do not alter its rules, "
+            "seed, permutation count or p-value gate. "
+            "Any further exit or sizing research must be "
+            "a separately preregistered experiment."
         ),
         market_name="NQ / MNQ futures",
-        timeframe="5-minute signal / 1-minute execution",
+        timeframe=(
+            "5-minute signal / 1-minute execution"
+        ),
         strategy_name=(
             "fixed_30m_long_only_1r_orb"
         ),

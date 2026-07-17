@@ -10,7 +10,7 @@ from experiment_lifecycle import (
 class Exp007LifecycleTests(
     unittest.TestCase
 ):
-    def test_exp007_is_preregistered(
+    def test_exp007_is_rejected(
         self,
     ) -> None:
         record = get_experiment_lifecycle(
@@ -18,15 +18,15 @@ class Exp007LifecycleTests(
         )
         self.assertEqual(
             record.stage,
-            "PRE_REGISTERED",
-        )
-        self.assertEqual(
-            record.strategy_name,
-            "fixed_30m_long_only_1r_orb",
+            "REJECTED",
         )
         self.assertIn(
-            "Do not optimize",
-            record.next_action,
+            "0.055944",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "0.050000",
+            record.stage_reason,
         )
 
     def test_prior_experiments_remain_frozen(
