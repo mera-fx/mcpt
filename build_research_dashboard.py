@@ -24,6 +24,9 @@ from research_dashboard_library import (
     load_experiment_metrics,
     relative_link,
 )
+from strategy_comparison_dashboard import (
+    build_strategy_comparison_section,
+)
 
 
 PROJECT_DIR = Path(__file__).resolve().parent
@@ -831,6 +834,10 @@ def build_dashboard_html(
         for record in records
     )
     active = len(records) - accepted - rejected
+    comparison_section = build_strategy_comparison_section(
+        PROJECT_DIR,
+        dashboard_directory,
+    )
 
     nav = "".join(
         (
@@ -974,6 +981,41 @@ main {{
   font-size: 1.5rem;
 }}
 .stat span {{ color: var(--muted); }}
+.strategy-comparison {{
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 22px;
+  margin: 18px 0 24px;
+  overflow: auto;
+  scroll-margin-top: 82px;
+}}
+.comparison-kicker {{
+  color: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}}
+.comparison-chart {{
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 18px 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+}}
+.comparison-table-wrap {{
+  overflow: auto;
+}}
+.strategy-comparison-table {{
+  min-width: 1050px;
+}}
+.strategy-comparison-table th:first-child {{
+  min-width: 240px;
+}}
+
 .search-panel {{
   display: flex;
   gap: 10px;
@@ -1401,6 +1443,7 @@ td code {{
     <div class="brand">Quantitative Research Hub</div>
     <nav>
       <a href="#top">Overview</a>
+      <a href="#strategy-comparison">Strategy comparison</a>
       {nav}
       <a href="#all-files">All files</a>
     </nav>
@@ -1422,6 +1465,8 @@ td code {{
     <div class="stat"><strong>{active}</strong><span>Active or under review</span></div>
   </div>
 </section>
+
+{comparison_section}
 
 <div class="search-panel">
   <input id="artifact-search" type="search"
