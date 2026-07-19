@@ -6,7 +6,11 @@ import unittest
 
 import pandas as pd
 
-from strategy_comparison_dashboard import build_strategy_comparison_section
+from strategy_comparison_dashboard import (
+    build_strategy_comparison_page,
+    build_strategy_comparison_section,
+    write_strategy_comparison_page,
+)
 
 
 class StrategyComparisonDashboardTests(unittest.TestCase):
@@ -79,6 +83,16 @@ class StrategyComparisonDashboardTests(unittest.TestCase):
             self.assertTrue(
                 (dashboard / "strategy_comparison_assets" / "normalized_equity_comparison.png").exists()
             )
+
+            page = build_strategy_comparison_page(project, dashboard)
+            self.assertIn("Research hub", page)
+            self.assertIn("Strategy comparison", page)
+            self.assertIn('class="value-positive"', page)
+            self.assertIn('class="value-negative"', page)
+
+            output = write_strategy_comparison_page(project, dashboard)
+            self.assertEqual(output.name, "strategy_comparison.html")
+            self.assertTrue(output.exists())
 
 
 if __name__ == "__main__":

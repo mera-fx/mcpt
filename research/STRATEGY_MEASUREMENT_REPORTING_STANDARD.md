@@ -71,3 +71,22 @@ Lifecycle status and failed gates remain visible as research context.
 The rebuild command hashes every decision, trade, equity and diagnostic input before
 and after report generation. A change to any protected input stops the build.
 The lifecycle registry is read but never edited.
+
+## Dashboard separation and colour semantics
+
+The research hub remains a compact experiment and artifact index. Strategy comparison
+is generated as a separate page at
+`reports/research_dashboard/strategy_comparison.html` and is opened from a dedicated
+navigation tab. The full comparison table and charts must not be inserted into the
+main dashboard flow.
+
+Colour is used as a reading aid rather than a replacement for numbers:
+
+- favourable measured values and passing evidence thresholds use green;
+- losses, drawdowns, failed thresholds and rejected decisions use red;
+- labels, counts and measurements without a universal good/bad interpretation remain
+  neutral;
+- blue is reserved for navigation, headings and row labels.
+
+Every coloured value retains its exact printed number and label so the report remains
+readable without colour.

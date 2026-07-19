@@ -25,7 +25,7 @@ from research_dashboard_library import (
     relative_link,
 )
 from strategy_comparison_dashboard import (
-    build_strategy_comparison_section,
+    write_strategy_comparison_page,
 )
 
 
@@ -331,6 +331,42 @@ def build_lifecycle_only_record(
     )
 
 
+def _display_number(value: str) -> float:
+    cleaned = (
+        str(value)
+        .replace("−", "-")
+        .replace("$", "")
+        .replace("%", "")
+        .replace(",", "")
+        .strip()
+    )
+    try:
+        return float(cleaned)
+    except (TypeError, ValueError):
+        return float("nan")
+
+
+def _metric_tone(label: str, value: str) -> str:
+    normalized = label.strip().lower()
+    number = _display_number(value)
+    if np.isnan(number):
+        return ""
+    if normalized == "profit factor":
+        return "tone-positive" if number > 1.0 else "tone-negative"
+    if normalized in {"net profit", "average trade"}:
+        if number > 0:
+            return "tone-positive"
+        if number < 0:
+            return "tone-negative"
+    if normalized in {"max drawdown", "max drawdown %"} and number < 0:
+        return "tone-negative"
+    if normalized == "win rate" and number >= 50.0:
+        return "tone-positive"
+    if normalized == "mcpt p-value":
+        return "tone-positive" if number <= 0.05 else "tone-negative"
+    return ""
+
+
 def _metric_card(
     label: str,
     value: str,
@@ -342,8 +378,10 @@ def _metric_card(
         if note
         else ""
     )
+    tone = _metric_tone(label, value)
+    class_name = "metric-card" + (f" {tone}" if tone else "")
     return (
-        '<div class="metric-card">'
+        f'<div class="{class_name}">'
         f'<div class="metric-label">{html.escape(label)}</div>'
         f'<div class="metric-value">{html.escape(value)}</div>'
         f"{note_html}"
@@ -834,11 +872,6 @@ def build_dashboard_html(
         for record in records
     )
     active = len(records) - accepted - rejected
-    comparison_section = build_strategy_comparison_section(
-        PROJECT_DIR,
-        dashboard_directory,
-    )
-
     nav = "".join(
         (
             f'<a href="#{html.escape(record["experiment_id"].lower())}">'
@@ -944,6 +977,24 @@ nav {{
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
+}}
+.top-tab {{
+  display: inline-block;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 7px 11px;
+  color: var(--muted);
+  font-weight: 750;
+}}
+.top-tab:hover {{
+  color: var(--text);
+  border-color: var(--accent);
+  text-decoration: none;
+}}
+.top-tab.active {{
+  color: #06233a;
+  background: var(--accent);
+  border-color: var(--accent);
 }}
 main {{
   width: min(1550px, calc(100% - 32px));
@@ -1202,6 +1253,8 @@ main {{
   font-size: 1.1rem;
   margin-top: 3px;
 }}
+.tone-positive .metric-value {{ color: var(--positive); }}
+.tone-negative .metric-value {{ color: var(--negative); }}
 .metric-note {{
   color: var(--muted);
   font-size: 0.68rem;
@@ -1442,8 +1495,9 @@ td code {{
   <div class="header-inner">
     <div class="brand">Quantitative Research Hub</div>
     <nav>
-      <a href="#top">Overview</a>
-      <a href="#strategy-comparison">Strategy comparison</a>
+      <a class="top-tab active" href="#top">Research hub</a>
+      <a class="top-tab" href="strategy_comparison.html"
+        target="_blank" rel="noopener">Strategy comparison ↗</a>
       {nav}
       <a href="#all-files">All files</a>
     </nav>
@@ -1465,8 +1519,6 @@ td code {{
     <div class="stat"><strong>{active}</strong><span>Active or under review</span></div>
   </div>
 </section>
-
-{comparison_section}
 
 <div class="search-panel">
   <input id="artifact-search" type="search"
@@ -1738,6 +1790,10 @@ def main() -> None:
         ),
         encoding="utf-8",
     )
+    comparison_file = write_strategy_comparison_page(
+        PROJECT_DIR,
+        dashboard_directory,
+    )
 
     dashboard_rows = []
     for record in records:
@@ -1832,6 +1888,7 @@ def main() -> None:
     print(f"Experiments: {len(records)}")
     print(f"Linked artifacts: {len(artifacts)}")
     print(f"Dashboard: {dashboard_file}")
+    print(f"Strategy comparison: {comparison_file}")
     print(
         "Experiment summary: "
         f"{results_root / 'research_dashboard.csv'}"

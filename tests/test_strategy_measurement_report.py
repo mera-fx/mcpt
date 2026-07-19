@@ -9,6 +9,7 @@ import pandas as pd
 
 from strategy_measurement_report import (
     _repair_timestamp_series,
+    _table,
     comparison_timeseries,
     measurement_specs,
     normalized_benchmark,
@@ -53,6 +54,21 @@ class StrategyMeasurementReportTests(unittest.TestCase):
             exp007.nq_trades_file.parent.name,
             "fixed_replication",
         )
+
+    def test_tables_colour_favourable_and_adverse_values(self) -> None:
+        markup = _table(
+            pd.DataFrame(
+                [
+                    {"Metric": "Net profit", "All trades": "$1,000.00"},
+                    {"Metric": "Maximum drawdown", "All trades": "−$250.00"},
+                    {"Metric": "Profit Factor", "All trades": "1.250"},
+                    {"Metric": "MCPT p-value", "All trades": "0.1400"},
+                ]
+            )
+        )
+        self.assertIn('class="value-positive"', markup)
+        self.assertIn('class="value-negative"', markup)
+        self.assertIn('class="row-label"', markup)
 
     def test_performance_table_has_all_long_short_columns(self) -> None:
         table = performance_table(self.sample_trades())

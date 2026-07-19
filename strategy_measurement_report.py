@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 
 
-REPORT_VERSION = "strategy_measurement_report_v1"
+REPORT_VERSION = "strategy_measurement_report_v2"
 REFERENCE_CAPITAL = {"NQ": 100_000.0, "MNQ": 10_000.0}
 
 
@@ -186,15 +186,156 @@ def _integer(value: Any) -> str:
     return f"{int(round(number)):,}"
 
 
+def _display_number(value: Any) -> float:
+    if isinstance(value, (int, float, np.integer, np.floating)):
+        number = float(value)
+        return number if math.isfinite(number) else float("nan")
+
+    text = str(value).strip()
+    if not text or text in {"—", "nan", "None"}:
+        return float("nan")
+
+    negative_parentheses = text.startswith("(") and text.endswith(")")
+    cleaned = (
+        text.replace("−", "-")
+        .replace("$", "")
+        .replace("%", "")
+        .replace(",", "")
+        .replace("(", "")
+        .replace(")", "")
+        .replace("minutes", "")
+        .replace("minute", "")
+        .replace("min", "")
+        .replace("sessions", "")
+        .replace("session", "")
+        .strip()
+    )
+    try:
+        number = float(cleaned)
+    except (TypeError, ValueError):
+        return float("nan")
+    return -abs(number) if negative_parentheses else number
+
+
+def _cell_tone(
+    row_label: Any,
+    column_label: Any,
+    value: Any,
+) -> str:
+    row = str(row_label).strip().lower().replace("_", " ")
+    column = str(column_label).strip().lower().replace("_", " ")
+    context = f"{row} {column}".strip()
+    text = str(value).strip().lower()
+
+    if text in {"pass", "passed", "true"}:
+        return "value-positive"
+    if text in {"fail", "failed", "false"}:
+        return "value-negative"
+    if "reject" in text:
+        return "value-negative"
+    if any(word in text for word in ("accept", "pass to", "lock exp")):
+        return "value-positive"
+
+    number = _display_number(value)
+    if not math.isfinite(number):
+        return ""
+
+    if "p value" in context or "p-value" in context:
+        return "value-positive" if number <= 0.05 else "value-negative"
+
+    if "profit factor" in context:
+        return "value-positive" if number > 1.0 else "value-negative"
+
+    positive_contexts = (
+        "net profit",
+        "gross profit",
+        "average trade",
+        "median trade",
+        "average winner",
+        "largest winner",
+        "payoff ratio",
+        "net profit / drawdown",
+        "average trade / average cost",
+        "average trade / costs",
+        "strategy return",
+        "benchmark return",
+        "excess return",
+        "combined test net profit",
+    )
+    if any(name in context for name in positive_contexts):
+        if number > 0:
+            return "value-positive"
+        if number < 0:
+            return "value-negative"
+
+    adverse_contexts = (
+        "gross loss",
+        "average loser",
+        "largest loser",
+        "maximum drawdown",
+        "max drawdown",
+        "total costs",
+    )
+    if any(name in context for name in adverse_contexts):
+        if number != 0:
+            return "value-negative"
+
+    if "win rate" in context and number >= 50.0:
+        return "value-positive"
+    if "profitable months" in context and number >= 50.0:
+        return "value-positive"
+
+    return ""
+
+
 def _table(frame: pd.DataFrame, *, index: bool = False) -> str:
     if frame.empty:
         return '<p class="note">No saved rows were available for this section.</p>'
-    return frame.to_html(
-        index=index,
-        border=0,
-        classes="data-table",
-        escape=True,
-        na_rep="—",
+
+    local = frame.copy()
+    if index:
+        index_name = local.index.name or "Index"
+        local = local.reset_index().rename(
+            columns={local.reset_index().columns[0]: index_name}
+        )
+
+    columns = list(local.columns)
+    header = "".join(
+        f"<th>{html.escape(str(column))}</th>"
+        for column in columns
+    )
+    body_rows: list[str] = []
+    for _, record in local.iterrows():
+        row_label = record.iloc[0] if len(record) else ""
+        cells: list[str] = []
+        for position, column in enumerate(columns):
+            value = record[column]
+            missing = value is None
+            if isinstance(value, (float, np.floating)):
+                missing = missing or math.isnan(float(value))
+            display = "—" if missing else str(value)
+            classes: list[str] = []
+            if position == 0:
+                classes.append("row-label")
+            tone = _cell_tone(row_label, column, value)
+            if tone:
+                classes.append(tone)
+            class_attribute = (
+                f' class="{" ".join(classes)}"'
+                if classes
+                else ""
+            )
+            cells.append(
+                f"<td{class_attribute}>{html.escape(display)}</td>"
+            )
+        body_rows.append("<tr>" + "".join(cells) + "</tr>")
+
+    return (
+        '<table class="data-table"><thead><tr>'
+        + header
+        + "</tr></thead><tbody>"
+        + "".join(body_rows)
+        + "</tbody></table>"
     )
 
 
@@ -1046,6 +1187,17 @@ def build_strategy_measurement_report(
             }
         )
 
+    def tone(label_text: str, raw_value: Any) -> str:
+        return _cell_tone(label_text, label_text, raw_value)
+
+    status_tone = (
+        "tone-negative"
+        if "REJECT" in label.upper()
+        else "tone-positive"
+        if any(word in label.upper() for word in ("ACCEPT", "PASS", "LOCK"))
+        else ""
+    )
+
     chart = lambda name, alt: (
         f'<img class="chart" src="assets/{html.escape(name)}" alt="{html.escape(alt)}">'
         if name in written else ""
@@ -1071,28 +1223,40 @@ nav {{ position:fixed; inset:0 auto 0 0; width:260px; padding:24px 17px; backgro
 nav strong {{ display:block; margin-bottom:14px; }}
 nav a {{ display:block; color:var(--muted); text-decoration:none; padding:7px 8px; border-radius:8px; }}
 nav a:hover {{ color:var(--text); background:var(--panel); }}
+.hub-link {{ color:var(--accent); font-weight:800; border:1px solid var(--line); margin-bottom:6px; }}
 main {{ margin-left:260px; width:min(1380px,calc(100% - 300px)); padding:30px 0 70px; }}
 header, section {{ background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:24px; margin-bottom:18px; overflow:auto; }}
 h1,h2,h3 {{ line-height:1.22; margin-top:0; }}
 .kicker {{ color:var(--accent); text-transform:uppercase; letter-spacing:.1em; font-size:.76rem; font-weight:800; }}
 .status {{ display:inline-block; border:1px solid var(--line); border-radius:999px; padding:7px 11px; color:var(--muted); font-weight:700; }}
+.status.tone-positive {{ color:var(--good); border-color:rgba(134,239,172,.55); }}
+.status.tone-negative {{ color:var(--bad); border-color:rgba(252,165,165,.55); }}
 .lead {{ font-size:1.08rem; max-width:1100px; }}
 .callout {{ background:var(--panel2); border-left:4px solid var(--accent); padding:16px 18px; border-radius:10px; margin:15px 0; }}
 .note {{ color:var(--muted); }}
 .data-table {{ width:100%; min-width:820px; border-collapse:collapse; }}
 th,td {{ border-bottom:1px solid var(--line); padding:9px 10px; text-align:left; vertical-align:top; white-space:nowrap; }}
-th {{ background:#172741; }}
+th {{ background:#1d3557; color:#dbeafe; }}
+.data-table tbody tr:nth-child(even) {{ background:rgba(255,255,255,.02); }}
+.data-table tbody tr:hover {{ background:rgba(125,211,252,.07); }}
+.row-label {{ color:#bfdbfe; font-weight:750; }}
+.value-positive {{ color:var(--good); font-weight:800; }}
+.value-negative {{ color:var(--bad); font-weight:800; }}
 .chart {{ display:block; width:100%; height:auto; margin:16px 0 26px; background:white; border:1px solid var(--line); border-radius:12px; }}
 .metrics {{ display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); gap:10px; }}
 .metric {{ background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:13px; }}
 .metric span {{ display:block; color:var(--muted); font-size:.78rem; }}
 .metric strong {{ display:block; margin-top:3px; font-size:1.2rem; }}
+.metric.tone-positive strong {{ color:var(--good); }}
+.metric.tone-negative strong {{ color:var(--bad); }}
 @media(max-width:900px) {{ nav {{ position:static; width:auto; }} main {{ margin:0 auto; width:calc(100% - 24px); }} .metrics {{ grid-template-columns:1fr 1fr; }} }}
 </style>
 </head>
 <body>
 <nav>
 <strong>{html.escape(spec.experiment_id)} measurements</strong>
+<a class="hub-link" href="../research_dashboard/index.html">← Research hub</a>
+<a class="hub-link" href="../research_dashboard/strategy_comparison.html">Strategy comparison</a>
 <a href="#overview">Overview</a>
 <a href="#happened">What happened and why</a>
 <a href="#design">What and how we tested</a>
@@ -1110,16 +1274,16 @@ th {{ background:#172741; }}
 <div class="kicker">{html.escape(spec.subtitle)} · {REPORT_VERSION}</div>
 <h1>{html.escape(spec.title)}</h1>
 <p class="lead">{html.escape(parameter_description)}</p>
-<p class="status">Formal status: {html.escape(label.replace('_', ' ').title())}</p>
+<p class="status {status_tone}">Formal status: {html.escape(label.replace('_', ' ').title())}</p>
 <div class="metrics">
-<div class="metric"><span>Profit Factor</span><strong>{_number(all_metrics['profit_factor'], 3)}</strong></div>
-<div class="metric"><span>Win rate</span><strong>{_percent(all_metrics['win_rate_percent'])}</strong></div>
-<div class="metric"><span>Net profit</span><strong>{_money(all_metrics['net_profit_usd'])}</strong></div>
-<div class="metric"><span>Maximum drawdown</span><strong>{_money(all_metrics['maximum_drawdown_usd'])}</strong></div>
-<div class="metric"><span>Average trade</span><strong>{_money(all_metrics['average_trade_usd'])}</strong></div>
-<div class="metric"><span>Net profit / drawdown</span><strong>{_number(all_metrics['net_profit_to_drawdown'], 3)}</strong></div>
+<div class="metric {tone('Profit Factor', all_metrics['profit_factor'])}"><span>Profit Factor</span><strong>{_number(all_metrics['profit_factor'], 3)}</strong></div>
+<div class="metric {tone('Win rate', all_metrics['win_rate_percent'])}"><span>Win rate</span><strong>{_percent(all_metrics['win_rate_percent'])}</strong></div>
+<div class="metric {tone('Net profit', all_metrics['net_profit_usd'])}"><span>Net profit</span><strong>{_money(all_metrics['net_profit_usd'])}</strong></div>
+<div class="metric {tone('Maximum drawdown', all_metrics['maximum_drawdown_usd'])}"><span>Maximum drawdown</span><strong>{_money(all_metrics['maximum_drawdown_usd'])}</strong></div>
+<div class="metric {tone('Average trade', all_metrics['average_trade_usd'])}"><span>Average trade</span><strong>{_money(all_metrics['average_trade_usd'])}</strong></div>
+<div class="metric {tone('Net profit / drawdown', all_metrics['net_profit_to_drawdown'])}"><span>Net profit / drawdown</span><strong>{_number(all_metrics['net_profit_to_drawdown'], 3)}</strong></div>
 <div class="metric"><span>Completed trades</span><strong>{len(nq_trades):,}</strong></div>
-<div class="metric"><span>MCPT p-value</span><strong>{_number(mcpt_p, 4)}</strong></div>
+<div class="metric {tone('MCPT p-value', mcpt_p)}"><span>MCPT p-value</span><strong>{_number(mcpt_p, 4)}</strong></div>
 </div>
 </header>
 <section id="happened"><h2>What happened and why</h2><div class="callout"><strong>What happened</strong><p>{html.escape(what_happened)}</p></div><div class="callout"><strong>Why the formal decision happened</strong><p>{html.escape(why)}</p></div><p class="note">A gate controls the claim made about a result. It does not erase the result's measured performance, risk, consistency or practical characteristics.</p></section>
