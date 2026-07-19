@@ -5,17 +5,23 @@ import unittest
 from experiment_lifecycle import get_experiment_lifecycle
 
 
-class Exp009LifecycleTests(unittest.TestCase):
-    def test_exp009_is_closed_to_review(self) -> None:
+class Exp010LifecycleTests(unittest.TestCase):
+    def test_exp010_is_preregistered(self) -> None:
+        record = get_experiment_lifecycle("EXP-010")
+        self.assertEqual(record.stage, "PRE_REGISTERED")
+        self.assertEqual(
+            record.strategy_name,
+            "opening_drive_deep_validation",
+        )
+        self.assertIn("all four", record.stage_reason.lower())
+
+    def test_exp009_remains_in_review(self) -> None:
         record = get_experiment_lifecycle("EXP-009")
         self.assertEqual(record.stage, "REVIEW")
         self.assertEqual(
             record.strategy_name,
             "multi_strategy_discovery_tournament",
         )
-        self.assertIn("All 24 preregistered candidates", record.stage_reason)
-        self.assertIn("no automatic winner", record.stage_reason.lower())
-        self.assertIn("EXP-010", record.next_action)
 
     def test_prior_experiments_remain_frozen(self) -> None:
         expected = {

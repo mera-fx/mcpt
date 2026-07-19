@@ -366,17 +366,22 @@ EXPERIMENT_LIFECYCLE: dict[
             "profitability, drawdown, consistency, cost resilience "
             "and practical trading behaviour under one common test."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "Six cash-session strategy families, four candidates per "
-            "family, shared data and execution rules, complete "
-            "measurement requirements and the no-winner discovery "
-            "boundary were locked before any EXP-009 result."
+            "All 24 preregistered candidates across six families were "
+            "measured under the common NQ/MNQ execution and cost model. "
+            "Twelve candidates were profitable, ten remained profitable "
+            "at two ticks of slippage per side, and the four opening-drive "
+            "candidates formed the strongest measured family. EXP-009 "
+            "made no automatic winner, pass/fail or edge-confirmation "
+            "claim and ran no MCPT, bootstrap or family optimization."
         ),
         next_action=(
-            "Implement and test all 24 candidates without changing "
-            "the frozen candidate budget. Commit the implementation "
-            "before calculating discovery measurements."
+            "Preserve EXP-009 as a completed discovery measurement in "
+            "REVIEW. Deeply validate the four locked opening-drive "
+            "candidates under EXP-010 with anchored walk-forward and "
+            "selection-aware MCPT. Do not authorize paper or live trading "
+            "from EXP-009."
         ),
         market_name="NQ / MNQ futures",
         timeframe="5-minute signal / 1-minute execution",
@@ -385,6 +390,36 @@ EXPERIMENT_LIFECYCLE: dict[
             "research/EXP-009_preregistration.md"
         ),
     ),
+
+    "EXP-010": ExperimentLifecycle(
+        experiment_id="EXP-010",
+        experiment_name="NQ/MNQ Opening-Drive Deep Validation",
+        hypothesis=(
+            "The four locked EXP-009 opening-drive candidates may retain "
+            "attractive performance, risk, consistency and cost "
+            "characteristics after family-level selection is accounted "
+            "for with anchored walk-forward and selection-aware MCPT."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "All four EXP-009 opening-drive candidates, the user-preferred "
+            "reference, data, execution, costs, walk-forward procedure, "
+            "bootstrap diagnostics, random seeds and selection-aware MCPT "
+            "were locked before any EXP-010 result."
+        ),
+        next_action=(
+            "Implement the protected four-candidate validation and commit "
+            "it before calculating EXP-010 measurements. Preserve all "
+            "EXP-009 results and the prior-family-selection limitation."
+        ),
+        market_name="NQ / MNQ futures",
+        timeframe="5-minute signal / 1-minute execution",
+        strategy_name="opening_drive_deep_validation",
+        preregistration_file=Path(
+            "research/EXP-010_preregistration.md"
+        ),
+    ),
+
 }
 
 
