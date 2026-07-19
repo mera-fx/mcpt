@@ -400,17 +400,23 @@ EXPERIMENT_LIFECYCLE: dict[
             "characteristics after family-level selection is accounted "
             "for with anchored walk-forward and selection-aware MCPT."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "All four EXP-009 opening-drive candidates, the user-preferred "
-            "reference, data, execution, costs, walk-forward procedure, "
-            "bootstrap diagnostics, random seeds and selection-aware MCPT "
-            "were locked before any EXP-010 result."
+            "The locked four-candidate validation produced strong "
+            "historical evidence. The measurement leader was the 0.5 "
+            "minimum-drive time-exit candidate: NQ PF 1.350073, net "
+            "$213,905, 775 trades and $25,280 maximum drawdown. Four of "
+            "five anchored folds were profitable with $114,695 combined "
+            "net profit, MNQ confirmed directionally, two-tick stress "
+            "remained profitable, and selection-aware MCPT p=0.025974."
         ),
         next_action=(
-            "Implement the protected four-candidate validation and commit "
-            "it before calculating EXP-010 measurements. Preserve all "
-            "EXP-009 results and the prior-family-selection limitation."
+            "Preserve the complete EXP-010 measurement in REVIEW. Keep "
+            "the 0.5 time-exit measurement leader and the user-preferred "
+            "0.5 / 1.5R reference visible as distinct alternatives. The "
+            "result is not independent confirmation because the opening-"
+            "drive family and 2019-2025 data were already viewed, so do "
+            "not authorize paper or live trading automatically."
         ),
         market_name="NQ / MNQ futures",
         timeframe="5-minute signal / 1-minute execution",
@@ -419,7 +425,6 @@ EXPERIMENT_LIFECYCLE: dict[
             "research/EXP-010_preregistration.md"
         ),
     ),
-
 }
 
 

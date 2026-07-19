@@ -1,0 +1,44 @@
+{
+  "diagnostics": [
+    {
+      "candidate_id": "opening_drive_0p5_time",
+      "resamples": 10000,
+      "random_seed": 5001,
+      "sampling_unit": "completed_trade",
+      "completed_trades": 775,
+      "observed_average_trade_usd": 276.0064516129032,
+      "observed_trade_profit_factor": 1.3500728278480598,
+      "average_trade_usd_95_percentile_interval": [
+        111.02983870967742,
+        448.1064516129032
+      ],
+      "trade_profit_factor_95_percentile_interval": [
+        1.129896511275825,
+        1.6150712241307958
+      ],
+      "average_trade_probability_above_zero": 0.9995,
+      "profit_factor_probability_above_one": 0.9995,
+      "decision_gate": false
+    },
+    {
+      "candidate_id": "opening_drive_0p5_1p5r",
+      "resamples": 10000,
+      "random_seed": 5001,
+      "sampling_unit": "completed_trade",
+      "completed_trades": 775,
+      "observed_average_trade_usd": 242.38709677419354,
+      "observed_trade_profit_factor": 1.3158469945355191,
+      "average_trade_usd_95_percentile_interval": [
+        86.77870967741936,
+        399.6742741935484
+      ],
+      "trade_profit_factor_95_percentile_interval": [
+        1.1036179308735727,
+        1.5669872915740293
+      ],
+      "average_trade_probability_above_zero": 0.9992,
+      "profit_factor_probability_above_one": 0.9992,
+      "decision_gate": false
+    }
+  ]
+}
