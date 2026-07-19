@@ -353,7 +353,40 @@ EXPERIMENT_LIFECYCLE: dict[
             "research/EXP-008_preregistration.md"
         ),
     ),
+
+
+    "EXP-009": ExperimentLifecycle(
+        experiment_id="EXP-009",
+        experiment_name=(
+            "NQ/MNQ Multi-Strategy Discovery Tournament"
+        ),
+        hypothesis=(
+            "Several structurally different, reproducible intraday "
+            "strategy families may display meaningfully different "
+            "profitability, drawdown, consistency, cost resilience "
+            "and practical trading behaviour under one common test."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "Six cash-session strategy families, four candidates per "
+            "family, shared data and execution rules, complete "
+            "measurement requirements and the no-winner discovery "
+            "boundary were locked before any EXP-009 result."
+        ),
+        next_action=(
+            "Implement and test all 24 candidates without changing "
+            "the frozen candidate budget. Commit the implementation "
+            "before calculating discovery measurements."
+        ),
+        market_name="NQ / MNQ futures",
+        timeframe="5-minute signal / 1-minute execution",
+        strategy_name="multi_strategy_discovery_tournament",
+        preregistration_file=Path(
+            "research/EXP-009_preregistration.md"
+        ),
+    ),
 }
+
 
 def normalize_experiment_id(
     value: str,
