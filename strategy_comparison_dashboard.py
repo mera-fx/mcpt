@@ -185,26 +185,30 @@ def _tone_for_value(
     text = str(raw).strip().lower()
 
     if normalized == "formal decision":
-        if "accept" in text or "pass" in text or "lock" in text:
-            return "value-positive"
         if "reject" in text or "fail" in text:
             return "value-negative"
+        if "accept" in text or "pass" in text or "lock" in text:
+            return "value-positive"
         return ""
 
     if normalized == "failed gates":
-        if not text or text in {"none", "nan", "—"}:
-            return "value-positive"
-        return "value-negative"
+        return (
+            ""
+            if not text or text in {"none", "nan", "—"}
+            else "value-negative"
+        )
 
     number = _safe(raw)
     if not math.isfinite(number):
         return ""
 
     if normalized == "mcpt p-value":
-        return "value-positive" if number <= 0.05 else "value-negative"
+        return "value-negative" if number > 0.05 else ""
+
+    if normalized == "profit factor":
+        return "value-negative" if number <= 1.0 else ""
 
     if normalized in {
-        "profit factor",
         "net profit",
         "average trade",
         "net profit / drawdown",
@@ -215,12 +219,7 @@ def _tone_for_value(
         "two-tick nq net profit",
         "walk-forward net profit",
     }:
-        if normalized == "profit factor":
-            return "value-positive" if number > 1.0 else "value-negative"
-        if number > 0:
-            return "value-positive"
-        if number < 0:
-            return "value-negative"
+        return "value-negative" if number < 0 else ""
 
     if normalized in {
         "maximum drawdown",
@@ -228,14 +227,7 @@ def _tone_for_value(
     } and number < 0:
         return "value-negative"
 
-    if normalized == "win rate" and number >= 50.0:
-        return "value-positive"
-
-    if normalized == "mcpt percentile" and number >= 95.0:
-        return "value-positive"
-
     return ""
-
 
 def _comparison_table(summary: pd.DataFrame) -> str:
     local = summary.set_index("experiment_id")
@@ -400,8 +392,9 @@ def build_strategy_comparison_section(
   {chart_html}
   <div class="comparison-table-wrap">{_comparison_table(summary)}</div>
   <p class="footer-note">
-    Green highlights favourable measurements. Red highlights losses,
-    drawdowns, failed evidence thresholds and rejected decisions. The NQ
+    Green text is reserved for status words such as Pass, Accepted and
+    Locked. Positive numeric values remain neutral. Red text marks losses,
+    drawdowns, failed evidence and rejected decisions. The NQ
     benchmark is a descriptive normalized session-close price path, not a
     tradable one-contract continuous-futures backtest.
   </p>
@@ -433,7 +426,7 @@ def build_strategy_comparison_page(
   --muted:#9cacbf;
   --line:#2a3b56;
   --accent:#38bdf8;
-  --positive:#4ade80;
+  --positive:#86efac;
   --negative:#fb7185;
   --warning:#facc15;
 }}
@@ -525,8 +518,8 @@ th {{
 th:first-child,td:first-child {{ text-align:left; }}
 tbody tr:nth-child(even) {{ background:rgba(255,255,255,.025); }}
 tbody tr:hover {{ background:rgba(56,189,248,.08); }}
-.value-positive {{ color:var(--positive); font-weight:800; }}
-.value-negative {{ color:var(--negative); font-weight:800; }}
+.value-positive {{ color:var(--positive); font-weight:inherit; }}
+.value-negative {{ color:var(--negative); font-weight:inherit; }}
 .footer-note {{ color:var(--muted); margin-top:24px; }}
 @media(max-width:760px) {{
   .header-inner {{ align-items:flex-start; flex-direction:column; }}

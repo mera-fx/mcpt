@@ -7,6 +7,7 @@ import unittest
 import pandas as pd
 
 from strategy_comparison_dashboard import (
+    _tone_for_value,
     build_strategy_comparison_page,
     build_strategy_comparison_section,
     write_strategy_comparison_page,
@@ -87,8 +88,26 @@ class StrategyComparisonDashboardTests(unittest.TestCase):
             page = build_strategy_comparison_page(project, dashboard)
             self.assertIn("Research hub", page)
             self.assertIn("Strategy comparison", page)
-            self.assertIn('class="value-positive"', page)
+            # This fixture contains only a rejected experiment,
+            # so no green status cell should be rendered.
+            self.assertNotIn('class="value-positive"', page)
             self.assertIn('class="value-negative"', page)
+            self.assertEqual(
+                _tone_for_value(
+                    "Formal decision",
+                    "ACCEPTED_FOR_PAPER_TESTING",
+                ),
+                "value-positive",
+            )
+            self.assertEqual(
+                _tone_for_value(
+                    "Net profit",
+                    1000.0,
+                ),
+                "",
+            )
+            self.assertNotIn('background:var(--positive)', page)
+            self.assertNotIn('background:var(--negative)', page)
 
             output = write_strategy_comparison_page(project, dashboard)
             self.assertEqual(output.name, "strategy_comparison.html")

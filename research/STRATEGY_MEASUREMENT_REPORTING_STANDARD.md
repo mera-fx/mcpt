@@ -80,13 +80,13 @@ is generated as a separate page at
 navigation tab. The full comparison table and charts must not be inserted into the
 main dashboard flow.
 
-Colour is used as a reading aid rather than a replacement for numbers:
+Colour is used only on selected printed text:
 
-- favourable measured values and passing evidence thresholds use green;
-- losses, drawdowns, failed thresholds and rejected decisions use red;
-- labels, counts and measurements without a universal good/bad interpretation remain
-  neutral;
-- blue is reserved for navigation, headings and row labels.
+- green is reserved for status words such as Pass, Accepted and Locked;
+- favourable numeric values remain in the normal text colour;
+- losses, drawdowns, failed evidence and rejected decisions use red text;
+- cells, rows, cards, status pills, borders and backgrounds remain neutral;
+- blue remains reserved for navigation, headings and row labels.
 
 Every coloured value retains its exact printed number and label so the report remains
 readable without colour.

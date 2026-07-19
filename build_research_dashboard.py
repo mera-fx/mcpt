@@ -352,20 +352,14 @@ def _metric_tone(label: str, value: str) -> str:
     if np.isnan(number):
         return ""
     if normalized == "profit factor":
-        return "tone-positive" if number > 1.0 else "tone-negative"
+        return "tone-negative" if number <= 1.0 else ""
     if normalized in {"net profit", "average trade"}:
-        if number > 0:
-            return "tone-positive"
-        if number < 0:
-            return "tone-negative"
+        return "tone-negative" if number < 0 else ""
     if normalized in {"max drawdown", "max drawdown %"} and number < 0:
         return "tone-negative"
-    if normalized == "win rate" and number >= 50.0:
-        return "tone-positive"
     if normalized == "mcpt p-value":
-        return "tone-positive" if number <= 0.05 else "tone-negative"
+        return "tone-negative" if number > 0.05 else ""
     return ""
-
 
 def _metric_card(
     label: str,
@@ -720,9 +714,21 @@ def _experiment_section(
         "result_decision",
         "",
     )
+    def decision_tone(value: Any) -> str:
+        normalized = str(value).upper()
+        if "REJECT" in normalized or "FAIL" in normalized:
+            return " tone-negative"
+        if (
+            "ACCEPT" in normalized
+            or "PASS" in normalized
+            or "LOCK" in normalized
+        ):
+            return " tone-positive"
+        return ""
+
     decision_badges = "".join(
         (
-            f'<span class="decision-badge">'
+            f'<span class="decision-badge{decision_tone(value)}">'
             f'{html.escape(label)}: '
             f'{html.escape(str(value))}</span>'
         )
@@ -1214,9 +1220,7 @@ main {{
   font-weight: 700;
   white-space: nowrap;
 }}
-.stage.accepted-for-paper-testing {{
-  color: var(--positive);
-}}
+.stage.accepted-for-paper-testing {{ color: var(--positive); }}
 .stage.rejected {{ color: var(--negative); }}
 .stage.review, .stage.full-validation {{
   color: var(--warning);
@@ -1229,7 +1233,7 @@ main {{
 }}
 .decision-badge {{
   font-size: 0.82rem;
-  color: var(--positive);
+  color: var(--text);
 }}
 .metrics-grid {{
   display: grid;
@@ -1255,6 +1259,8 @@ main {{
 }}
 .tone-positive .metric-value {{ color: var(--positive); }}
 .tone-negative .metric-value {{ color: var(--negative); }}
+.decision-badge.tone-positive {{ color: var(--positive); }}
+.decision-badge.tone-negative {{ color: var(--negative); }}
 .metric-note {{
   color: var(--muted);
   font-size: 0.68rem;

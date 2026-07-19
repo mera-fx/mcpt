@@ -55,8 +55,8 @@ class StrategyMeasurementReportTests(unittest.TestCase):
             "fixed_replication",
         )
 
-    def test_tables_colour_favourable_and_adverse_values(self) -> None:
-        markup = _table(
+    def test_green_is_reserved_for_status_text(self) -> None:
+        numeric_markup = _table(
             pd.DataFrame(
                 [
                     {"Metric": "Net profit", "All trades": "$1,000.00"},
@@ -66,9 +66,18 @@ class StrategyMeasurementReportTests(unittest.TestCase):
                 ]
             )
         )
-        self.assertIn('class="value-positive"', markup)
-        self.assertIn('class="value-negative"', markup)
-        self.assertIn('class="row-label"', markup)
+        status_markup = _table(
+            pd.DataFrame(
+                [
+                    {"Gate": "Example", "Result": "Pass"},
+                    {"Gate": "Example two", "Result": "Fail"},
+                ]
+            )
+        )
+        self.assertNotIn('class="value-positive"', numeric_markup)
+        self.assertIn('class="value-negative"', numeric_markup)
+        self.assertIn('class="value-positive"', status_markup)
+        self.assertIn('class="value-negative"', status_markup)
 
     def test_performance_table_has_all_long_short_columns(self) -> None:
         table = performance_table(self.sample_trades())

@@ -227,26 +227,29 @@ def _cell_tone(
     context = f"{row} {column}".strip()
     text = str(value).strip().lower()
 
-    if text in {"pass", "passed", "true"}:
+    # Green is reserved for status words. Positive numeric values remain
+    # in the normal text colour. Red still marks adverse numeric values,
+    # failures and rejections.
+    if text in {"pass", "passed", "true", "accepted"}:
         return "value-positive"
     if text in {"fail", "failed", "false"}:
         return "value-negative"
+    if "accept" in text or text.startswith("lock_"):
+        return "value-positive"
     if "reject" in text:
         return "value-negative"
-    if any(word in text for word in ("accept", "pass to", "lock exp")):
-        return "value-positive"
 
     number = _display_number(value)
     if not math.isfinite(number):
         return ""
 
     if "p value" in context or "p-value" in context:
-        return "value-positive" if number <= 0.05 else "value-negative"
+        return "value-negative" if number > 0.05 else ""
 
     if "profit factor" in context:
-        return "value-positive" if number > 1.0 else "value-negative"
+        return "value-negative" if number <= 1.0 else ""
 
-    positive_contexts = (
+    result_contexts = (
         "net profit",
         "gross profit",
         "average trade",
@@ -262,11 +265,8 @@ def _cell_tone(
         "excess return",
         "combined test net profit",
     )
-    if any(name in context for name in positive_contexts):
-        if number > 0:
-            return "value-positive"
-        if number < 0:
-            return "value-negative"
+    if any(name in context for name in result_contexts):
+        return "value-negative" if number < 0 else ""
 
     adverse_contexts = (
         "gross loss",
@@ -276,17 +276,10 @@ def _cell_tone(
         "max drawdown",
         "total costs",
     )
-    if any(name in context for name in adverse_contexts):
-        if number != 0:
-            return "value-negative"
-
-    if "win rate" in context and number >= 50.0:
-        return "value-positive"
-    if "profitable months" in context and number >= 50.0:
-        return "value-positive"
+    if any(name in context for name in adverse_contexts) and number != 0:
+        return "value-negative"
 
     return ""
-
 
 def _table(frame: pd.DataFrame, *, index: bool = False) -> str:
     if frame.empty:
@@ -1190,12 +1183,19 @@ def build_strategy_measurement_report(
     def tone(label_text: str, raw_value: Any) -> str:
         return _cell_tone(label_text, label_text, raw_value)
 
+    upper_label = label.upper()
     status_tone = (
         "tone-negative"
-        if "REJECT" in label.upper()
-        else "tone-positive"
-        if any(word in label.upper() for word in ("ACCEPT", "PASS", "LOCK"))
-        else ""
+        if "REJECT" in upper_label or "FAIL" in upper_label
+        else (
+            "tone-positive"
+            if (
+                "ACCEPT" in upper_label
+                or "PASS" in upper_label
+                or "LOCK" in upper_label
+            )
+            else ""
+        )
     )
 
     chart = lambda name, alt: (
@@ -1229,8 +1229,8 @@ header, section {{ background:var(--panel); border:1px solid var(--line); border
 h1,h2,h3 {{ line-height:1.22; margin-top:0; }}
 .kicker {{ color:var(--accent); text-transform:uppercase; letter-spacing:.1em; font-size:.76rem; font-weight:800; }}
 .status {{ display:inline-block; border:1px solid var(--line); border-radius:999px; padding:7px 11px; color:var(--muted); font-weight:700; }}
-.status.tone-positive {{ color:var(--good); border-color:rgba(134,239,172,.55); }}
-.status.tone-negative {{ color:var(--bad); border-color:rgba(252,165,165,.55); }}
+.status.tone-positive {{ color:var(--good); }}
+.status.tone-negative {{ color:var(--bad); }}
 .lead {{ font-size:1.08rem; max-width:1100px; }}
 .callout {{ background:var(--panel2); border-left:4px solid var(--accent); padding:16px 18px; border-radius:10px; margin:15px 0; }}
 .note {{ color:var(--muted); }}
@@ -1240,8 +1240,8 @@ th {{ background:#1d3557; color:#dbeafe; }}
 .data-table tbody tr:nth-child(even) {{ background:rgba(255,255,255,.02); }}
 .data-table tbody tr:hover {{ background:rgba(125,211,252,.07); }}
 .row-label {{ color:#bfdbfe; font-weight:750; }}
-.value-positive {{ color:var(--good); font-weight:800; }}
-.value-negative {{ color:var(--bad); font-weight:800; }}
+.value-positive {{ color:var(--good); font-weight:inherit; }}
+.value-negative {{ color:var(--bad); font-weight:inherit; }}
 .chart {{ display:block; width:100%; height:auto; margin:16px 0 26px; background:white; border:1px solid var(--line); border-radius:12px; }}
 .metrics {{ display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); gap:10px; }}
 .metric {{ background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:13px; }}

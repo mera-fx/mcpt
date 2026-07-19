@@ -51,13 +51,44 @@ class ResearchDashboardStrategyTabTests(unittest.TestCase):
             markup,
         )
 
-    def test_main_metrics_use_colour_tones(self) -> None:
-        markup = build_dashboard_html(
+    def test_green_is_used_for_status_not_positive_metrics(self) -> None:
+        rejected_markup = build_dashboard_html(
             [sample_record()],
             Path("."),
         )
-        self.assertIn("tone-positive", markup)
-        self.assertIn("tone-negative", markup)
+
+        accepted = sample_record()
+        accepted["status"] = "ACCEPTED_FOR_PAPER_TESTING"
+        accepted["status_label"] = "Accepted for paper testing"
+        accepted["metrics"] = dict(accepted["metrics"])
+        accepted["metrics"]["result_decision"] = (
+            "ACCEPT_FOR_PAPER_TESTING"
+        )
+        accepted_markup = build_dashboard_html(
+            [accepted],
+            Path("."),
+        )
+
+        self.assertIn(
+            "decision-badge tone-positive",
+            accepted_markup,
+        )
+        self.assertIn(
+            "decision-badge tone-negative",
+            rejected_markup,
+        )
+        self.assertNotIn(
+            'class="metric-card tone-positive"',
+            accepted_markup,
+        )
+        self.assertNotIn(
+            "background: var(--positive)",
+            accepted_markup,
+        )
+        self.assertNotIn(
+            "background: var(--negative)",
+            rejected_markup,
+        )
 
 
 if __name__ == "__main__":
