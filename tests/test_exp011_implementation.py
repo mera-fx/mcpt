@@ -32,6 +32,13 @@ class Exp011ImplementationTests(unittest.TestCase):
         self.assertFalse(record["evaluation"]["automatic_winner"])
         self.assertFalse(record["evaluation"]["pass_fail_gate"])
         self.assertFalse(record["protections"]["new_mcpt"])
+        self.assertEqual(
+            record["bootstrap"]["mnq_actual_usd_comparison_scale"],
+            1.0,
+        )
+        self.assertTrue(
+            record["bootstrap"]["mnq_double_scaling_prohibited"]
+        )
         self.assertFalse(
             record["protections"]["paper_trading_authorized"]
         )

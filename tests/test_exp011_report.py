@@ -35,7 +35,7 @@ class Exp011ReportTests(unittest.TestCase):
                     results[
                         (signal_id, "integer_mnq_equal_risk")
                     ],
-                    comparison_scale_to_nq=10.0,
+                    comparison_scale_to_nq=1.0,
                     resamples=50,
                 )
             )
@@ -68,6 +68,7 @@ class Exp011ReportTests(unittest.TestCase):
         self.assertIn("all methods and both exit variants", text)
         self.assertIn("does not declare a sizing winner", text)
         self.assertIn("does not confirm the signal edge", text)
+        self.assertIn("no extra ten-times conversion", text)
         self.assertIn('class="status-good">LOCKED', text)
         self.assertNotIn('class="status-good">$', text)
 

@@ -556,9 +556,10 @@ from trade to trade.</p>
 <h2>Paired session bootstrap</h2>
 {_table_html(bootstrap_frame)}
 <p class="note">Each comparison resampled the same evaluation sessions on both
-sides. MNQ P&amp;L and risk were multiplied by ten only inside the stated
-NQ-dollar diagnostic. This report-only bootstrap does not confirm the signal edge
-or impose a pass/fail gate.</p>
+sides. Both NQ and the complete multi-contract MNQ position are already recorded
+in actual US dollars, so no extra ten-times conversion is applied. This
+report-only bootstrap does not confirm the signal edge or impose a pass/fail
+gate.</p>
 
 <h2>Research context and limits</h2>
 <div class="panel">

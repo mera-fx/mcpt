@@ -26,17 +26,19 @@ class Exp011BootstrapTests(unittest.TestCase):
         self.assertFalse(first["decision_gate"])
         self.assertFalse(first["signal_edge_confirmation"])
 
-    def test_integer_mnq_can_be_scaled_to_nq_dollars(self) -> None:
+    def test_integer_mnq_uses_actual_dollars_without_double_scale(
+        self,
+    ) -> None:
         results = make_sized_results()
         diagnostic = paired_sizing_bootstrap(
             results[("opening_drive_0p5_time", "fixed_one_nq")],
             results[
                 ("opening_drive_0p5_time", "integer_mnq_equal_risk")
             ],
-            comparison_scale_to_nq=10.0,
+            comparison_scale_to_nq=1.0,
             resamples=50,
         )
-        self.assertEqual(diagnostic["comparison_scale_to_nq"], 10.0)
+        self.assertEqual(diagnostic["comparison_scale_to_nq"], 1.0)
         self.assertEqual(diagnostic["evaluation_sessions"], 5)
 
     def test_different_signals_cannot_be_paired(self) -> None:

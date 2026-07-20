@@ -44,8 +44,11 @@ constant and profits are not compounded.
 The implementation records performance, drawdown, initial-risk dispersion,
 contract distribution, skipped trades, annual and monthly behaviour, costs,
 and practical holding measurements. Four paired session bootstraps use 10,000
-resamples and seed 5111. The MNQ diagnostic is also shown at ten-times native
-dollars solely to make its scale comparable with NQ.
+resamples and seed 5111. Both the fixed NQ position and the complete dynamically
+sized MNQ position are already recorded in actual US dollars. The MNQ result
+therefore receives no additional ten-times conversion; doing so would
+double-count the contract multiplier after contract quantity has already been
+applied.
 
 The report includes a plain-English strategy explanation, a worked sizing
 example, all six rows, equity versus a normalized NQ price benchmark,

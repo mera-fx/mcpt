@@ -52,7 +52,8 @@ EXP011_IMPLEMENTATION: dict[str, Any] = {
         "resamples": 10000,
         "seed": 5111,
         "paired_by_evaluation_session": True,
-        "mnq_scale_to_nq": 10.0,
+        "mnq_actual_usd_comparison_scale": 1.0,
+        "mnq_double_scaling_prohibited": True,
         "decision_gate": False,
     },
     "files": [
@@ -152,7 +153,8 @@ def validate_exp011_implementation(
         bootstrap["resamples"] != 10000
         or bootstrap["seed"] != 5111
         or bootstrap["paired_by_evaluation_session"] is not True
-        or bootstrap["mnq_scale_to_nq"] != 10.0
+        or bootstrap["mnq_actual_usd_comparison_scale"] != 1.0
+        or bootstrap["mnq_double_scaling_prohibited"] is not True
         or bootstrap["decision_gate"] is not False
     ):
         raise ValueError("EXP-011 bootstrap implementation changed.")

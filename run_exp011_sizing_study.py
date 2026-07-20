@@ -296,7 +296,7 @@ def run_study() -> None:
             paired_sizing_bootstrap(
                 fixed,
                 sized[(signal_id, "integer_mnq_equal_risk")],
-                comparison_scale_to_nq=10.0,
+                comparison_scale_to_nq=1.0,
             )
         )
 
