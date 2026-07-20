@@ -23,6 +23,7 @@ CURRENT_REPORT_GENERATORS = (
     "exp009_report.py",
     "exp010_report.py",
     "exp011_report.py",
+    "exp013_report.py",
     "strategy_measurement_report.py",
     "strategy_comparison_dashboard.py",
 )
