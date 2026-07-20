@@ -1,0 +1,7 @@
+family_id,candidate_count,profitable_candidate_count,median_profit_factor,median_win_rate,median_net_profit_usd,median_maximum_drawdown_usd,nondominated_candidate_count,reliability_flags
+gap_continuation,4,4,1.1898132823346521,0.3450030319108618,18121.25,-17357.5,0,1
+gap_fade,4,4,1.364207396189291,0.45916052820697084,34960.0,-10182.5,2,0
+overnight_momentum_continuation,4,4,1.145827204763257,0.3615492957746479,16330.0,-12596.25,0,4
+overnight_inventory_reversal,4,2,0.9896408366232612,0.4194582814445828,-3407.5,-16445.0,0,5
+overnight_range_breakout,4,0,0.8934759611770119,0.45318989653984937,-55620.0,-71111.25,0,4
+premarket_momentum_continuation,4,4,1.433440596530959,0.36871290221805686,24546.25,-13117.5,1,3

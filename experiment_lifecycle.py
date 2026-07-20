@@ -469,18 +469,22 @@ EXPERIMENT_LIFECYCLE: dict[
             "reversal and range-breakout strategies with meaningfully "
             "different performance and risk characteristics."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "Six extended-hours context families, 24 candidates, the "
-            "2020-2025 aligned frozen NQ/MNQ sample, cash-session-only "
-            "entries, costs, measurements and reporting rules were "
-            "locked before any EXP-012 strategy result."
+            "All 24 preregistered candidates across six extended-context "
+            "families were measured on 1,331 aligned 2020-2025 NQ/MNQ "
+            "sessions. Eighteen candidates were profitable at base and "
+            "two-tick NQ costs. Gap fade and premarket momentum were the "
+            "strongest measured families. Three candidates were retained "
+            "for deeper review without an automatic winner, pass/fail or "
+            "edge-confirmation claim."
         ),
         next_action=(
-            "Implement and commit the protected 24-candidate measurement "
-            "engine before calculating results. Preserve every candidate "
-            "and make no automatic winner, pass/fail, edge-confirmation "
-            "or trading-authorization claim."
+            "Preserve EXP-012 as a completed discovery measurement in "
+            "REVIEW. Under EXP-013, deeply validate the locked gap-fade "
+            "0.50 / 1R and premarket-continuation 0.50 and 0.75 time-exit "
+            "candidates. Explicitly account for their post-EXP-012 "
+            "selection and do not authorize paper or live trading."
         ),
         market_name="NQ / MNQ futures",
         timeframe=(
@@ -490,6 +494,41 @@ EXPERIMENT_LIFECYCLE: dict[
         strategy_name="extended_hours_context_discovery",
         preregistration_file=Path(
             "research/EXP-012_preregistration.md"
+        ),
+    ),
+
+    "EXP-013": ExperimentLifecycle(
+        experiment_id="EXP-013",
+        experiment_name=(
+            "Extended-Context Three-Finalist Deep Validation"
+        ),
+        hypothesis=(
+            "The locked gap-fade and premarket-continuation review "
+            "candidates may retain attractive performance, risk and "
+            "consistency after temporal testing and a discovery-wide "
+            "24-candidate permutation test."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "The three EXP-012 review candidates, their post-result "
+            "selection limitations, frozen data, execution, costs, four "
+            "anchored folds, bootstrap seed and discovery-wide 24-"
+            "candidate MCPT were locked before any EXP-013 result."
+        ),
+        next_action=(
+            "Implement and commit the protected three-finalist validation "
+            "before calculating EXP-013 measurements. Preserve EXP-012, "
+            "the low-sample warning and the post-selection limitation. "
+            "Do not authorize paper or live trading."
+        ),
+        market_name="NQ / MNQ futures",
+        timeframe=(
+            "Extended-session context / 5-minute signal / "
+            "1-minute execution"
+        ),
+        strategy_name="extended_context_finalist_validation",
+        preregistration_file=Path(
+            "research/EXP-013_preregistration.md"
         ),
     ),
 
