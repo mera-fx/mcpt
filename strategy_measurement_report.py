@@ -14,6 +14,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from strategy_explanations import (
+    STRATEGY_EXPLANATION_CSS,
+    strategy_explanation_html,
+)
+
 
 REPORT_VERSION = "strategy_measurement_report_v2"
 REFERENCE_CAPITAL = {"NQ": 100_000.0, "MNQ": 10_000.0}
@@ -1250,6 +1255,7 @@ th {{ background:#1d3557; color:#dbeafe; }}
 .metric.tone-positive strong {{ color:var(--good); }}
 .metric.tone-negative strong {{ color:var(--bad); }}
 @media(max-width:900px) {{ nav {{ position:static; width:auto; }} main {{ margin:0 auto; width:calc(100% - 24px); }} .metrics {{ grid-template-columns:1fr 1fr; }} }}
+{STRATEGY_EXPLANATION_CSS}
 </style>
 </head>
 <body>
@@ -1258,6 +1264,7 @@ th {{ background:#1d3557; color:#dbeafe; }}
 <a class="hub-link" href="../research_dashboard/index.html">← Research hub</a>
 <a class="hub-link" href="../research_dashboard/strategy_comparison.html">Strategy comparison</a>
 <a href="#overview">Overview</a>
+<a href="#strategy-rules">How the strategy works</a>
 <a href="#happened">What happened and why</a>
 <a href="#design">What and how we tested</a>
 <a href="#performance">Performance</a>
@@ -1286,6 +1293,7 @@ th {{ background:#1d3557; color:#dbeafe; }}
 <div class="metric {tone('MCPT p-value', mcpt_p)}"><span>MCPT p-value</span><strong>{_number(mcpt_p, 4)}</strong></div>
 </div>
 </header>
+{strategy_explanation_html(spec.experiment_id)}
 <section id="happened"><h2>What happened and why</h2><div class="callout"><strong>What happened</strong><p>{html.escape(what_happened)}</p></div><div class="callout"><strong>Why the formal decision happened</strong><p>{html.escape(why)}</p></div><p class="note">A gate controls the claim made about a result. It does not erase the result's measured performance, risk, consistency or practical characteristics.</p></section>
 <section id="design"><h2>What and how we tested</h2>{_table(design_rows)}<p class="note">This report is rebuilt only from saved frozen result files and frozen market data. It does not rerun a strategy, optimization, bootstrap or MCPT.</p></section>
 <section id="performance"><h2>Complete NQ performance summary</h2>{_table(performance)}<h3>MNQ implementation comparison</h3>{_table(mnq_table)}</section>

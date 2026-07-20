@@ -17,6 +17,10 @@ from exp004_orb_engine import (
 from exp004_quick_screen import (
     Exp004QuickEvaluation,
 )
+from strategy_explanations import (
+    STRATEGY_EXPLANATION_CSS,
+    strategy_explanation_html,
+)
 
 
 def _format_value(
@@ -538,6 +542,7 @@ code, pre {{
     padding: 15px;
   }}
 }}
+{STRATEGY_EXPLANATION_CSS}
 </style>
 </head>
 <body>
@@ -550,6 +555,8 @@ code, pre {{
     OUT-OF-SAMPLE DATA REMAINED LOCKED. This report contains in-sample evidence only.
   </div>
 </section>
+
+{strategy_explanation_html("EXP-004")}
 
 <section class="cards">
   <div class="card">

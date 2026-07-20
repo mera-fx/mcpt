@@ -8,6 +8,11 @@ from typing import Any, Iterable
 import numpy as np
 import pandas as pd
 
+from strategy_explanations import (
+    STRATEGY_EXPLANATION_CSS,
+    strategy_explanation_html,
+)
+
 
 CORE_SUMMARY_COLUMNS = (
     "total_return_percent",
@@ -935,12 +940,14 @@ footer {{
     .comparison-cards {{ grid-template-columns: 1fr; }}
     .data-table.compact {{ table-layout: auto; }}
 }}
+{STRATEGY_EXPLANATION_CSS}
 </style>
 </head>
 <body>
 <div class="page">
 <nav class="report-nav" aria-label="Report sections">
     <a href="#overview">Overview</a>
+    <a href="#strategy-rules">How the strategy works</a>
     <a href="#comparison">Comparison</a>
     <a href="#parameters">Parameters</a>
     <a href="#diagnostics">Diagnostics</a>
@@ -983,6 +990,8 @@ footer {{
         </div>
     </div>
 </section>
+
+{strategy_explanation_html(experiment_id)}
 
 <section class="section" id="comparison">
     <div class="section-header">

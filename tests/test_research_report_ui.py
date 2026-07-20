@@ -132,6 +132,18 @@ class ResearchReportUiTests(unittest.TestCase):
         self.assertIn("Additional account and position metrics", text)
         self.assertNotIn("total_return_percent", text)
 
+    def test_report_explains_strategy_before_results(self) -> None:
+        with TemporaryDirectory() as temporary:
+            report = self.build_report(Path(temporary))
+            text = report.read_text(encoding="utf-8")
+
+        self.assertIn('href="#strategy-rules"', text)
+        self.assertIn('id="strategy-rules"', text)
+        self.assertIn("How the strategy works", text)
+        self.assertIn("Compression quantile (0.20)", text)
+        self.assertIn("quietest 20%", text)
+        self.assertIn("Worked example", text)
+
     def test_chart_discovery_is_ordered_and_readable(self) -> None:
         with TemporaryDirectory() as temporary:
             directory = Path(temporary)

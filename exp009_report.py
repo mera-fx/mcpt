@@ -14,6 +14,11 @@ import pandas as pd
 
 from exp009_engine import Exp009Arrays, Exp009Result
 from exp009_measurements import family_measurement_summary
+from strategy_explanations import (
+    STRATEGY_EXPLANATION_CSS,
+    family_explanation_html,
+    strategy_explanation_html,
+)
 
 
 FAMILY_LABELS = {
@@ -494,7 +499,8 @@ def build_exp009_report(
         divergent = int(subset["mnq_divergence"].sum())
         family_sections.append(
             f"<section><h2>{html.escape(FAMILY_LABELS[family_id])}</h2>"
-            "<p>Four locked variations were measured under the same "
+            + family_explanation_html(family_id)
+            + "<p>Four locked variations were measured under the same "
             "NQ/MNQ data, costs, one-contract sizing and one-minute "
             "execution rules. These measurements describe the family; "
             "they do not validate an edge.</p>"
@@ -573,6 +579,7 @@ code,pre {{ background:#081321; border:1px solid var(--line);
 pre {{ padding:15px; overflow:auto; color:var(--muted); }}
 @media(max-width:900px) {{ .grid {{ grid-template-columns:1fr; }}
   main {{ padding:14px; }} }}
+{STRATEGY_EXPLANATION_CSS}
 </style>
 </head>
 <body><main>
@@ -584,6 +591,7 @@ pre {{ padding:15px; overflow:auto; color:var(--muted); }}
   broad discovery screen. It does not declare a winner, confirm an edge,
   authorize paper trading, or authorize live trading.</p>
 </section>
+{strategy_explanation_html("EXP-009")}
 <section>
   <h2>What we tested and how</h2>
   <p>We measured four locked versions of each of six structurally different

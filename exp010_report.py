@@ -13,6 +13,10 @@ import numpy as np
 import pandas as pd
 
 from exp009_engine import Exp009Arrays, Exp009Result
+from strategy_explanations import (
+    STRATEGY_EXPLANATION_CSS,
+    strategy_explanation_html,
+)
 
 
 def _format_value(column: str, value: Any) -> str:
@@ -427,6 +431,7 @@ pre {{ background:#081321; border:1px solid var(--line);
   border-radius:8px; padding:15px; overflow:auto; color:var(--muted); }}
 @media(max-width:900px) {{ .grid {{ grid-template-columns:1fr; }}
   main {{ padding:14px; }} }}
+{STRATEGY_EXPLANATION_CSS}
 </style></head><body><main>
 <section>
   <h1>EXP-010 — Opening-Drive Deep Validation</h1>
@@ -436,6 +441,7 @@ pre {{ background:#081321; border:1px solid var(--line);
   is a secondary historical evidence label. The measurements below come
   first. No paper or live trading is authorized.</p>
 </section>
+{strategy_explanation_html("EXP-010")}
 <section>
   <h2>What we tested and how</h2>
   <p>EXP-010 retained all four opening-drive candidates discovered in

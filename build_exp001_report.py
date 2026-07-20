@@ -8,6 +8,10 @@ import pandas as pd
 from matplotlib.patches import Patch
 
 from donchian import donchian_breakout
+from strategy_explanations import (
+    STRATEGY_EXPLANATION_CSS,
+    strategy_explanation_html,
+)
 
 
 # ============================================================
@@ -820,6 +824,7 @@ report_html = f"""
     code {{
         color: #00d9ff;
     }}
+    {STRATEGY_EXPLANATION_CSS}
 </style>
 </head>
 
@@ -832,6 +837,8 @@ report_html = f"""
         BTCUSDT spot price data · 1-hour bars ·
         Out-of-sample period 2022–2025
     </div>
+
+    {strategy_explanation_html("EXP-001")}
 
     <div class="decision">
         <div class="decision-title">

@@ -82,6 +82,18 @@ class Exp009ReportTests(unittest.TestCase):
                 "Opening drive continuation",
             ):
                 self.assertIn(label, text)
+            self.assertIn('id="strategy-rules"', text)
+            self.assertIn("How the strategy works", text)
+            self.assertIn("Worked example", text)
+            for family_id in (
+                "orb_pullback_continuation",
+                "failed_orb_reversal",
+                "vwap_mean_reversion",
+                "vwap_trend_pullback",
+                "intraday_compression_breakout",
+                "opening_drive_continuation",
+            ):
+                self.assertIn(f'id="family-rules-{family_id}"', text)
             self.assertTrue(
                 (Path(temporary) / "orb_pullback_continuation_monthly_heatmap.png").is_file()
             )
