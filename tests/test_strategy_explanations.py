@@ -20,7 +20,7 @@ from upgrade_strategy_explanations import (
 
 class StrategyExplanationTests(unittest.TestCase):
     def test_catalog_covers_every_current_experiment(self) -> None:
-        expected = {f"EXP-{number:03d}" for number in range(1, 11)}
+        expected = {f"EXP-{number:03d}" for number in range(1, 12)}
         self.assertEqual(set(STRATEGY_EXPLANATIONS), expected)
 
     def test_every_explanation_has_rules_parameters_and_example(self) -> None:

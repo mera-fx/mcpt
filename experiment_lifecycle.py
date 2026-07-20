@@ -425,6 +425,36 @@ EXPERIMENT_LIFECYCLE: dict[
             "research/EXP-010_preregistration.md"
         ),
     ),
+
+    "EXP-011": ExperimentLifecycle(
+        experiment_id="EXP-011",
+        experiment_name="NQ/MNQ Opening-Drive Position-Sizing Study",
+        hypothesis=(
+            "Equal-dollar-risk sizing may reduce variation in initial "
+            "trade risk and improve drawdown behaviour without changing "
+            "the frozen EXP-010 opening-drive signals."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "The two frozen signal variants, calibration/evaluation "
+            "split, risk-target rule, three sizing methods, execution, "
+            "costs, paired bootstrap and measurement-first reporting "
+            "were locked before any EXP-011 sizing result."
+        ),
+        next_action=(
+            "Implement and commit the protected sizing engine before "
+            "calculating results. Preserve both signal variants, show "
+            "all six measurements, and make no signal-edge or trading "
+            "authorization claim."
+        ),
+        market_name="NQ / MNQ futures",
+        timeframe="5-minute signal / 1-minute execution",
+        strategy_name="opening_drive_position_sizing_study",
+        preregistration_file=Path(
+            "research/EXP-011_preregistration.md"
+        ),
+    ),
+
 }
 
 

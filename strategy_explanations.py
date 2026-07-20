@@ -559,6 +559,57 @@ STRATEGY_EXPLANATIONS: Mapping[str, StrategyExplanation] = {
         "A 0.50 drive fraction does not mean NQ rose 50%. It means the directional "
         "open-to-close move covered 50% of that morning's total high-low range.",
     ),
+    "EXP-011": _explanation(
+        "Opening-drive equal-dollar-risk sizing",
+        "The opening-drive signal stays exactly the same. This experiment changes "
+        "only the number of contracts so a wide-range trade does not automatically "
+        "risk far more dollars than a quiet, narrow-range trade.",
+        (
+            (
+                "Signal",
+                "Use the frozen 0.50 opening-drive time-exit leader and 1.5R user "
+                "reference from EXP-010. Entry, stop and exit rules do not change.",
+            ),
+            (
+                "Risk target",
+                "Use 2019–2020 calibration trades to calculate the median initial "
+                "risk of one NQ contract. Freeze that dollar amount before evaluating 2021–2025.",
+            ),
+            (
+                "Fractional NQ sizing",
+                "Divide target dollar risk by the current one-NQ initial risk and "
+                "cap the theoretical result at 2.0 contracts.",
+            ),
+            (
+                "Integer MNQ sizing",
+                "Divide target risk by one-MNQ risk, round down to a whole contract, "
+                "allow zero, and cap at 20 MNQ contracts.",
+            ),
+        ),
+        (
+            (
+                "Target dollar risk",
+                "A constant dollar amount calibrated once from old data. It is not "
+                "optimized for the highest historical profit.",
+            ),
+            (
+                "Fractional versus integer",
+                "Fractional NQ is a theoretical measurement. MNQ permits smaller "
+                "whole-contract steps and is the practical implementation comparison.",
+            ),
+            (
+                "Contract cap",
+                "The maximum allowed size—2 NQ or 20 MNQ—prevents an unusually tiny "
+                "opening range from creating extreme leverage.",
+            ),
+        ),
+        "If target risk is $1,500 and one NQ would initially risk $2,000, "
+        "fractional size is 1,500 / 2,000 = 0.75 NQ. If one MNQ would risk "
+        "$203, integer size is floor(1,500 / 203) = 7 MNQ contracts.",
+        "The contract fraction is a position quantity, not a probability or market "
+        "percentage. Sizing can reshape risk and drawdown, but it cannot prove that "
+        "the underlying entry signal has an edge.",
+    ),
 }
 
 
