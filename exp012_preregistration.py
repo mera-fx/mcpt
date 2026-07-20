@@ -172,6 +172,20 @@ EXP012_PREREGISTRATION: dict[str, Any] = {
         "best measured combination of profitability, win rate, drawdown, "
         "consistency, cost resilience and practical trading behaviour?"
     ),
+    "pre_result_correction": {
+        "recorded_date": "2026-07-20",
+        "field": "market_and_data.historical_start",
+        "original_value": "2020-01-02",
+        "corrected_value": "2020-01-03",
+        "reason": (
+            "The frozen complete-aligned 2020 sample begins on "
+            "2020-01-03. The mismatch was found during implementation "
+            "data compatibility checks before any candidate result."
+        ),
+        "strategy_rules_changed": False,
+        "candidate_parameters_changed": False,
+        "results_calculated_before_correction": False,
+    },
     "relationship_to_prior_research": {
         "extended_session_data_result_must_verify": True,
         "cash_outcomes_from_2020_2025_have_been_viewed": True,
@@ -209,7 +223,7 @@ EXP012_PREREGISTRATION: dict[str, Any] = {
         "dataset_result_file": (
             "research/EXTENDED_SESSION_DATA_RESULT.json"
         ),
-        "historical_start": "2020-01-02",
+        "historical_start": "2020-01-03",
         "historical_end": "2025-12-31",
         "included_years": [2020, 2021, 2022, 2023, 2024, 2025],
         "expected_complete_aligned_sessions": 1331,
@@ -590,6 +604,17 @@ def validate_exp012_preregistration(
     ):
         raise ValueError("EXP-012 research boundary changed.")
 
+    correction = current["pre_result_correction"]
+    if (
+        correction["field"] != "market_and_data.historical_start"
+        or correction["original_value"] != "2020-01-02"
+        or correction["corrected_value"] != "2020-01-03"
+        or correction["strategy_rules_changed"] is not False
+        or correction["candidate_parameters_changed"] is not False
+        or correction["results_calculated_before_correction"] is not False
+    ):
+        raise ValueError("EXP-012 pre-result correction record changed.")
+
     expected_stages = {
         "EXP-005": "ACCEPTED_FOR_PAPER_TESTING",
         "EXP-006": "REJECTED",
@@ -618,6 +643,7 @@ def validate_exp012_preregistration(
     if (
         data["primary_measurement_market"] != "NQ"
         or data["secondary_implementation_market"] != "MNQ"
+        or data["historical_start"] != "2020-01-03"
         or data["included_years"] != [2020, 2021, 2022, 2023, 2024, 2025]
         or data["expected_complete_aligned_sessions"] != 1331
         or data["use_only_complete_aligned_nq_mnq_sessions"] is not True

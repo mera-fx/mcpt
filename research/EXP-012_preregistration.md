@@ -32,7 +32,7 @@ liquidity.
 
 - Primary market: NQ
 - Secondary implementation comparison: MNQ
-- Period: 2020-01-02 through 2025-12-31
+- Period: 2020-01-03 through 2025-12-31
 - Complete aligned NQ/MNQ sessions: 1,331
 - Context source: one-minute extended-session data
 - Signal bars: completed five-minute bars
@@ -47,6 +47,15 @@ The 13 aligned 2019 sessions are excluded because they provide limited
 partial-year coverage. Only complete aligned NQ/MNQ sessions are used.
 No missing bar may be filled or synthesized, and the frozen data may
 not be edited or rebuilt under EXP-012.
+
+### Pre-result date correction
+
+The originally committed preregistration stated `2020-01-02` as the
+historical start. The production-data compatibility check showed that
+the first frozen complete-aligned 2020 session is `2020-01-03`. This
+factual boundary was corrected on 2026-07-20 before any candidate result
+was calculated. No strategy rule, candidate, threshold, cost, execution
+rule or interpretation boundary changed.
 
 ## Common execution and risk rules
 

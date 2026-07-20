@@ -33,9 +33,22 @@ class Exp012PreregistrationTests(unittest.TestCase):
             data["included_years"],
             [2020, 2021, 2022, 2023, 2024, 2025],
         )
+        self.assertEqual(data["historical_start"], "2020-01-03")
         self.assertEqual(data["expected_complete_aligned_sessions"], 1331)
         self.assertTrue(data["exclude_2019_due_to_limited_aligned_coverage"])
         self.assertTrue(data["use_only_complete_aligned_nq_mnq_sessions"])
+
+    def test_pre_result_start_date_correction_is_recorded(self) -> None:
+        correction = get_exp012_preregistration()[
+            "pre_result_correction"
+        ]
+        self.assertEqual(correction["original_value"], "2020-01-02")
+        self.assertEqual(correction["corrected_value"], "2020-01-03")
+        self.assertFalse(correction["strategy_rules_changed"])
+        self.assertFalse(correction["candidate_parameters_changed"])
+        self.assertFalse(
+            correction["results_calculated_before_correction"]
+        )
 
     def test_extended_context_does_not_authorize_overnight_entries(
         self,
