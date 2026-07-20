@@ -1,0 +1,78 @@
+{
+  "complete_aligned_sessions": 1344,
+  "dataset": "NQ/MNQ extended-session data foundation",
+  "excluded_incomplete_sessions": 295,
+  "first_included_session": "2019-08-02",
+  "implementation_commit": "73dc3650ad5d3ebffd817fe5b2851729b03fe7d4",
+  "last_included_session": "2025-12-31",
+  "outputs": {
+    "MNQ_1m": {
+      "rows": 1849560,
+      "sha256": "30156c6c1af559833ffb10ca84d99680bb9f8d572c37bdc5d15e2da925fba285"
+    },
+    "MNQ_5m": {
+      "rows": 369912,
+      "sha256": "c8cda74e0b87a0386c500ec5f40ee4966b2542c64f885212c34d4a1b9a7b2ec7"
+    },
+    "NQ_1m": {
+      "rows": 1849560,
+      "sha256": "b1679f833d03c2f2aedeaf4ec442a34a284edd307942e13918a0488c71a669cc"
+    },
+    "NQ_5m": {
+      "rows": 369912,
+      "sha256": "06598e2dd4cf2b89cd6777fb85881db7feb00faa0a5b4cda435e664a4c3c660a"
+    }
+  },
+  "research_boundary": {
+    "mcpt_calculated": false,
+    "missing_bars_filled": false,
+    "optimization_calculated": false,
+    "strategy_results_calculated": false,
+    "trading_authorized": false
+  },
+  "status": "DATA_READY",
+  "year_counts": {
+    "2019": {
+      "complete_aligned": 13,
+      "mnq_complete": 13,
+      "nq_complete": 119,
+      "total": 162
+    },
+    "2020": {
+      "complete_aligned": 221,
+      "mnq_complete": 230,
+      "nq_complete": 227,
+      "total": 246
+    },
+    "2021": {
+      "complete_aligned": 224,
+      "mnq_complete": 246,
+      "nq_complete": 225,
+      "total": 250
+    },
+    "2022": {
+      "complete_aligned": 233,
+      "mnq_complete": 246,
+      "nq_complete": 233,
+      "total": 248
+    },
+    "2023": {
+      "complete_aligned": 215,
+      "mnq_complete": 244,
+      "nq_complete": 215,
+      "total": 246
+    },
+    "2024": {
+      "complete_aligned": 216,
+      "mnq_complete": 248,
+      "nq_complete": 216,
+      "total": 248
+    },
+    "2025": {
+      "complete_aligned": 222,
+      "mnq_complete": 237,
+      "nq_complete": 222,
+      "total": 239
+    }
+  }
+}
