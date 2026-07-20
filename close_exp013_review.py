@@ -58,8 +58,12 @@ def replace_exp013_block(text: str) -> str:
     start = text.find('"EXP-013": ExperimentLifecycle(')
     if start < 0:
         raise RuntimeError("EXP-013 lifecycle block was not found.")
+    next_block = text.find(
+        '\n    "EXP-014": ExperimentLifecycle(', start
+    )
     normalize_start = text.find("\ndef normalize_experiment_id", start)
-    end = text.rfind("\n}", start, normalize_start)
+    registry_end = text.rfind("\n}", start, normalize_start)
+    end = next_block if next_block >= 0 else registry_end
     if end < 0:
         raise RuntimeError("Lifecycle registry ending was not found.")
 

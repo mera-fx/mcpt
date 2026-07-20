@@ -538,6 +538,42 @@ EXPERIMENT_LIFECYCLE: dict[
         ),
     ),
 
+    "EXP-014": ExperimentLifecycle(
+        experiment_id="EXP-014",
+        experiment_name=(
+            "Finalist Behaviour and Complementarity Study"
+        ),
+        hypothesis=(
+            "The three frozen EXP-013 finalists may exhibit distinct "
+            "direction, regime, exit, tail and drawdown behaviour, while "
+            "gap fade and premarket continuation may provide complementary "
+            "session-level P&L rather than duplicating the same risk."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "The exact three finalists, frozen 2020-2025 data, trade "
+            "reconstruction checks, 2025 failure diagnostics, entry-known "
+            "regimes, pairwise overlap measures and two unweighted "
+            "cross-family research sleeve pairs were locked before any "
+            "EXP-014 measurement."
+        ),
+        next_action=(
+            "Implement and commit the protected behaviour study before "
+            "reconstructing trades. Preserve all EXP-013 evidence, make "
+            "no rule, filter or parameter selection, and do not treat the "
+            "arithmetic sleeve pairs as executable portfolios."
+        ),
+        market_name="NQ / MNQ futures",
+        timeframe=(
+            "Extended-session context / 5-minute signal / "
+            "1-minute execution"
+        ),
+        strategy_name="finalist_behaviour_and_complementarity",
+        preregistration_file=Path(
+            "research/EXP-014_preregistration.md"
+        ),
+    ),
+
 }
 
 
