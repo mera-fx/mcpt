@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from report_chart_style import save_report_figure
+
 
 REPORT_VERSION = (
     "exp008_vertical_exit_geometry_report_v1"
@@ -81,7 +83,8 @@ def _save_equity_chart(
     )
     axis.grid(alpha=0.25)
     figure.tight_layout()
-    figure.savefig(
+    save_report_figure(
+        figure,
         output,
         dpi=150,
     )
@@ -129,7 +132,8 @@ def _save_drawdown_chart(
     )
     axis.grid(alpha=0.25)
     figure.tight_layout()
-    figure.savefig(
+    save_report_figure(
+        figure,
         output,
         dpi=150,
     )
@@ -168,7 +172,8 @@ def _save_annual_chart(
         alpha=0.25,
     )
     figure.tight_layout()
-    figure.savefig(
+    save_report_figure(
+        figure,
         output,
         dpi=150,
     )
@@ -204,7 +209,8 @@ def _save_walk_forward_chart(
         alpha=0.25,
     )
     figure.tight_layout()
-    figure.savefig(
+    save_report_figure(
+        figure,
         output,
         dpi=150,
     )
@@ -242,7 +248,8 @@ def _save_cost_chart(
     )
     axis.grid(alpha=0.25)
     figure.tight_layout()
-    figure.savefig(
+    save_report_figure(
+        figure,
         output,
         dpi=150,
     )
@@ -287,7 +294,8 @@ def _save_mcpt_chart(
         alpha=0.25,
     )
     figure.tight_layout()
-    figure.savefig(
+    save_report_figure(
+        figure,
         output,
         dpi=150,
     )
@@ -392,7 +400,8 @@ def _save_parameter_heatmaps(
                 + ".png"
             )
         )
-        figure.savefig(
+        save_report_figure(
+            figure,
             output,
             dpi=150,
         )

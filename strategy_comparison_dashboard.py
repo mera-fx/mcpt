@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from report_chart_style import save_report_figure
+
 
 COMPARISON_VERSION = "strategy_measurement_comparison_v2"
 
@@ -48,7 +50,12 @@ def _integer(value: Any) -> str:
 
 def _save(figure: plt.Figure, path: Path) -> None:
     figure.tight_layout()
-    figure.savefig(path, dpi=150, bbox_inches="tight")
+    save_report_figure(
+        figure,
+        path,
+        dpi=150,
+        bbox_inches="tight",
+    )
     plt.close(figure)
 
 

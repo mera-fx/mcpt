@@ -14,6 +14,7 @@ import pandas as pd
 
 from exp009_engine import Exp009Arrays, Exp009Result
 from exp009_measurements import family_measurement_summary
+from report_chart_style import save_report_figure
 from strategy_explanations import (
     STRATEGY_EXPLANATION_CSS,
     family_explanation_html,
@@ -164,7 +165,7 @@ def _save_pareto_charts(
         axis.grid(alpha=0.2)
         figure.tight_layout()
         path = report_dir / filename
-        figure.savefig(path, dpi=150, facecolor="#0b1220")
+        save_report_figure(figure, path, dpi=150)
         plt.close(figure)
         paths.append(path)
     return paths
@@ -216,7 +217,7 @@ def _save_equity_benchmark_chart(
     )
     figure.tight_layout()
     path = report_dir / "candidate_equity_vs_nq_benchmark.png"
-    figure.savefig(path, dpi=160, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=160)
     plt.close(figure)
     return path
 
@@ -238,7 +239,7 @@ def _save_family_chart(
         axis.grid(axis="x", alpha=0.2)
     figure.tight_layout()
     path = report_dir / "family_measurement_comparison.png"
-    figure.savefig(path, dpi=150, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=150)
     plt.close(figure)
     return path
 
@@ -318,7 +319,7 @@ def _save_family_diagnostics(
     axis.legend(fontsize=7, frameon=False)
     figure.tight_layout()
     path = report_dir / f"{prefix}_equity_benchmark.png"
-    figure.savefig(path, dpi=150, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=150)
     plt.close(figure)
     paths["equity"] = path
 
@@ -348,7 +349,7 @@ def _save_family_diagnostics(
     axis.set_title(f"{FAMILY_LABELS[family_id]} monthly P&L heatmap")
     figure.tight_layout()
     path = report_dir / f"{prefix}_monthly_heatmap.png"
-    figure.savefig(path, dpi=150, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=150)
     plt.close(figure)
     paths["monthly"] = path
 
@@ -403,7 +404,7 @@ def _save_family_diagnostics(
         axes[1].legend(fontsize=7, frameon=False)
     figure.tight_layout()
     path = report_dir / f"{prefix}_trade_behaviour.png"
-    figure.savefig(path, dpi=150, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=150)
     plt.close(figure)
     paths["behaviour"] = path
 
@@ -429,7 +430,7 @@ def _save_family_diagnostics(
         axis.grid(axis="y", alpha=0.2)
     figure.tight_layout()
     path = report_dir / f"{prefix}_profit_concentration.png"
-    figure.savefig(path, dpi=150, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=150)
     plt.close(figure)
     paths["concentration"] = path
     return paths

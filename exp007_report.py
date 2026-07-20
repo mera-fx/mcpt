@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from report_chart_style import save_report_figure
+
 
 REPORT_VERSION = "exp007_vertical_report_v1"
 
@@ -48,7 +50,7 @@ def _save_equity_chart(
     axis.set_ylabel("Cumulative net PnL (USD)")
     axis.grid(alpha=0.25)
     figure.tight_layout()
-    figure.savefig(output, dpi=150)
+    save_report_figure(figure, output, dpi=150)
     plt.close(figure)
 
 
@@ -74,7 +76,7 @@ def _save_drawdown_chart(
     axis.set_ylabel("Drawdown (% of reference capital)")
     axis.grid(alpha=0.25)
     figure.tight_layout()
-    figure.savefig(output, dpi=150)
+    save_report_figure(figure, output, dpi=150)
     plt.close(figure)
 
 
@@ -92,7 +94,7 @@ def _save_annual_chart(frame: pd.DataFrame, output: Path) -> None:
     axis.set_ylabel("Net PnL (USD)")
     axis.grid(axis="y", alpha=0.25)
     figure.tight_layout()
-    figure.savefig(output, dpi=150)
+    save_report_figure(figure, output, dpi=150)
     plt.close(figure)
 
 
@@ -110,7 +112,7 @@ def _save_cost_chart(frame: pd.DataFrame, output: Path) -> None:
     axis.set_ylabel("Net PnL (USD)")
     axis.grid(alpha=0.25)
     figure.tight_layout()
-    figure.savefig(output, dpi=150)
+    save_report_figure(figure, output, dpi=150)
     plt.close(figure)
 
 
@@ -132,7 +134,7 @@ def _save_mcpt_chart(
     axis.legend()
     axis.grid(axis="y", alpha=0.25)
     figure.tight_layout()
-    figure.savefig(output, dpi=150)
+    save_report_figure(figure, output, dpi=150)
     plt.close(figure)
 
 

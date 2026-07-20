@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from exp009_engine import Exp009Arrays, Exp009Result
+from report_chart_style import save_report_figure
 from strategy_explanations import (
     STRATEGY_EXPLANATION_CSS,
     strategy_explanation_html,
@@ -133,7 +134,7 @@ def _save_equity_chart(
     axis.legend(frameon=False, fontsize=8, ncol=2)
     figure.tight_layout()
     path = output_dir / "equity_vs_nq_benchmark.png"
-    figure.savefig(path, dpi=160, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=160)
     plt.close(figure)
     return path
 
@@ -161,7 +162,7 @@ def _save_drawdown_chart(
     axis.legend(frameon=False)
     figure.tight_layout()
     path = output_dir / "selected_reference_drawdown.png"
-    figure.savefig(path, dpi=155, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=155)
     plt.close(figure)
     return path
 
@@ -193,7 +194,7 @@ def _save_annual_chart(
     figure = axis.get_figure()
     figure.tight_layout()
     path = output_dir / "annual_candidate_comparison.png"
-    figure.savefig(path, dpi=155, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=155)
     plt.close(figure)
     return path
 
@@ -219,7 +220,7 @@ def _save_walk_forward_chart(
     axis.grid(axis="y", alpha=0.18)
     figure.tight_layout()
     path = output_dir / "walk_forward_net_profit.png"
-    figure.savefig(path, dpi=155, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=155)
     plt.close(figure)
     return path
 
@@ -246,7 +247,7 @@ def _save_cost_chart(
     axis.legend(frameon=False, fontsize=8, ncol=2)
     figure.tight_layout()
     path = output_dir / "cost_sensitivity.png"
-    figure.savefig(path, dpi=155, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=155)
     plt.close(figure)
     return path
 
@@ -280,7 +281,7 @@ def _save_mcpt_chart(
         axis.grid(alpha=0.16)
     figure.tight_layout()
     path = output_dir / "mcpt_distributions.png"
-    figure.savefig(path, dpi=155, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=155)
     plt.close(figure)
     return path
 
@@ -308,7 +309,7 @@ def _save_trade_distribution(
         axis.grid(alpha=0.16)
     figure.tight_layout()
     path = output_dir / "selected_reference_trade_distribution.png"
-    figure.savefig(path, dpi=155, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=155)
     plt.close(figure)
     return path
 

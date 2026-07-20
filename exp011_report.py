@@ -14,6 +14,7 @@ import pandas as pd
 from exp009_engine import Exp009Arrays
 from exp011_measurements import SIGNAL_IDS
 from exp011_sizing import Exp011Calibration, Exp011SizedResult, SIZING_IDS
+from report_chart_style import save_report_figure
 from strategy_explanations import (
     STRATEGY_EXPLANATION_CSS,
     strategy_explanation_html,
@@ -147,7 +148,7 @@ def _save_equity_chart(
     )
     figure.tight_layout()
     path = output_dir / "sizing_equity_vs_nq.png"
-    figure.savefig(path, dpi=160, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=160)
     plt.close(figure)
     return path
 
@@ -175,7 +176,7 @@ def _save_drawdown_chart(
     figure.suptitle("Sizing-method drawdown comparison", fontsize=14)
     figure.tight_layout()
     path = output_dir / "sizing_drawdowns.png"
-    figure.savefig(path, dpi=160, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=160)
     plt.close(figure)
     return path
 
@@ -204,7 +205,7 @@ def _save_risk_chart(
     figure.suptitle("Initial-risk distribution after sizing", fontsize=14)
     figure.tight_layout()
     path = output_dir / "initial_risk_distribution.png"
-    figure.savefig(path, dpi=160, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=160)
     plt.close(figure)
     return path
 
@@ -237,7 +238,7 @@ def _save_contract_chart(
     figure.suptitle("Calculated contract quantities", fontsize=14)
     figure.tight_layout()
     path = output_dir / "contract_count_distribution.png"
-    figure.savefig(path, dpi=160, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=160)
     plt.close(figure)
     return path
 
@@ -268,7 +269,7 @@ def _save_annual_chart(
     figure.suptitle("Annual net profit by sizing method", fontsize=14)
     figure.tight_layout()
     path = output_dir / "annual_sizing_comparison.png"
-    figure.savefig(path, dpi=160, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=160)
     plt.close(figure)
     return path
 
@@ -309,7 +310,7 @@ def _save_monthly_heatmap(
     figure.colorbar(image, ax=axis, label="Net profit ($)")
     figure.tight_layout()
     path = output_dir / "monthly_sizing_heatmap.png"
-    figure.savefig(path, dpi=160, facecolor="#0b1220")
+    save_report_figure(figure, path, dpi=160)
     plt.close(figure)
     return path
 

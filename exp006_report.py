@@ -8,6 +8,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from report_chart_style import save_report_figure
+
 
 def _format(value: Any) -> str:
     if value is None:
@@ -251,7 +253,7 @@ def write_exp006_charts(
         path = chart_root / (
             f"nq_pf_heatmap_{direction}.png"
         )
-        figure.savefig(path, dpi=150)
+        save_report_figure(figure, path, dpi=150)
         plt.close(figure)
         paths.append(path)
 
@@ -276,7 +278,7 @@ def write_exp006_charts(
         axis.grid(True, alpha=0.25)
         figure.tight_layout()
         path = chart_root / "selected_nq_equity.png"
-        figure.savefig(path, dpi=150)
+        save_report_figure(figure, path, dpi=150)
         plt.close(figure)
         paths.append(path)
 
@@ -296,7 +298,7 @@ def write_exp006_charts(
         axis.grid(True, alpha=0.25)
         figure.tight_layout()
         path = chart_root / "selected_nq_drawdown.png"
-        figure.savefig(path, dpi=150)
+        save_report_figure(figure, path, dpi=150)
         plt.close(figure)
         paths.append(path)
 
@@ -321,7 +323,7 @@ def write_exp006_charts(
         axis.grid(True, alpha=0.25)
         figure.tight_layout()
         path = chart_root / "selected_mnq_equity.png"
-        figure.savefig(path, dpi=150)
+        save_report_figure(figure, path, dpi=150)
         plt.close(figure)
         paths.append(path)
 
@@ -343,7 +345,7 @@ def write_exp006_charts(
         axis.grid(True, axis="y", alpha=0.25)
         figure.tight_layout()
         path = chart_root / "walk_forward_nq.png"
-        figure.savefig(path, dpi=150)
+        save_report_figure(figure, path, dpi=150)
         plt.close(figure)
         paths.append(path)
 
@@ -372,7 +374,7 @@ def write_exp006_charts(
         axis.grid(True, axis="y", alpha=0.25)
         figure.tight_layout()
         path = chart_root / "selection_mcpt.png"
-        figure.savefig(path, dpi=150)
+        save_report_figure(figure, path, dpi=150)
         plt.close(figure)
         paths.append(path)
 

@@ -10,6 +10,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from report_chart_style import save_report_figure
+
 
 PROJECT_DIR = Path(__file__).resolve().parent
 RESULT_ROOT = PROJECT_DIR / "results" / "EXP-005" / "full_validation"
@@ -740,7 +742,7 @@ def _write_charts(
         axis.set_ylabel("Total equity USD")
         figure.tight_layout()
         path = ASSET_ROOT / f"{symbol.lower()}_total_equity_usd.png"
-        figure.savefig(path, dpi=160)
+        save_report_figure(figure, path, dpi=160)
         plt.close(figure)
         charts[f"{symbol.lower()}_total_equity"] = f"assets/{path.name}"
 
@@ -753,7 +755,7 @@ def _write_charts(
         axis.set_ylabel("Drawdown %")
         figure.tight_layout()
         path = ASSET_ROOT / f"{symbol.lower()}_drawdown_percent.png"
-        figure.savefig(path, dpi=160)
+        save_report_figure(figure, path, dpi=160)
         plt.close(figure)
         charts[f"{symbol.lower()}_drawdown"] = f"assets/{path.name}"
 
@@ -778,7 +780,7 @@ def _write_charts(
     axis.legend()
     figure.tight_layout()
     path = ASSET_ROOT / "normalized_total_equity.png"
-    figure.savefig(path, dpi=160)
+    save_report_figure(figure, path, dpi=160)
     plt.close(figure)
     charts["normalized_equity"] = f"assets/{path.name}"
 
@@ -804,7 +806,7 @@ def _write_charts(
     axis.set_ylabel("Return %")
     figure.tight_layout()
     path = ASSET_ROOT / "yearly_return_percent.png"
-    figure.savefig(path, dpi=160)
+    save_report_figure(figure, path, dpi=160)
     plt.close(figure)
     charts["yearly"] = f"assets/{path.name}"
 
@@ -826,7 +828,7 @@ def _write_charts(
     axis.legend()
     figure.tight_layout()
     path = ASSET_ROOT / "cost_sensitivity_profit_factor.png"
-    figure.savefig(path, dpi=160)
+    save_report_figure(figure, path, dpi=160)
     plt.close(figure)
     charts["cost"] = f"assets/{path.name}"
 
@@ -850,7 +852,7 @@ def _write_charts(
     axis.legend()
     figure.tight_layout()
     path = ASSET_ROOT / "nq_mcpt_distribution.png"
-    figure.savefig(path, dpi=160)
+    save_report_figure(figure, path, dpi=160)
     plt.close(figure)
     charts["mcpt"] = f"assets/{path.name}"
 

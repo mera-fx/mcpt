@@ -14,6 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from report_chart_style import save_report_figure
 from strategy_explanations import (
     STRATEGY_EXPLANATION_CSS,
     strategy_explanation_html,
@@ -739,7 +740,12 @@ def _test_design(experiment_id: str, decision: dict[str, Any]) -> list[tuple[str
 
 def _save_figure(figure: plt.Figure, output: Path) -> None:
     figure.tight_layout()
-    figure.savefig(output, dpi=150, bbox_inches="tight")
+    save_report_figure(
+        figure,
+        output,
+        dpi=150,
+        bbox_inches="tight",
+    )
     plt.close(figure)
 
 
