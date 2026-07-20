@@ -464,17 +464,20 @@ def deduplicate_source_rows(
     if not frame.index.has_duplicates:
         return frame.sort_index(), DuplicateStats()
 
-    pieces: list[pd.DataFrame] = []
+    duplicate_mask = frame.index.duplicated(
+        keep=False
+    )
+    pieces: list[pd.DataFrame] = [
+        frame.loc[~duplicate_mask]
+    ]
     stats = DuplicateStats()
 
-    for timestamp, group in frame.groupby(
+    for timestamp, group in frame.loc[
+        duplicate_mask
+    ].groupby(
         level=0,
         sort=True,
     ):
-        if len(group) == 1:
-            pieces.append(group)
-            continue
-
         unique_ohlcv = (
             group[OHLCV_COLUMNS]
             .astype(float)
@@ -565,7 +568,8 @@ def read_quantower_source(
     raw = pd.read_csv(
         path,
         sep=";",
-        engine="python",
+        engine="c",
+        low_memory=False,
     )
     raw = _drop_blank_columns(raw)
     missing = set(REQUIRED_COLUMNS).difference(raw.columns)
@@ -769,6 +773,31 @@ def session_segment(
     return "post_cash"
 
 
+def session_segments(
+    index: pd.DatetimeIndex,
+) -> np.ndarray:
+    local = index.tz_convert(NEW_YORK_TZ)
+    minutes = (
+        local.hour.to_numpy(dtype=np.int16) * 60
+        + local.minute.to_numpy(dtype=np.int16)
+    )
+    return np.select(
+        [
+            minutes >= 18 * 60,
+            minutes < 4 * 60,
+            minutes < 9 * 60 + 30,
+            minutes < 16 * 60,
+        ],
+        [
+            "evening",
+            "overnight",
+            "premarket",
+            "cash",
+        ],
+        default="post_cash",
+    )
+
+
 def build_expected_calendar(
     session_dates: Iterable[date],
 ) -> pd.DataFrame:
@@ -783,10 +812,7 @@ def build_expected_calendar(
                         len(index),
                         dtype=np.int32,
                     ),
-                    "segment": [
-                        session_segment(item)
-                        for item in index
-                    ],
+                    "segment": session_segments(index),
                 },
                 index=index,
             )
@@ -871,42 +897,56 @@ def measure_session_quality(
     nq: pd.DataFrame,
     mnq: pd.DataFrame,
 ) -> pd.DataFrame:
-    rows: list[dict[str, Any]] = []
-    for session_date, expected in calendar.groupby(
-        "session_date",
-        sort=True,
-    ):
-        index = expected.index
-        nq_present = index.isin(nq.index)
-        mnq_present = index.isin(mnq.index)
-        expected_rows = int(len(index))
-        nq_rows = int(nq_present.sum())
-        mnq_rows = int(mnq_present.sum())
-        common_rows = int((nq_present & mnq_present).sum())
-        rows.append(
-            {
-                "session_date": session_date,
-                "expected_rows": expected_rows,
-                "nq_rows": nq_rows,
-                "mnq_rows": mnq_rows,
-                "common_rows": common_rows,
-                "nq_missing_rows": expected_rows - nq_rows,
-                "mnq_missing_rows": expected_rows - mnq_rows,
-                "common_missing_rows": (
-                    expected_rows - common_rows
-                ),
-                "legacy_pause_expected": (
-                    date.fromisoformat(session_date)
-                    < PAUSE_REMOVAL_TRADE_DATE
-                ),
-                "complete_aligned": (
-                    nq_rows == expected_rows
-                    and mnq_rows == expected_rows
-                    and common_rows == expected_rows
-                ),
-            }
+    presence = calendar[["session_date"]].copy()
+    presence["nq_present"] = presence.index.isin(
+        nq.index
+    )
+    presence["mnq_present"] = presence.index.isin(
+        mnq.index
+    )
+    presence["common_present"] = (
+        presence["nq_present"]
+        & presence["mnq_present"]
+    )
+    quality = (
+        presence.groupby("session_date", sort=True)
+        .agg(
+            expected_rows=("nq_present", "size"),
+            nq_rows=("nq_present", "sum"),
+            mnq_rows=("mnq_present", "sum"),
+            common_rows=("common_present", "sum"),
         )
-    return pd.DataFrame(rows)
+        .reset_index()
+    )
+    for column in (
+        "expected_rows",
+        "nq_rows",
+        "mnq_rows",
+        "common_rows",
+    ):
+        quality[column] = quality[column].astype(int)
+    quality["nq_missing_rows"] = (
+        quality["expected_rows"] - quality["nq_rows"]
+    )
+    quality["mnq_missing_rows"] = (
+        quality["expected_rows"] - quality["mnq_rows"]
+    )
+    quality["common_missing_rows"] = (
+        quality["expected_rows"] - quality["common_rows"]
+    )
+    quality["legacy_pause_expected"] = [
+        date.fromisoformat(value)
+        < PAUSE_REMOVAL_TRADE_DATE
+        for value in quality["session_date"]
+    ]
+    quality["complete_aligned"] = (
+        quality["nq_rows"].eq(quality["expected_rows"])
+        & quality["mnq_rows"].eq(quality["expected_rows"])
+        & quality["common_rows"].eq(
+            quality["expected_rows"]
+        )
+    )
+    return quality
 
 
 def _materialize_complete_rows(
@@ -934,6 +974,7 @@ def aggregate_active_five_minute(
     frame: pd.DataFrame,
 ) -> pd.DataFrame:
     local = frame.copy()
+    local["timestamp"] = frame.index
     local["active_5m_bar"] = (
         local["session_minute"].astype(int) // 5
     )
@@ -949,6 +990,7 @@ def aggregate_active_five_minute(
         )
 
     output = grouped.agg(
+        timestamp=("timestamp", "first"),
         open=("open", "first"),
         high=("high", "max"),
         low=("low", "min"),
@@ -957,21 +999,18 @@ def aggregate_active_five_minute(
         session_minute=("session_minute", "first"),
         segment=("segment", "first"),
     )
-    first_timestamps = grouped.apply(
-        lambda group: group.index[0],
-        include_groups=False,
-    )
+    group_keys = output.index.to_list()
     output.index = pd.DatetimeIndex(
-        first_timestamps.to_list()
+        output.pop("timestamp")
     )
     output.index.name = "timestamp"
     output["session_date"] = [
         item[0]
-        for item in first_timestamps.index
+        for item in group_keys
     ]
     output["active_5m_bar"] = [
         int(item[1])
-        for item in first_timestamps.index
+        for item in group_keys
     ]
     return output[
         OHLCV_COLUMNS
