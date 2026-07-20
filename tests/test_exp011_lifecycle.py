@@ -6,15 +6,15 @@ from experiment_lifecycle import get_experiment_lifecycle
 
 
 class Exp011LifecycleTests(unittest.TestCase):
-    def test_exp011_is_preregistered(self) -> None:
+    def test_exp011_is_closed_to_review(self) -> None:
         record = get_experiment_lifecycle("EXP-011")
-        self.assertEqual(record.stage, "PRE_REGISTERED")
+        self.assertEqual(record.stage, "REVIEW")
         self.assertEqual(
             record.strategy_name,
             "opening_drive_position_sizing_study",
         )
         self.assertIn("equal-dollar-risk", record.hypothesis.lower())
-        self.assertIn("all six measurements", record.next_action.lower())
+        self.assertIn("automatic winner", record.next_action.lower())
 
     def test_exp010_remains_in_review(self) -> None:
         record = get_experiment_lifecycle("EXP-010")

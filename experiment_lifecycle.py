@@ -434,18 +434,23 @@ EXPERIMENT_LIFECYCLE: dict[
             "trade risk and improve drawdown behaviour without changing "
             "the frozen EXP-010 opening-drive signals."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "The two frozen signal variants, calibration/evaluation "
-            "split, risk-target rule, three sizing methods, execution, "
-            "costs, paired bootstrap and measurement-first reporting "
-            "were locked before any EXP-011 sizing result."
+            "All six locked signal-by-sizing rows were measured. Equal-risk "
+            "sizing reduced average initial risk from about $2,157 for fixed "
+            "one-NQ to about $1,005 fractional NQ or $900 integer MNQ, and "
+            "reduced maximum drawdown from about $25,000 to $9,000-$10,000. "
+            "Absolute profit also fell because evaluation-period exposure was "
+            "materially lower. A report-only MNQ bootstrap unit error was "
+            "corrected with the original output preserved and all six "
+            "strategy measurements unchanged."
         ),
         next_action=(
-            "Implement and commit the protected sizing engine before "
-            "calculating results. Preserve both signal variants, show "
-            "all six measurements, and make no signal-edge or trading "
-            "authorization claim."
+            "Preserve EXP-011 in REVIEW as a measurement of the return-risk "
+            "trade-off. Keep fixed NQ, fractional NQ and integer MNQ visible "
+            "without an automatic winner. Use the practical MNQ sizing "
+            "mechanism only as context for later strategy design; do not "
+            "claim independent signal confirmation or authorize trading."
         ),
         market_name="NQ / MNQ futures",
         timeframe="5-minute signal / 1-minute execution",
