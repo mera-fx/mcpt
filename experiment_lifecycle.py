@@ -460,6 +460,39 @@ EXPERIMENT_LIFECYCLE: dict[
         ),
     ),
 
+    "EXP-012": ExperimentLifecycle(
+        experiment_id="EXP-012",
+        experiment_name="NQ/MNQ Extended-Hours Context Discovery",
+        hypothesis=(
+            "Information formed during the overnight and premarket "
+            "sessions may identify cash-session gap, continuation, "
+            "reversal and range-breakout strategies with meaningfully "
+            "different performance and risk characteristics."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "Six extended-hours context families, 24 candidates, the "
+            "2020-2025 aligned frozen NQ/MNQ sample, cash-session-only "
+            "entries, costs, measurements and reporting rules were "
+            "locked before any EXP-012 strategy result."
+        ),
+        next_action=(
+            "Implement and commit the protected 24-candidate measurement "
+            "engine before calculating results. Preserve every candidate "
+            "and make no automatic winner, pass/fail, edge-confirmation "
+            "or trading-authorization claim."
+        ),
+        market_name="NQ / MNQ futures",
+        timeframe=(
+            "Extended-session context / 5-minute signal / "
+            "1-minute execution"
+        ),
+        strategy_name="extended_hours_context_discovery",
+        preregistration_file=Path(
+            "research/EXP-012_preregistration.md"
+        ),
+    ),
+
 }
 
 
