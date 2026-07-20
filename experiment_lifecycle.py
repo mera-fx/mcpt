@@ -508,18 +508,24 @@ EXPERIMENT_LIFECYCLE: dict[
             "consistency after temporal testing and a discovery-wide "
             "24-candidate permutation test."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "The three EXP-012 review candidates, their post-result "
-            "selection limitations, frozen data, execution, costs, four "
-            "anchored folds, bootstrap seed and discovery-wide 24-"
-            "candidate MCPT were locked before any EXP-013 result."
+            "The locked three-finalist validation produced strong "
+            "historical evidence. Premarket continuation at a 0.75 "
+            "drive fraction with a time exit led the measurement with "
+            "NQ PF 2.023738, $44,205 net profit, 88 trades and $5,540 "
+            "maximum drawdown. Three of four anchored test years were "
+            "profitable with $26,295 combined net profit. All 24 source "
+            "candidates were repeated inside the discovery-wide MCPT, "
+            "which produced p=0.003996."
         ),
         next_action=(
-            "Implement and commit the protected three-finalist validation "
-            "before calculating EXP-013 measurements. Preserve EXP-012, "
-            "the low-sample warning and the post-selection limitation. "
-            "Do not authorize paper or live trading."
+            "Preserve the complete EXP-013 measurement in REVIEW and "
+            "keep all three finalists visible as different trade-offs. "
+            "The result is not independent confirmation because the "
+            "finalists were selected after viewing EXP-012. Any further "
+            "rule change or optimization requires a new experiment ID; "
+            "do not authorize paper or live trading automatically."
         ),
         market_name="NQ / MNQ futures",
         timeframe=(
