@@ -580,6 +580,38 @@ EXPERIMENT_LIFECYCLE: dict[
             "research/EXP-014_preregistration.md"
         ),
     ),
+
+    "EXP-015": ExperimentLifecycle(
+        experiment_id="EXP-015",
+        experiment_name=(
+            "London Strategic Edge NQ/MNQ Data-Source Qualification"
+        ),
+        hypothesis=(
+            "London Strategic Edge may provide identifiable, structurally "
+            "complete and sufficiently consistent one-minute NQ/MNQ history "
+            "for new research when compared with the frozen Quantower reference."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "The catalog-first identity audit, fixed DST, holiday and roll "
+            "sample windows, structural measurements, cross-source comparisons "
+            "and exact frozen-strategy replay diagnostics were locked before "
+            "accessing the vendor futures catalog or downloading history."
+        ),
+        next_action=(
+            "Implement and commit a protected preflight and catalog-only audit. "
+            "Do not download historical bars until NQ/MNQ identity, timestamp, "
+            "contract and roll methodology are resolved. Keep all prior data "
+            "and results frozen and never store the API key."
+        ),
+        market_name="NQ / MNQ futures",
+        timeframe="One-minute historical data-source qualification",
+        strategy_name="london_strategic_edge_data_qualification",
+        preregistration_file=Path(
+            "research/EXP-015_preregistration.md"
+        ),
+    ),
+
 }
 
 
