@@ -131,6 +131,15 @@ class Exp014MeasurementTests(unittest.TestCase):
         self.assertTrue(
             pairs["diagnostic_not_executable_portfolio"].all()
         )
+        self.assertTrue((pairs["total_years"] == 1).all())
+        self.assertTrue((pairs["profitable_years"] == 1).all())
+        self.assertFalse(pairs["worst_year_usd"].isna().any())
+        self.assertTrue(
+            np.allclose(
+                pairs["worst_year_usd"].to_numpy(dtype=float),
+                pairs["net_profit_usd"].to_numpy(dtype=float),
+            )
+        )
 
         drawdowns = drawdown_diagnostics(self.session_pnl, pair_daily)
         self.assertEqual(len(drawdowns), 5)

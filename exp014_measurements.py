@@ -579,7 +579,8 @@ def sleeve_pair_measurements(
         overlap = left_active & right_active
         active_pnl = pnl[active]
         drawdown = maximum_drawdown(pnl)
-        annual = pd.Series(pnl, index=dates).groupby(dates.dt.year).sum()
+        annual_years = dates.dt.year.to_numpy(dtype=int)
+        annual = pd.Series(pnl).groupby(annual_years).sum()
         monthly_period = dates.dt.to_period("M")
         monthly = pd.Series(
             pnl, index=monthly_period.to_numpy()
