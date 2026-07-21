@@ -1,8 +1,8 @@
 # EXP-016 Pre-measurement Alignment Correction
 
-**Basis:** locked preregistration and code review only  
-**Vendor bar values viewed:** no  
-**Local audit results viewed:** no  
+**Basis:** locked preregistration and code review only
+**Vendor bar values viewed:** no
+**Local audit results viewed:** no
 **Remote access performed by correction:** no
 
 Five original samples had already downloaded and the sixth request had failed
