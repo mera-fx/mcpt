@@ -2,8 +2,8 @@
 
 ## London Strategic Edge NQ/MNQ Data-Source Qualification
 
-**Locked:** 21 July 2026  
-**State:** PRE_REGISTERED / NOT RUN  
+**Locked:** 21 July 2026
+**State:** PRE_REGISTERED / NOT RUN
 **Results viewed:** None from the EXP-015 vendor catalog or history
 
 ## Purpose
