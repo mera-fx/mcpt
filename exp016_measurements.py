@@ -13,6 +13,7 @@ import pandas as pd
 OHLCV = ["open", "high", "low", "close", "volume"]
 TIMESTAMP_ALIASES = (
     "timestamp",
+    "ts",
     "datetime",
     "date_time",
     "time",
