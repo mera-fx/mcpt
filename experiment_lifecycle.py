@@ -615,6 +615,32 @@ EXPERIMENT_LIFECYCLE: dict[
             "research/EXP-015_preregistration.md"
         ),
     ),
+
+    "EXP-016": ExperimentLifecycle(
+        experiment_id="EXP-016",
+        experiment_name="NQ.F Structural and Cross-Source Sample Audit",
+        hypothesis=(
+            "The London Strategic Edge NQ.F one-minute series may be complete, "
+            "internally valid and sufficiently consistent with the frozen "
+            "Quantower NQ reference to serve as a supplementary source."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "Six fixed DST, holiday and roll sample windows, structural checks, "
+            "cross-source comparisons and supplementary-only interpretation "
+            "rules were locked before accessing NQ.F history."
+        ),
+        next_action=(
+            "Implement and commit a protected six-request NQ.F sample audit. "
+            "Do not rerun the catalog, download full history, alter Quantower "
+            "data, run strategies or authorize paper/live trading."
+        ),
+        market_name="NQ.F versus frozen Quantower NQ",
+        timeframe="One-minute structural and cross-source sample audit",
+        strategy_name="nq_f_data_sample_qualification",
+        preregistration_file=Path("research/EXP-016_preregistration.md"),
+    ),
+
 }
 
 
