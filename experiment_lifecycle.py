@@ -591,18 +591,22 @@ EXPERIMENT_LIFECYCLE: dict[
             "complete and sufficiently consistent one-minute NQ/MNQ history "
             "for new research when compared with the frozen Quantower reference."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "The catalog-first identity audit, fixed DST, holiday and roll "
-            "sample windows, structural measurements, cross-source comparisons "
-            "and exact frozen-strategy replay diagnostics were locked before "
-            "accessing the vendor futures catalog or downloading history."
+            "The protected official-client catalog audit returned 69 futures "
+            "rows. It found one NQ candidate, NQ.F, spanning 29 May 2016 through "
+            "20 July 2026, but no MNQ candidate. The catalog did not resolve "
+            "continuous-contract identity, roll construction or price "
+            "adjustment. The frozen classification is IDENTITY_UNRESOLVED. "
+            "No historical bars were downloaded and no prior data was replaced."
         ),
         next_action=(
-            "Implement and commit a protected preflight and catalog-only audit. "
-            "Do not download historical bars until NQ/MNQ identity, timestamp, "
-            "contract and roll methodology are resolved. Keep all prior data "
-            "and results frozen and never store the API key."
+            "Preserve EXP-015 in REVIEW as evidence that London Strategic Edge "
+            "is not qualified as the primary NQ/MNQ historical source. Keep "
+            "NQ.F available only as an unresolved supplementary candidate. Any "
+            "NQ.F-only sample audit or new vendor-data use requires a new "
+            "preregistered experiment and must not replace frozen Quantower "
+            "data. No paper or live trading is authorized."
         ),
         market_name="NQ / MNQ futures",
         timeframe="One-minute historical data-source qualification",
@@ -611,7 +615,6 @@ EXPERIMENT_LIFECYCLE: dict[
             "research/EXP-015_preregistration.md"
         ),
     ),
-
 }
 
 
