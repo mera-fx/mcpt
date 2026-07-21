@@ -1,7 +1,8 @@
 # EXP-017 Exact NQ Contract Data Benchmark — Preregistration
 
-**Locked date:** 2026-07-21  
-**Stage:** PRE_REGISTERED  
+**Locked date:** 2026-07-21
+
+**Stage:** PRE_REGISTERED
 **Benchmark bar values viewed:** none
 
 EXP-017 will determine which accessible exact-contract one-minute NQ source has the strongest evidence for new historical strategy research. Data quality is evaluated before cost; cost and licensing are tie-breakers only.
