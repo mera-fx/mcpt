@@ -5,6 +5,7 @@ import unittest
 import pandas as pd
 
 from exp016_measurements import (
+    ALL_WINDOW_IDS,
     canonicalize_vendor_frame,
     classify_audit,
     compare_with_reference,
@@ -66,8 +67,20 @@ class Exp016MeasurementTests(unittest.TestCase):
         self.assertEqual(metrics["matched_rows"], 3)
         self.assertEqual(metrics["vendor_only_rows"], 0)
         self.assertEqual(metrics["quantower_only_rows"], 0)
+        self.assertEqual(metrics["expected_minute_completeness"], 1.0)
         self.assertEqual(metrics["matched_timestamp_share"], 1.0)
         self.assertEqual(metrics["close_within_one_tick_share"], 1.0)
+        for column in ("open", "high", "low", "close"):
+            self.assertEqual(metrics[f"{column}_diff_exact_rows"], 3)
+            self.assertEqual(
+                metrics[f"{column}_diff_gt_0_to_0p25_rows"],
+                0,
+            )
+            self.assertEqual(
+                metrics[f"{column}_diff_gt_0p25_to_1_rows"],
+                0,
+            )
+            self.assertEqual(metrics[f"{column}_diff_gt_1_rows"], 0)
         self.assertEqual(len(detail), 3)
 
     def test_naive_timestamps_block_cross_source_matching(self) -> None:
@@ -101,11 +114,13 @@ class Exp016MeasurementTests(unittest.TestCase):
         cross = pd.DataFrame(
             [
                 {
+                    "window_id": window_id,
                     "comparison_status": "MEASURED",
+                    "expected_minute_completeness": 1.0,
                     "matched_timestamp_share": 1.0,
                     "close_within_one_tick_share": 1.0,
                 }
-                for _ in range(6)
+                for window_id in ALL_WINDOW_IDS
             ]
         )
         self.assertEqual(

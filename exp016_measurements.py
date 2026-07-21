@@ -20,6 +20,29 @@ TIMESTAMP_ALIASES = (
     "time left",
 )
 
+ALL_WINDOW_IDS = (
+    "2020_march_dst_roll_volatility",
+    "2021_thanksgiving",
+    "2022_june_roll",
+    "2023_march_dst_roll",
+    "2024_thanksgiving",
+    "2025_march_dst_roll",
+)
+ROLL_WINDOW_IDS = frozenset(
+    {
+        "2020_march_dst_roll_volatility",
+        "2022_june_roll",
+        "2023_march_dst_roll",
+        "2025_march_dst_roll",
+    }
+)
+OUTSIDE_ROLL_WINDOW_IDS = frozenset(
+    {
+        "2021_thanksgiving",
+        "2024_thanksgiving",
+    }
+)
+
 
 class Exp016MeasurementError(RuntimeError):
     pass
@@ -134,6 +157,22 @@ def utc_window_bounds(start: str, end: str) -> tuple[pd.Timestamp, pd.Timestamp]
     return lower, upper
 
 
+def _difference_bucket_counts(
+    values: pd.Series,
+    prefix: str,
+) -> dict[str, int]:
+    return {
+        f"{prefix}_diff_exact_rows": int(values.eq(0.0).sum()),
+        f"{prefix}_diff_gt_0_to_0p25_rows": int(
+            values.gt(0.0).where(values.le(0.25), False).sum()
+        ),
+        f"{prefix}_diff_gt_0p25_to_1_rows": int(
+            values.gt(0.25).where(values.le(1.0), False).sum()
+        ),
+        f"{prefix}_diff_gt_1_rows": int(values.gt(1.0).sum()),
+    }
+
+
 def compare_with_reference(
     *,
     vendor: CanonicalFrame,
@@ -152,6 +191,7 @@ def compare_with_reference(
                 "matched_rows": None,
                 "vendor_only_rows": None,
                 "quantower_only_rows": None,
+                "expected_minute_completeness": None,
                 "matched_timestamp_share": None,
                 "close_within_one_tick_share": None,
             },
@@ -167,6 +207,7 @@ def compare_with_reference(
                 "matched_rows": None,
                 "vendor_only_rows": None,
                 "quantower_only_rows": None,
+                "expected_minute_completeness": None,
                 "matched_timestamp_share": None,
                 "close_within_one_tick_share": None,
             },
@@ -208,10 +249,14 @@ def compare_with_reference(
     ).abs()
 
     close_diff = matched["close_abs_diff"]
-    exact = int(close_diff.eq(0.0).sum())
-    quarter = int(close_diff.gt(0.0).where(close_diff.le(0.25), False).sum())
-    one_point = int(close_diff.gt(0.25).where(close_diff.le(1.0), False).sum())
-    over_one = int(close_diff.gt(1.0).sum())
+    difference_buckets: dict[str, int] = {}
+    for column in ("open", "high", "low", "close"):
+        difference_buckets.update(
+            _difference_bucket_counts(
+                matched[f"{column}_abs_diff"],
+                column,
+            )
+        )
 
     reference_rows = int(len(reference_frame))
     matched_rows = int(len(matched_index))
@@ -230,12 +275,10 @@ def compare_with_reference(
         "matched_rows": matched_rows,
         "vendor_only_rows": int(len(vendor_only)),
         "quantower_only_rows": int(len(reference_only)),
+        "expected_minute_completeness": matched_share,
         "matched_timestamp_share": matched_share,
         "close_within_one_tick_share": within_tick,
-        "close_diff_exact_rows": exact,
-        "close_diff_gt_0_to_0p25_rows": quarter,
-        "close_diff_gt_0p25_to_1_rows": one_point,
-        "close_diff_gt_1_rows": over_one,
+        **difference_buckets,
         "mean_open_abs_diff": float(matched["open_abs_diff"].mean()),
         "mean_high_abs_diff": float(matched["high_abs_diff"].mean()),
         "mean_low_abs_diff": float(matched["low_abs_diff"].mean()),
@@ -276,10 +319,38 @@ def classify_audit(
     if not cross_source["comparison_status"].eq("MEASURED").all():
         return "STRUCTURE_UNRESOLVED"
 
+    if "window_id" not in cross_source.columns:
+        return "STRUCTURE_UNRESOLVED"
+    window_ids = set(cross_source["window_id"].astype(str))
+    if window_ids != set(ALL_WINDOW_IDS):
+        return "STRUCTURE_UNRESOLVED"
+
+    required_overlap = cross_source[
+        [
+            "expected_minute_completeness",
+            "matched_timestamp_share",
+        ]
+    ].apply(pd.to_numeric, errors="coerce")
+    if not np.isfinite(required_overlap.to_numpy(dtype=float)).all():
+        return "STRUCTURE_UNRESOLVED"
     if (
-        cross_source["matched_timestamp_share"].min() < 0.999
-        or cross_source["close_within_one_tick_share"].min() < 0.995
+        required_overlap["expected_minute_completeness"].min() < 0.999
+        or required_overlap["matched_timestamp_share"].min() < 0.999
     ):
+        return "NOT_QUALIFIED"
+
+    outside_roll = cross_source[
+        cross_source["window_id"].isin(OUTSIDE_ROLL_WINDOW_IDS)
+    ]
+    if len(outside_roll) != len(OUTSIDE_ROLL_WINDOW_IDS):
+        return "STRUCTURE_UNRESOLVED"
+    outside_roll_close_share = pd.to_numeric(
+        outside_roll["close_within_one_tick_share"],
+        errors="coerce",
+    )
+    if not np.isfinite(outside_roll_close_share.to_numpy(dtype=float)).all():
+        return "STRUCTURE_UNRESOLVED"
+    if outside_roll_close_share.min() < 0.995:
         return "NOT_QUALIFIED"
 
     # Contract, roll and adjustment methodology remains unresolved.
