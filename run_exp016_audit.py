@@ -99,6 +99,29 @@ def _load_json(path: Path) -> dict[str, Any]:
     return value
 
 
+def _portable_relative_path(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).replace(chr(92), "/")
+
+
+def _project_path_from_relative(value: Any) -> Path:
+    normalized = _portable_relative_path(value)
+    parts = [
+        part for part in normalized.split("/")
+        if part not in ("", ".")
+    ]
+    if (
+        not normalized
+        or normalized.startswith("/")
+        or not parts
+        or any(part == ".." for part in parts)
+        or ":" in parts[0]
+    ):
+        raise RuntimeError("Expected a safe project-relative path.")
+    return PROJECT_DIR.joinpath(*parts)
+
+
 def _verify_lifecycle() -> None:
     expected = {
         "EXP-005": "ACCEPTED_FOR_PAPER_TESTING",
@@ -322,7 +345,7 @@ def run_download_samples() -> dict[str, Any]:
             "symbol": "NQ.F",
             "dataset": "futures",
             "timeframe": "1m",
-            "local_path": str(output.relative_to(PROJECT_DIR)),
+            "local_path": output.relative_to(PROJECT_DIR).as_posix(),
             "size_bytes": int(output.stat().st_size),
             "sha256": sha256_file(output),
             "catalog_called": False,
@@ -413,12 +436,12 @@ def _verify_rate_limit_amendment_state() -> tuple[dict[str, Any], list[dict[str,
             or record.get("end") != expected["end"]
             or record.get("size_bytes") != expected["size_bytes"]
             or record.get("sha256") != expected["sha256"]
-            or record.get("local_path") != expected["local_path"]
+            or _portable_relative_path(record.get("local_path")) != _portable_relative_path(expected["local_path"])
         ):
             raise RuntimeError(
                 f"Frozen successful request changed: {expected['window_id']}"
             )
-        path = PROJECT_DIR / record["local_path"]
+        path = _project_path_from_relative(record["local_path"])
         if (
             not path.is_file()
             or path.stat().st_size != expected["size_bytes"]
@@ -545,7 +568,7 @@ def run_retry_rate_limited_window() -> dict[str, Any]:
         "symbol": "NQ.F",
         "dataset": "futures",
         "timeframe": "1m",
-        "local_path": str(output.relative_to(PROJECT_DIR)),
+        "local_path": output.relative_to(PROJECT_DIR).as_posix(),
         "size_bytes": int(output.stat().st_size),
         "sha256": sha256_file(output),
         "catalog_called": False,
@@ -624,7 +647,7 @@ def run_local_audit() -> dict[str, Any]:
     by_window = {item["window_id"]: item for item in requests}
     for window in FIXED_SAMPLE_WINDOWS:
         record = by_window[window["window_id"]]
-        path = PROJECT_DIR / record["local_path"]
+        path = _project_path_from_relative(record["local_path"])
         if sha256_file(path) != record["sha256"]:
             raise RuntimeError(
                 f"Vendor sample hash changed: {window['window_id']}"
