@@ -40,6 +40,15 @@ from exp016_measurements import (
     compare_with_reference,
     sha256_file,
 )
+from exp016_rate_limit_amendment import (
+    COMPLETED_BEFORE_RATE_LIMIT,
+    EXPECTED_IMPLEMENTATION_COMMIT,
+    MINIMUM_RETRY_WAIT_SECONDS,
+    OBSERVED_RATE_LIMIT_FAILURE,
+    RETRY_LOCK_RELATIVE_PATH,
+    RETRY_RAW_RELATIVE_PATH,
+    validate_exp016_rate_limit_amendment,
+)
 from exp016_preregistration import (
     FIXED_SAMPLE_WINDOWS,
     validate_exp016_preregistration,
@@ -188,12 +197,14 @@ def protected_preflight() -> dict[str, Any]:
     print("EXP-016 IMPLEMENTATION PREFLIGHT")
     print("================================")
     print("Lifecycle:                 PRE_REGISTERED")
-    print("Implementation:            IMPLEMENTED_NOT_RUN")
+    print("Implementation:            IMPLEMENTED_PARTIALLY_ACCESSED")
+    print("Rate-limit amendment:      AVAILABLE")
     print("EXP-015 result verified:   True")
     print("Quantower reference valid: True")
     print("Vendor symbol:             NQ.F")
     print("Locked windows:            6")
-    print("Maximum remote requests:   6")
+    print("Original request limit:    6")
+    print("Amended retry allowance:   1 failed window only")
     print("Catalog rerun:             False")
     print("Full-history download:     False")
     print("Strategy execution:        False")
@@ -362,6 +373,237 @@ def run_download_samples() -> dict[str, Any]:
     return manifest
 
 
+
+def _verify_rate_limit_amendment_state() -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    validate_exp016_rate_limit_amendment()
+
+    ancestry = _run_git(
+        "merge-base",
+        "--is-ancestor",
+        EXPECTED_IMPLEMENTATION_COMMIT,
+        "HEAD",
+        check=False,
+    )
+    if ancestry.returncode != 0:
+        raise RuntimeError(
+            "The frozen EXP-016 implementation commit is not an ancestor of HEAD."
+        )
+
+    if DOWNLOAD_MANIFEST.exists():
+        raise RuntimeError(
+            "The six-window download manifest already exists. No retry is allowed."
+        )
+
+    records = _load_completed_records()
+    expected_ids = {
+        item["window_id"] for item in COMPLETED_BEFORE_RATE_LIMIT
+    } | {OBSERVED_RATE_LIMIT_FAILURE["window_id"]}
+    if set(records) != expected_ids:
+        raise RuntimeError(
+            "The original request-lock set does not match the frozen amendment evidence."
+        )
+
+    successful: list[dict[str, Any]] = []
+    for expected in COMPLETED_BEFORE_RATE_LIMIT:
+        record = records[expected["window_id"]]
+        if (
+            record.get("status") != "COMPLETE"
+            or record.get("request_attempt") != 1
+            or record.get("start") != expected["start"]
+            or record.get("end") != expected["end"]
+            or record.get("size_bytes") != expected["size_bytes"]
+            or record.get("sha256") != expected["sha256"]
+            or record.get("local_path") != expected["local_path"]
+        ):
+            raise RuntimeError(
+                f"Frozen successful request changed: {expected['window_id']}"
+            )
+        path = PROJECT_DIR / record["local_path"]
+        if (
+            not path.is_file()
+            or path.stat().st_size != expected["size_bytes"]
+            or sha256_file(path) != expected["sha256"]
+        ):
+            raise RuntimeError(
+                f"Frozen successful sample changed: {expected['window_id']}"
+            )
+        successful.append(record)
+
+    failed = records[OBSERVED_RATE_LIMIT_FAILURE["window_id"]]
+    safe_error = str(failed.get("safe_error", ""))
+    if (
+        failed.get("status") != "FAILED"
+        or failed.get("request_attempt") != 1
+        or failed.get("start") != OBSERVED_RATE_LIMIT_FAILURE["start"]
+        or failed.get("end") != OBSERVED_RATE_LIMIT_FAILURE["end"]
+        or safe_error != OBSERVED_RATE_LIMIT_FAILURE["safe_error"]
+        or failed.get("local_path")
+        or failed.get("size_bytes")
+        or failed.get("sha256")
+    ):
+        raise RuntimeError("The frozen 429 failure evidence changed.")
+
+    failed_at_text = failed.get("failed_at_utc")
+    if not isinstance(failed_at_text, str):
+        raise RuntimeError("The original failed request has no failure timestamp.")
+    failed_at = datetime.fromisoformat(failed_at_text)
+    if failed_at.tzinfo is None:
+        raise RuntimeError("The original failure timestamp is not timezone-aware.")
+    elapsed = (datetime.now(timezone.utc) - failed_at.astimezone(timezone.utc)).total_seconds()
+    if elapsed < MINIMUM_RETRY_WAIT_SECONDS:
+        remaining = int(MINIMUM_RETRY_WAIT_SECONDS - elapsed + 59) // 60
+        raise RuntimeError(
+            f"The amended retry cooldown has not elapsed. Wait at least {remaining} more minute(s)."
+        )
+
+    return failed, successful
+
+
+def run_retry_rate_limited_window() -> dict[str, Any]:
+    git = protected_preflight()
+    failed, successful = _verify_rate_limit_amendment_state()
+
+    key = os.environ.get("LSE_API_KEY")
+    if not key:
+        raise RuntimeError(
+            "LSE_API_KEY is not set. Do not place the key in a file."
+        )
+
+    python = _isolated_python()
+    if not python.is_file():
+        raise RuntimeError("The frozen isolated lse-data environment is missing.")
+
+    retry_lock = PROJECT_DIR / RETRY_LOCK_RELATIVE_PATH
+    retry_destination = PROJECT_DIR / RETRY_RAW_RELATIVE_PATH
+    if retry_lock.exists():
+        raise RuntimeError(
+            "The one amended retry already has a lock. No further retry is allowed."
+        )
+    if retry_destination.exists():
+        raise RuntimeError(
+            "The amended retry destination already exists. Stop for review."
+        )
+
+    retry_lock.parent.mkdir(parents=True, exist_ok=True)
+    started = {
+        "schema_version": 1,
+        "experiment_id": "EXP-016",
+        "amendment_id": "EXP-016-A1",
+        "window_id": OBSERVED_RATE_LIMIT_FAILURE["window_id"],
+        "start": OBSERVED_RATE_LIMIT_FAILURE["start"],
+        "end": OBSERVED_RATE_LIMIT_FAILURE["end"],
+        "status": "RETRY_REQUEST_STARTED",
+        "started_at_utc": datetime.now(timezone.utc).isoformat(),
+        "git": git,
+        "original_request_attempt": 1,
+        "amended_retry_attempt": 1,
+        "total_window_request_attempt": 2,
+        "original_failure_preserved": True,
+        "original_safe_error": OBSERVED_RATE_LIMIT_FAILURE["safe_error"],
+    }
+    _atomic_json(started, retry_lock)
+
+    env = dict(os.environ)
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    completed = subprocess.run(
+        [
+            str(python),
+            str(WORKER_FILE),
+            "--window-id",
+            OBSERVED_RATE_LIMIT_FAILURE["window_id"],
+            "--start",
+            OBSERVED_RATE_LIMIT_FAILURE["start"],
+            "--end",
+            OBSERVED_RATE_LIMIT_FAILURE["end"],
+            "--destination",
+            str(retry_destination),
+        ],
+        cwd=PROJECT_DIR,
+        env=env,
+        text=True,
+        capture_output=True,
+    )
+    if completed.returncode != 0:
+        retry_failed = {
+            **started,
+            "status": "RETRY_FAILED",
+            "failed_at_utc": datetime.now(timezone.utc).isoformat(),
+            "safe_error": completed.stderr.strip()[:1000],
+            "additional_retry_authorized": False,
+        }
+        _atomic_json(retry_failed, retry_lock)
+        raise RuntimeError(
+            "The one amended retry failed. No additional request is authorized."
+        )
+
+    worker = json.loads(completed.stdout)
+    output = Path(worker["path"])
+    retry_record = {
+        **started,
+        "status": "COMPLETE",
+        "completed_at_utc": datetime.now(timezone.utc).isoformat(),
+        "symbol": "NQ.F",
+        "dataset": "futures",
+        "timeframe": "1m",
+        "local_path": str(output.relative_to(PROJECT_DIR)),
+        "size_bytes": int(output.stat().st_size),
+        "sha256": sha256_file(output),
+        "catalog_called": False,
+        "strategy_called": False,
+        "additional_retry_authorized": False,
+    }
+    _atomic_json(retry_record, retry_lock)
+
+    requests = [*successful, retry_record]
+    by_id = {item["window_id"]: item for item in requests}
+    ordered = [by_id[item["window_id"]] for item in FIXED_SAMPLE_WINDOWS]
+    manifest = {
+        "schema_version": 1,
+        "experiment_id": "EXP-016",
+        "result_phase": "SIX_FIXED_SAMPLES_DOWNLOADED_WITH_RATE_LIMIT_AMENDMENT",
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "git": git,
+        "client": {
+            "distribution": "lse-data",
+            "version": EXPECTED_CLIENT_VERSION,
+            "isolated_environment": True,
+        },
+        "requests": ordered,
+        "successful_sample_count": 6,
+        "original_request_attempt_count": 6,
+        "amended_retry_attempt_count": 1,
+        "total_remote_history_request_attempts": 7,
+        "original_rate_limit_failure": failed,
+        "rate_limit_amendment": {
+            "amendment_id": "EXP-016-A1",
+            "retry_window_id": OBSERVED_RATE_LIMIT_FAILURE["window_id"],
+            "original_failure_preserved": True,
+            "only_one_additional_attempt": True,
+            "minimum_wait_seconds": MINIMUM_RETRY_WAIT_SECONDS,
+        },
+        "catalog_rerun": False,
+        "full_history_download": False,
+        "strategy_run": False,
+        "api_key_written": False,
+    }
+    _atomic_json(manifest, DOWNLOAD_MANIFEST)
+
+    print()
+    print("EXP-016 RATE-LIMITED WINDOW RETRY")
+    print("=================================")
+    print("Retry window:             2025_march_dst_roll")
+    print("Original completed:       5")
+    print("Amended retry completed:  1")
+    print("Successful samples:       6")
+    print("Total request attempts:   7")
+    print("Original failure kept:    True")
+    print("Further retry allowed:    False")
+    print("Catalog rerun:            False")
+    print("Full history:             False")
+    print("Strategy run:             False")
+    print("=================================")
+    return manifest
+
 def run_local_audit() -> dict[str, Any]:
     git = protected_preflight()
     if not DOWNLOAD_MANIFEST.is_file():
@@ -489,6 +731,7 @@ def main() -> None:
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--preflight", action="store_true")
     group.add_argument("--download-samples", action="store_true")
+    group.add_argument("--retry-rate-limited-window", action="store_true")
     group.add_argument("--audit-local", action="store_true")
     args = parser.parse_args()
 
@@ -496,6 +739,8 @@ def main() -> None:
         protected_preflight()
     elif args.download_samples:
         run_download_samples()
+    elif args.retry_rate_limited_window:
+        run_retry_rate_limited_window()
     else:
         run_local_audit()
 
