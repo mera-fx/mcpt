@@ -624,21 +624,47 @@ EXPERIMENT_LIFECYCLE: dict[
             "internally valid and sufficiently consistent with the frozen "
             "Quantower NQ reference to serve as a supplementary source."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "Six fixed DST, holiday and roll sample windows, structural checks, "
-            "cross-source comparisons and supplementary-only interpretation "
-            "rules were locked before accessing NQ.F history."
+            "The protected six-window audit classified NQ.F as NOT_QUALIFIED. "
+            "All samples were structurally clean, but expected-minute and matched-"
+            "timestamp shares ranged from 87.978% to 98.889%, below the locked "
+            "99.9% requirement. The two outside-roll close-within-one-tick shares "
+            "were 97.047% and 97.826%, below the locked 99.5% requirement."
         ),
         next_action=(
-            "Implement and commit a protected six-request NQ.F sample audit. "
-            "Do not rerun the catalog, download full history, alter Quantower "
-            "data, run strategies or authorize paper/live trading."
+            "Preserve EXP-016 in REVIEW. Do not rerun its download, retry or audit. "
+            "Use a new exact-contract benchmark before selecting data for new research."
         ),
         market_name="NQ.F versus frozen Quantower NQ",
         timeframe="One-minute structural and cross-source sample audit",
         strategy_name="nq_f_data_sample_qualification",
         preregistration_file=Path("research/EXP-016_preregistration.md"),
+    ),
+
+    "EXP-017": ExperimentLifecycle(
+        experiment_id="EXP-017",
+        experiment_name="Exact NQ Contract Data Benchmark",
+        hypothesis=(
+            "Comparing the same exact quarterly NQ contracts across independently "
+            "identified sources may distinguish price accuracy, session completeness "
+            "and historical reproducibility without continuous-roll ambiguity."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "Six exact-contract windows, a price-free source-lock stage, structural "
+            "and cross-source measurements, repeat-download checks and fixed source-"
+            "selection rules were locked before accessing EXP-017 benchmark bars."
+        ),
+        next_action=(
+            "Create and commit the EXP-017 source-lock record before any bar access. "
+            "Resolve exact aliases, provider provenance, licensing and an exchange-"
+            "reference candidate without viewing OHLCV values."
+        ),
+        market_name="Exact quarterly NQ futures contracts",
+        timeframe="One-minute multi-source data benchmark",
+        strategy_name="exact_nq_contract_data_benchmark",
+        preregistration_file=Path("research/EXP-017_preregistration.md"),
     ),
 
 }
