@@ -1,21 +1,28 @@
 from __future__ import annotations
 
+from pathlib import Path
 import unittest
 
+from close_exp014_review import replace_exp014_block
 from experiment_lifecycle import get_experiment_lifecycle
-from register_exp014 import add_exp014_lifecycle
 
 
 class Exp014LifecycleTests(unittest.TestCase):
-    def test_exp014_is_preregistered(self) -> None:
+    def test_exp014_is_closed_to_review(self) -> None:
         record = get_experiment_lifecycle("EXP-014")
-        self.assertEqual(record.stage, "PRE_REGISTERED")
+        self.assertEqual(record.stage, "REVIEW")
         self.assertEqual(
             record.strategy_name,
             "finalist_behaviour_and_complementarity",
         )
-        self.assertIn("complementary", record.hypothesis.lower())
-        self.assertIn("no rule", record.next_action.lower())
+        self.assertIn(
+            "annual-measurement correction",
+            record.stage_reason.lower(),
+        )
+        self.assertIn(
+            "no paper or live trading",
+            record.next_action.lower(),
+        )
 
     def test_exp013_and_prior_experiments_remain_frozen(self) -> None:
         expected = {
@@ -35,9 +42,11 @@ class Exp014LifecycleTests(unittest.TestCase):
                 stage,
             )
 
-    def test_registration_is_idempotent_when_present(self) -> None:
-        source = '"EXP-014": ExperimentLifecycle(\n'
-        self.assertEqual(add_exp014_lifecycle(source), source)
+    def test_review_closure_is_idempotent_when_present(self) -> None:
+        source = Path("experiment_lifecycle.py").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(replace_exp014_block(source), source)
 
 
 if __name__ == "__main__":

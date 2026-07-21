@@ -549,19 +549,26 @@ EXPERIMENT_LIFECYCLE: dict[
             "gap fade and premarket continuation may provide complementary "
             "session-level P&L rather than duplicating the same risk."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "The exact three finalists, frozen 2020-2025 data, trade "
-            "reconstruction checks, 2025 failure diagnostics, entry-known "
-            "regimes, pairwise overlap measures and two unweighted "
-            "cross-family research sleeve pairs were locked before any "
-            "EXP-014 measurement."
+            "The protected behaviour study exactly reconstructed all three "
+            "EXP-013 finalists and measured their 2025 behaviour, trade "
+            "concentration, entry-known regimes, overlap and fixed arithmetic "
+            "sleeve pairs. Gap fade earned $6,070 in 2025, premarket "
+            "continuation 0.50 earned $9,635 with a $20,695 maximum drawdown "
+            "and an 18-loss streak, and premarket continuation 0.75 lost "
+            "$2,890 on 10 trades. Cross-family all-session P&L correlations "
+            "were 0.041 and 0.021. The two diagnostic sleeve pairs had "
+            "net-profit-to-drawdown ratios of 6.679 and 9.822 after the "
+            "documented annual-measurement correction."
         ),
         next_action=(
-            "Implement and commit the protected behaviour study before "
-            "reconstructing trades. Preserve all EXP-013 evidence, make "
-            "no rule, filter or parameter selection, and do not treat the "
-            "arithmetic sleeve pairs as executable portfolios."
+            "Preserve EXP-014 in REVIEW as descriptive evidence. Keep the "
+            "2025 weakness, 88-trade warning and same-instrument sleeve "
+            "limitations visible. Any strategy change, regime filter, pair "
+            "selection, weighting or executable portfolio design requires a "
+            "new preregistered experiment ID. No paper or live trading is "
+            "authorized by this study."
         ),
         market_name="NQ / MNQ futures",
         timeframe=(
@@ -573,7 +580,6 @@ EXPERIMENT_LIFECYCLE: dict[
             "research/EXP-014_preregistration.md"
         ),
     ),
-
 }
 
 
