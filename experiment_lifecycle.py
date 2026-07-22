@@ -657,9 +657,10 @@ EXPERIMENT_LIFECYCLE: dict[
             "selection rules were locked before accessing EXP-017 benchmark bars."
         ),
         next_action=(
-            "Create and commit the EXP-017 source-lock record before any bar access. "
-            "Resolve exact aliases, provider provenance, licensing and an exchange-"
-            "reference candidate without viewing OHLCV values."
+            "Complete metadata-only eligibility confirmation for Databento GLBX.MDP3 "
+            "and CME DataMine before any bar access. Resolve exact aliases, expiry "
+            "identity, timestamp semantics, entitlements, licensing and cost; then "
+            "commit the final eligibility lock. Do not request OHLCV yet."
         ),
         market_name="Exact quarterly NQ futures contracts",
         timeframe="One-minute multi-source data benchmark",
