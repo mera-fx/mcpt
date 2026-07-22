@@ -7,6 +7,7 @@ import re
 from strategy_explanations import (
     FAMILY_EXPLANATIONS,
     FAMILY_REPORT_HEADINGS,
+    STRATEGY_EXPLANATIONS,
     STRATEGY_EXPLANATION_CSS,
     family_explanation_html,
     strategy_explanation_html,
@@ -87,9 +88,18 @@ def _insert_nav_link(document: str) -> str:
 
 
 def _insert_main_explanation(document: str, experiment_id: str) -> str:
-    if 'id="strategy-rules"' in document:
-        return document
     explanation = strategy_explanation_html(experiment_id)
+    existing = re.search(
+        r"<section\b[^>]*\bid=[\"']strategy-rules[\"'][^>]*>.*?</section>",
+        document,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    if existing:
+        return (
+            document[: existing.start()]
+            + explanation
+            + document[existing.end() :]
+        )
     patterns = (
         r"(</header>)",
         r"(<section[^>]*(?:class=[\"'][^\"']*hero[^\"']*[\"'])?[^>]*>.*?</section>)",
@@ -162,6 +172,8 @@ def upgrade_reports(
 ) -> tuple[Path, ...]:
     changed: list[Path] = []
     for experiment_id, path in reports:
+        if experiment_id not in STRATEGY_EXPLANATIONS:
+            continue
         before = path.read_text(encoding="utf-8")
         after = upgrade_report_document(before, experiment_id)
         if before == after:

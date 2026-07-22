@@ -613,6 +613,43 @@ STRATEGY_EXPLANATIONS: Mapping[str, StrategyExplanation] = {
 }
 
 
+FIXED_NQ_MNQ_RISK_CONTEXT: tuple[str, str] = (
+    "Fixed contract quantity; variable dollar risk. The primary NQ measurement "
+    "uses one NQ contract on every valid signal, while the secondary MNQ "
+    "implementation comparison uses one MNQ contract. The contract count does "
+    "not change with the stop distance, account equity or earlier profits. "
+    "Therefore dollar risk changes from trade to trade with the actual "
+    "entry-to-stop distance. No percentage-of-equity sizing, volatility "
+    "targeting or compounding is used.",
+    "If the actual NQ entry is 20,060 and the protective stop is 19,980, the "
+    "distance is 80 points. One NQ initially risks approximately "
+    "80 × $20 + $15 costs = $1,615, before any adverse stop gap.",
+)
+
+
+STRATEGY_RISK_CONTEXT: Mapping[str, tuple[str, str]] = {
+    "EXP-005": FIXED_NQ_MNQ_RISK_CONTEXT,
+    "EXP-006": FIXED_NQ_MNQ_RISK_CONTEXT,
+    "EXP-007": FIXED_NQ_MNQ_RISK_CONTEXT,
+    "EXP-008": FIXED_NQ_MNQ_RISK_CONTEXT,
+    "EXP-009": FIXED_NQ_MNQ_RISK_CONTEXT,
+    "EXP-010": FIXED_NQ_MNQ_RISK_CONTEXT,
+    "EXP-011": (
+        "EXP-011 compares three sizing methods while keeping the EXP-010 "
+        "signals unchanged. Fixed one NQ always uses one NQ contract and "
+        "therefore retains variable dollar risk. Fractional NQ theoretically "
+        "sizes toward a frozen $1,005 target, capped at 2.0 NQ. Integer MNQ "
+        "practically sizes toward the same target using whole contracts, "
+        "rounded down and capped at 20 MNQ. Position size does not compound "
+        "with prior profits.",
+        "If one NQ would initially risk $2,000, fractional NQ size is "
+        "$1,005 / $2,000 = 0.5025 NQ. If one MNQ would risk $203, integer "
+        "MNQ size is floor($1,005 / $203) = 4 contracts. In the 2021–2025 "
+        "measurement, fixed one NQ averaged $2,156.99 initial risk per trade.",
+    ),
+}
+
+
 FAMILY_EXPLANATIONS: Mapping[str, StrategyExplanation] = {
     "orb_pullback_continuation": _explanation(
         "ORB pullback continuation",
@@ -723,6 +760,7 @@ def explanation_html(
     section_id: str = "strategy-rules",
     heading_level: int = 2,
     container_tag: str = "section",
+    risk_context: tuple[str, str] | None = None,
 ) -> str:
     heading = max(1, min(int(heading_level), 6))
     tag = "div" if container_tag == "div" else "section"
@@ -737,6 +775,17 @@ def explanation_html(
         f"<tr><th>{_escape(label)}</th><td>{_escape(text)}</td></tr>"
         for label, text in explanation.parameters
     )
+    risk_html = ""
+    if risk_context is not None:
+        risk_text, risk_example = risk_context
+        risk_html = (
+            '<div class="strategy-example strategy-risk">'
+            "<strong>Position sizing and risk</strong>"
+            f"<p>{_escape(risk_text)}</p></div>"
+            '<div class="strategy-distinction strategy-risk-example">'
+            "<strong>Worked risk example</strong>"
+            f"<p>{_escape(risk_example)}</p></div>"
+        )
     return (
         f'<{tag} id="{_escape(section_id)}" '
         'class="strategy-explanation-section">'
@@ -744,6 +793,7 @@ def explanation_html(
         f"<h3>{_escape(explanation.title)}</h3>"
         f'<p class="plain-language-lead">{_escape(explanation.idea)}</p>'
         f'<div class="strategy-rule-grid">{rule_cards}</div>'
+        f"{risk_html}"
         "<h3>What the parameters mean</h3>"
         '<table class="strategy-parameter-table"><tbody>'
         f"{parameter_rows}</tbody></table>"
@@ -770,7 +820,11 @@ def strategy_explanation_html(
             "<p>A plain-English strategy explanation has not yet been registered "
             f"for {_escape(key)}.</p></section>"
         )
-    return explanation_html(explanation, section_id=section_id)
+    return explanation_html(
+        explanation,
+        section_id=section_id,
+        risk_context=STRATEGY_RISK_CONTEXT.get(key),
+    )
 
 
 def family_explanation_html(
@@ -785,4 +839,5 @@ def family_explanation_html(
         section_id=identifier,
         heading_level=3,
         container_tag="div",
+        risk_context=FIXED_NQ_MNQ_RISK_CONTEXT,
     )
