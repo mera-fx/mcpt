@@ -48,7 +48,7 @@ class BuildResearchDashboardV2Tests(unittest.TestCase):
             [],
             {},
         )
-        self.assertIn("Strategy research · EXP-001 through EXP-014", page)
+        self.assertIn("Strategy research", page)
         self.assertIn("Data-source research · EXP-015 through EXP-018", page)
         self.assertIn("REPEATABILITY_PENDING", page)
         self.assertIn("Dashboard coverage gaps", page)

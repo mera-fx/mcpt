@@ -35,6 +35,91 @@ PROFILE_CSV = PROJECT_DIR / "results" / "research_dashboard_profiles.csv"
 PROFILE_JSON = PROJECT_DIR / "results" / "research_dashboard_profiles.json"
 
 
+STRATEGY_RESEARCH_GROUPS = (
+    {
+        "group_id": "btc-hourly-strategies",
+        "title": "BTCUSDT Hourly Strategy Ideas",
+        "description": (
+            "Three separate BTCUSDT hourly strategy hypotheses tested in the "
+            "same research environment. They share market and timeframe, but "
+            "they are not one optimization lineage."
+        ),
+        "relationship": (
+            "EXP-001 Donchian breakout · EXP-002 z-score mean reversion · "
+            "EXP-003 volatility-compression breakout"
+        ),
+        "experiment_ids": ("EXP-001", "EXP-002", "EXP-003"),
+    },
+    {
+        "group_id": "orb-transfer-lineage",
+        "title": "ORB Locked-Transfer Lineage",
+        "description": (
+            "The original QQQ opening-range idea, its unchanged transfer to "
+            "NQ/MNQ, and the later structured optimization measured against "
+            "the accepted transfer control."
+        ),
+        "relationship": (
+            "EXP-004 QQQ quick screen → EXP-005 locked NQ/MNQ transfer → "
+            "EXP-006 structured optimization"
+        ),
+        "experiment_ids": ("EXP-004", "EXP-005", "EXP-006"),
+    },
+    {
+        "group_id": "long-only-orb-lineage",
+        "title": "Long-Only ORB Exit-Geometry Lineage",
+        "description": (
+            "A separate long-only opening-range branch. EXP-007 is the fixed "
+            "30-minute 1R baseline and EXP-008 is its locked exit-geometry search."
+        ),
+        "relationship": (
+            "EXP-007 fixed long-only baseline → EXP-008 exit-geometry optimization"
+        ),
+        "experiment_ids": ("EXP-007", "EXP-008"),
+    },
+    {
+        "group_id": "opening-drive-lineage",
+        "title": "Multi-Strategy Discovery and Opening-Drive Lineage",
+        "description": (
+            "The broad intraday discovery tournament, the deep validation of "
+            "its opening-drive family, and the sizing study performed without "
+            "changing the validated signals."
+        ),
+        "relationship": (
+            "EXP-009 discovery tournament → EXP-010 opening-drive validation → "
+            "EXP-011 position sizing"
+        ),
+        "experiment_ids": ("EXP-009", "EXP-010", "EXP-011"),
+    },
+    {
+        "group_id": "extended-context-lineage",
+        "title": "Extended-Hours Context Lineage",
+        "description": (
+            "The extended-hours discovery tournament, validation of the three "
+            "locked finalists, and the descriptive behaviour and complementarity study."
+        ),
+        "relationship": (
+            "EXP-012 context discovery → EXP-013 finalist validation → "
+            "EXP-014 behaviour and complementarity"
+        ),
+        "experiment_ids": ("EXP-012", "EXP-013", "EXP-014"),
+    },
+)
+
+
+def _strategy_group_for(experiment_id: str) -> dict[str, Any] | None:
+    for group in STRATEGY_RESEARCH_GROUPS:
+        if experiment_id in group["experiment_ids"]:
+            return group
+    return None
+
+
+def _strategy_group_label(experiment_id: str) -> str:
+    group = _strategy_group_for(experiment_id)
+    if group is None:
+        return "Data-source qualification"
+    return str(group["title"])
+
+
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -655,20 +740,78 @@ def _experiment_block(
 '''
 
 
+def _strategy_group_block(
+    group: dict[str, Any],
+    profiles: list[DashboardProfile],
+    artifacts: list[ResearchArtifact],
+    previews: dict[str, Path | None],
+) -> str:
+    experiment_ids = tuple(group["experiment_ids"])
+    profile_by_id = {profile.experiment_id: profile for profile in profiles}
+    members = [
+        profile_by_id[experiment_id]
+        for experiment_id in experiment_ids
+        if experiment_id in profile_by_id
+    ]
+    if not members:
+        return ""
+
+    blocks = "".join(
+        _experiment_block(profile, artifacts, previews)
+        for profile in members
+    )
+    searchable = " ".join(
+        [
+            str(group["title"]),
+            str(group["description"]),
+            str(group["relationship"]),
+        ]
+        + [profile.experiment_id for profile in members]
+        + [profile.experiment_name for profile in members]
+    ).lower()
+    range_label = " · ".join(profile.experiment_id for profile in members)
+
+    return f'''
+<details class="research-group" id="group-{html.escape(str(group['group_id']))}"
+  data-search="{html.escape(searchable)}">
+  <summary>
+    <span class="group-heading">
+      <strong>{html.escape(str(group['title']))}</strong>
+      <span>{html.escape(range_label)}</span>
+    </span>
+    <span class="group-count">{len(members)} experiments</span>
+  </summary>
+  <div class="research-group-body">
+    <p class="group-description">{html.escape(str(group['description']))}</p>
+    <p class="lineage-flow">{html.escape(str(group['relationship']))}</p>
+    {blocks}
+  </div>
+</details>
+'''
+
+
 def _overview_row(profile: DashboardProfile) -> str:
     report = "Yes" if profile.primary_report_path else "No"
     if profile.research_type == "strategy":
         results = f"{populated_strategy_metric_count(profile.metrics)}/{len(STRATEGY_METRIC_FIELDS)} metrics"
     else:
         results = profile.result_state
+    group_label = _strategy_group_label(profile.experiment_id)
     gap = "Complete" if not profile.missing_items else f"{len(profile.missing_items)} gap(s)"
     searchable = (
-        profile.experiment_id + " " + profile.experiment_name + " " + profile.result_state
+        profile.experiment_id
+        + " "
+        + profile.experiment_name
+        + " "
+        + profile.result_state
+        + " "
+        + group_label
     ).lower()
     return (
         f'<tr data-search="{html.escape(searchable)}">'
         f'<td><a href="#{html.escape(profile.experiment_id.lower())}">{html.escape(profile.experiment_id)}</a></td>'
         f"<td>{html.escape(profile.experiment_name)}</td>"
+        f"<td>{html.escape(group_label)}</td>"
         f"<td>{html.escape(profile.research_type_label)}</td>"
         f"<td>{html.escape(profile.stage)}</td>"
         f"<td>{html.escape(results)}</td>"
@@ -692,7 +835,15 @@ def build_html(
     adapter_gaps = sum(bool(item.missing_items) for item in profiles)
 
     overview = "".join(_overview_row(item) for item in profiles)
-    strategy = "".join(_experiment_block(item, artifacts, previews) for item in strategy_profiles)
+    strategy = "".join(
+        _strategy_group_block(
+            group,
+            strategy_profiles,
+            artifacts,
+            previews,
+        )
+        for group in STRATEGY_RESEARCH_GROUPS
+    )
     data = "".join(_experiment_block(item, artifacts, previews) for item in data_profiles)
 
     return f'''<!doctype html>
@@ -835,6 +986,40 @@ thead th {{
   background: rgba(134, 215, 255, 0.08);
 }}
 .note {{ display: block; font-size: 0.78rem; font-weight: 400; margin-top: 4px; }}
+.research-group {{
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(13, 40, 64, 0.34);
+  margin: 18px 0;
+  overflow: hidden;
+}}
+.research-group > summary {{
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 18px 20px;
+  cursor: pointer;
+  list-style: none;
+}}
+.research-group > summary::-webkit-details-marker {{ display: none; }}
+.group-heading strong {{ display: block; font-size: 1.08rem; }}
+.group-heading span {{ display: block; color: var(--accent); margin-top: 3px; font-size: 0.82rem; }}
+.group-count {{ color: var(--muted); white-space: nowrap; }}
+.research-group-body {{
+  border-top: 1px solid var(--line);
+  padding: 18px;
+}}
+.group-description {{ margin: 0 0 8px; color: var(--muted); max-width: 1100px; }}
+.lineage-flow {{
+  margin: 0 0 18px;
+  border-left: 3px solid var(--accent);
+  background: rgba(134, 215, 255, 0.06);
+  padding: 10px 12px;
+  font-weight: 700;
+}}
+.research-group .experiment:first-of-type {{ margin-top: 0; }}
+.research-group .experiment:last-child {{ margin-bottom: 0; }}
 .experiment {{
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -959,8 +1144,8 @@ thead th {{
     <table id="overview-table">
       <thead>
         <tr>
-          <th>Experiment</th><th>Name</th><th>Research type</th><th>Lifecycle</th>
-          <th>Parsed result</th><th>Primary report</th><th>Files</th><th>Coverage</th>
+          <th>Experiment</th><th>Name</th><th>Research group</th><th>Research type</th>
+          <th>Lifecycle</th><th>Parsed result</th><th>Primary report</th><th>Files</th><th>Coverage</th>
         </tr>
       </thead>
       <tbody>{overview}</tbody>
@@ -969,11 +1154,12 @@ thead th {{
 </section>
 
 <section id="strategy-research">
-  <h2 class="section-title">Strategy research · EXP-001 through EXP-014</h2>
+  <h2 class="section-title">Strategy research</h2>
   <p class="muted">
-    Strategy records use performance, risk, robustness and lifecycle evidence.
-    A blank metric means the dashboard does not yet have a trustworthy
-    experiment-specific adapter; it does not mean the experiment had no result.
+    Experiments are grouped by research lineage so related work is kept together
+    and separate branches remain visibly separate. Every group and experiment
+    starts collapsed. Arrows show research dependency, not an automatic winner
+    or trading authorization.
   </p>
   {strategy}
 </section>
@@ -996,13 +1182,27 @@ thead th {{
 <script>
 const search = document.getElementById("search");
 const experiments = Array.from(document.querySelectorAll(".experiment"));
+const researchGroups = Array.from(document.querySelectorAll(".research-group"));
 const overviewRows = Array.from(document.querySelectorAll("#overview-table tbody tr"));
+const overviewLinks = Array.from(document.querySelectorAll('#overview-table a[href^="#exp-"]'));
 
 document.getElementById("expand").addEventListener("click", () => {{
+  researchGroups.forEach(item => item.open = true);
   experiments.forEach(item => item.open = true);
 }});
 document.getElementById("collapse").addEventListener("click", () => {{
   experiments.forEach(item => item.open = false);
+  researchGroups.forEach(item => item.open = false);
+}});
+
+overviewLinks.forEach(link => {{
+  link.addEventListener("click", () => {{
+    const target = document.querySelector(link.getAttribute("href"));
+    if (!target) return;
+    const group = target.closest(".research-group");
+    if (group) group.open = true;
+    target.open = true;
+  }});
 }});
 
 search.addEventListener("input", () => {{
@@ -1011,6 +1211,21 @@ search.addEventListener("input", () => {{
     const visible = !query || (item.dataset.search || "").includes(query);
     item.classList.toggle("hidden", !visible);
     if (query && visible) item.open = true;
+  }});
+  researchGroups.forEach(group => {{
+    const groupMatches = Boolean(
+      query && (group.dataset.search || "").includes(query)
+    );
+    const members = Array.from(group.querySelectorAll(".experiment"));
+    if (groupMatches) {{
+      members.forEach(item => item.classList.remove("hidden"));
+    }}
+    const hasVisibleMember = members.some(
+      item => !item.classList.contains("hidden")
+    );
+    const visible = !query || groupMatches || hasVisibleMember;
+    group.classList.toggle("hidden", !visible);
+    if (query && visible) group.open = true;
   }});
   overviewRows.forEach(item => {{
     const visible = !query || (item.dataset.search || "").includes(query);
