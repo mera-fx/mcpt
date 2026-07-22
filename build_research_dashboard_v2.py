@@ -1,0 +1,761 @@
+from __future__ import annotations
+
+import argparse
+import html
+import json
+import math
+import os
+from pathlib import Path
+from typing import Any
+
+import pandas as pd
+
+from dashboard_experiment_profiles import (
+    DashboardProfile,
+    STRATEGY_METRIC_FIELDS,
+    build_dashboard_profile,
+    populated_strategy_metric_count,
+)
+from experiment_lifecycle import list_experiment_lifecycles
+from research_dashboard_library import (
+    ResearchArtifact,
+    build_artifact_preview,
+    choose_primary_report,
+    discover_artifacts,
+    load_experiment_metrics,
+    relative_link,
+)
+
+
+PROJECT_DIR = Path(__file__).resolve().parent
+DASHBOARD_DIR = PROJECT_DIR / "reports" / "research_dashboard"
+DASHBOARD_FILE = DASHBOARD_DIR / "index.html"
+PROFILE_CSV = PROJECT_DIR / "results" / "research_dashboard_profiles.csv"
+PROFILE_JSON = PROJECT_DIR / "results" / "research_dashboard_profiles.json"
+
+
+def parse_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Build a heterogeneous research dashboard with separate strategy "
+            "and data-source qualification views from saved files only."
+        )
+    )
+    parser.add_argument("--open", action="store_true")
+    return parser.parse_args()
+
+
+def _safe_float(value: Any) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return float("nan")
+    return number if math.isfinite(number) else float("nan")
+
+
+def _number(value: Any, digits: int = 3) -> str:
+    number = _safe_float(value)
+    return "—" if math.isnan(number) else f"{number:,.{digits}f}"
+
+
+def _integer(value: Any) -> str:
+    number = _safe_float(value)
+    return "—" if math.isnan(number) else f"{int(round(number)):,}"
+
+
+def _percent(value: Any, digits: int = 2, fraction: bool = False) -> str:
+    number = _safe_float(value)
+    if math.isnan(number):
+        return "—"
+    if fraction:
+        number *= 100.0
+    return f"{number:,.{digits}f}%"
+
+
+def _money(value: Any) -> str:
+    number = _safe_float(value)
+    if math.isnan(number):
+        return "—"
+    sign = "−" if number < 0 else ""
+    return f"{sign}${abs(number):,.2f}"
+
+
+def _bool(value: Any) -> str:
+    if value is True:
+        return "Yes"
+    if value is False:
+        return "No"
+    return "—"
+
+
+def _status_class(value: str) -> str:
+    normalized = value.upper()
+    if "ACCEPTED" in normalized or "QUALIFIED" in normalized:
+        return "good"
+    if "REJECTED" in normalized or "FAILED" in normalized or "NOT_QUALIFIED" in normalized:
+        return "bad"
+    if "PENDING" in normalized or "PRE_REGISTERED" in normalized:
+        return "pending"
+    return "review"
+
+
+def _artifact_href(artifact: ResearchArtifact) -> str:
+    return relative_link(DASHBOARD_DIR, artifact.path)
+
+
+def _path_href(path: str) -> str:
+    if not path:
+        return ""
+    return relative_link(DASHBOARD_DIR, PROJECT_DIR / path)
+
+
+def _metric_row(label: str, value: str, note: str = "") -> str:
+    note_html = f'<span class="note">{html.escape(note)}</span>' if note else ""
+    return (
+        "<tr>"
+        f"<th>{html.escape(label)}{note_html}</th>"
+        f"<td>{html.escape(value)}</td>"
+        "</tr>"
+    )
+
+
+def _strategy_table(profile: DashboardProfile) -> str:
+    metrics = profile.metrics
+    rows = [
+        _metric_row("Profit Factor", _number(metrics.get("profit_factor"))),
+        _metric_row("Net profit", _money(metrics.get("net_profit_usd"))),
+        _metric_row("Win rate", _percent(metrics.get("win_rate_percent"))),
+        _metric_row("Maximum drawdown", _money(metrics.get("max_drawdown_usd"))),
+        _metric_row("Maximum drawdown %", _percent(metrics.get("max_drawdown_percent"))),
+        _metric_row("Total return", _percent(metrics.get("total_return_percent"))),
+        _metric_row("Completed trades", _integer(metrics.get("total_trades"))),
+        _metric_row("MCPT p-value", _number(metrics.get("mcpt_p_value"), 4)),
+        _metric_row(
+            "Metric coverage",
+            f"{populated_strategy_metric_count(metrics)}/{len(STRATEGY_METRIC_FIELDS)}",
+            "Blank values are displayed honestly rather than inferred from unrelated files.",
+        ),
+        _metric_row("Metric source", str(metrics.get("metric_source") or "No adapter yet")),
+    ]
+    return '<table class="metric-table"><tbody>' + "".join(rows) + "</tbody></table>"
+
+
+def _data_table(profile: DashboardProfile) -> str:
+    values = profile.data_measurements
+    rows = [
+        _metric_row("Classification", profile.result_state),
+        _metric_row("Result source", profile.result_state_source or "Lifecycle registry"),
+        _metric_row("Initial windows measured", _integer(values.get("initial_windows_measured"))),
+        _metric_row(
+            "Repeatability windows measured",
+            _integer(values.get("repeatability_windows_measured")),
+        ),
+        _metric_row(
+            "Minimum regular trade-minute coverage",
+            _percent(values.get("regular_trade_minute_coverage"), 6, fraction=True),
+        ),
+        _metric_row(
+            "Minimum extended trade-minute coverage",
+            _percent(values.get("extended_trade_minute_coverage"), 6, fraction=True),
+        ),
+        _metric_row("Estimated cost", _money(values.get("estimated_cost_usd"))),
+        _metric_row("Identity mismatches", _integer(values.get("identity_mismatch_rows"))),
+        _metric_row("Duplicate timestamps", _integer(values.get("duplicate_timestamp_rows"))),
+        _metric_row("Invalid OHLC rows", _integer(values.get("invalid_ohlc_rows"))),
+        _metric_row("Negative-volume rows", _integer(values.get("negative_volume_rows"))),
+        _metric_row("Nonfinite OHLCV rows", _integer(values.get("nonfinite_ohlcv_rows"))),
+        _metric_row("Off-tick OHLC values", _integer(values.get("off_tick_ohlc_values"))),
+        _metric_row("Futures rows catalogued", _integer(values.get("futures_rows"))),
+        _metric_row("NQ candidates", _integer(values.get("nq_candidates"))),
+        _metric_row("MNQ candidates", _integer(values.get("mnq_candidates"))),
+        _metric_row("History downloaded", _bool(values.get("history_downloaded"))),
+        _metric_row("Exchange-accuracy claim", _bool(values.get("exchange_accuracy_claim"))),
+        _metric_row("Strategy run", _bool(values.get("strategy_run"))),
+        _metric_row("Paper trading authorized", _bool(values.get("paper_trading_authorized"))),
+        _metric_row("Live trading authorized", _bool(values.get("live_trading_authorized"))),
+    ]
+    return '<table class="metric-table"><tbody>' + "".join(rows) + "</tbody></table>"
+
+
+def _artifact_list(
+    experiment_id: str,
+    artifacts: list[ResearchArtifact],
+    previews: dict[str, Path | None],
+) -> str:
+    experiment_artifacts = [
+        artifact for artifact in artifacts
+        if artifact.experiment_id == experiment_id
+    ]
+    if not experiment_artifacts:
+        return '<p class="muted">No linked artifacts.</p>'
+
+    rows: list[str] = []
+    for artifact in experiment_artifacts:
+        href = _artifact_href(artifact)
+        preview = previews.get(artifact.project_relative_path)
+        preview_link = ""
+        if preview is not None:
+            preview_href = relative_link(DASHBOARD_DIR, preview)
+            preview_link = (
+                f' · <a href="{html.escape(preview_href)}">Preview</a>'
+            )
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(artifact.category)}</td>"
+            f"<td>{html.escape(artifact.label)}</td>"
+            f"<td><code>{html.escape(artifact.project_relative_path)}</code></td>"
+            f'<td><a href="{html.escape(href)}">Open</a>{preview_link}</td>'
+            "</tr>"
+        )
+    return (
+        '<div class="table-wrap"><table class="artifact-table">'
+        "<thead><tr><th>Type</th><th>Name</th><th>Location</th><th>Open</th></tr></thead>"
+        "<tbody>" + "".join(rows) + "</tbody></table></div>"
+    )
+
+
+def _experiment_block(
+    profile: DashboardProfile,
+    artifacts: list[ResearchArtifact],
+    previews: dict[str, Path | None],
+) -> str:
+    state_class = _status_class(profile.result_state)
+    missing = ""
+    if profile.missing_items:
+        missing = (
+            '<div class="warning"><strong>Dashboard coverage gaps</strong><ul>'
+            + "".join(f"<li>{html.escape(item)}</li>" for item in profile.missing_items)
+            + "</ul></div>"
+        )
+
+    report_link = (
+        f'<a class="button" href="{html.escape(_path_href(profile.primary_report_path))}">'
+        "Open primary report</a>"
+        if profile.primary_report_path
+        else '<span class="button disabled">No primary report</span>'
+    )
+    prereg_link = (
+        f'<a class="button" href="{html.escape(_path_href(profile.preregistration_file))}">'
+        "Open preregistration</a>"
+        if profile.preregistration_file
+        else ""
+    )
+
+    metric_html = (
+        _strategy_table(profile)
+        if profile.research_type == "strategy"
+        else _data_table(profile)
+    )
+
+    searchable = " ".join(
+        (
+            profile.experiment_id,
+            profile.experiment_name,
+            profile.research_type_label,
+            profile.stage,
+            profile.result_state,
+            profile.market_name,
+            profile.strategy_name,
+            profile.stage_reason,
+        )
+    ).lower()
+
+    open_attribute = " open" if profile.stage in {"REVIEW", "PRE_REGISTERED", "ACCEPTED_FOR_PAPER_TESTING"} else ""
+    metric_title = (
+        "Strategy measurements"
+        if profile.research_type == "strategy"
+        else "Data-source measurements"
+    )
+    return f'''
+<details class="experiment" id="{html.escape(profile.experiment_id.lower())}"
+  data-search="{html.escape(searchable)}"{open_attribute}>
+  <summary>
+    <span class="exp-id">{html.escape(profile.experiment_id)}</span>
+    <span class="exp-title">{html.escape(profile.experiment_name)}</span>
+    <span class="pill type">{html.escape(profile.research_type_label)}</span>
+    <span class="pill {state_class}">{html.escape(profile.result_state)}</span>
+    <span class="artifact-count">{profile.artifact_count:,} files</span>
+  </summary>
+  <div class="experiment-body">
+    <div class="metadata">
+      <div><span>Lifecycle</span><strong>{html.escape(profile.stage)}</strong></div>
+      <div><span>Market</span><strong>{html.escape(profile.market_name)}</strong></div>
+      <div><span>Timeframe</span><strong>{html.escape(profile.timeframe)}</strong></div>
+      <div><span>Strategy / subject</span><strong>{html.escape(profile.strategy_name)}</strong></div>
+    </div>
+
+    <section class="narrative">
+      <h3>Research question</h3>
+      <p>{html.escape(profile.hypothesis)}</p>
+      <h3>Current evidence and decision</h3>
+      <p>{html.escape(profile.stage_reason)}</p>
+      <h3>Next action</h3>
+      <p>{html.escape(profile.next_action)}</p>
+    </section>
+
+    <div class="actions">{report_link}{prereg_link}</div>
+    {missing}
+
+    <section>
+      <h3>{metric_title}</h3>
+      {metric_html}
+    </section>
+
+    <details class="artifacts">
+      <summary>Research files ({profile.artifact_count:,})</summary>
+      {_artifact_list(profile.experiment_id, artifacts, previews)}
+    </details>
+  </div>
+</details>
+'''
+
+
+def _overview_row(profile: DashboardProfile) -> str:
+    report = "Yes" if profile.primary_report_path else "No"
+    if profile.research_type == "strategy":
+        results = f"{populated_strategy_metric_count(profile.metrics)}/{len(STRATEGY_METRIC_FIELDS)} metrics"
+    else:
+        results = profile.result_state
+    gap = "Complete" if not profile.missing_items else f"{len(profile.missing_items)} gap(s)"
+    searchable = (
+        profile.experiment_id + " " + profile.experiment_name + " " + profile.result_state
+    ).lower()
+    return (
+        f'<tr data-search="{html.escape(searchable)}">'
+        f'<td><a href="#{html.escape(profile.experiment_id.lower())}">{html.escape(profile.experiment_id)}</a></td>'
+        f"<td>{html.escape(profile.experiment_name)}</td>"
+        f"<td>{html.escape(profile.research_type_label)}</td>"
+        f"<td>{html.escape(profile.stage)}</td>"
+        f"<td>{html.escape(results)}</td>"
+        f"<td>{report}</td>"
+        f"<td>{profile.artifact_count:,}</td>"
+        f"<td>{html.escape(gap)}</td>"
+        "</tr>"
+    )
+
+
+def build_html(
+    profiles: list[DashboardProfile],
+    artifacts: list[ResearchArtifact],
+    previews: dict[str, Path | None],
+) -> str:
+    strategy_profiles = [item for item in profiles if item.research_type == "strategy"]
+    data_profiles = [item for item in profiles if item.research_type == "data_source"]
+    accepted = sum(item.stage == "ACCEPTED_FOR_PAPER_TESTING" for item in profiles)
+    review = sum(item.stage in {"REVIEW", "PRE_REGISTERED"} for item in profiles)
+    missing_reports = sum(not item.primary_report_path for item in profiles)
+    adapter_gaps = sum(bool(item.missing_items) for item in profiles)
+
+    overview = "".join(_overview_row(item) for item in profiles)
+    strategy = "".join(_experiment_block(item, artifacts, previews) for item in strategy_profiles)
+    data = "".join(_experiment_block(item, artifacts, previews) for item in data_profiles)
+
+    return f'''<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quantitative Research Dashboard</title>
+<style>
+:root {{
+  color-scheme: dark;
+  --bg: #0a1020;
+  --panel: #111a2e;
+  --panel2: #15213a;
+  --text: #e8eef8;
+  --muted: #9eacc2;
+  --line: #2b3a58;
+  --accent: #86d7ff;
+  --good: #72d89a;
+  --bad: #ff8d8d;
+  --pending: #ffd37a;
+  --review: #b7b8ff;
+}}
+* {{ box-sizing: border-box; }}
+html {{ scroll-behavior: smooth; }}
+body {{
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  line-height: 1.5;
+}}
+header {{
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: rgba(10, 16, 32, 0.96);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(10px);
+}}
+.header-inner {{
+  width: min(1600px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 14px 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  flex-wrap: wrap;
+}}
+.brand {{ font-weight: 800; }}
+nav {{ display: flex; gap: 14px; flex-wrap: wrap; }}
+a {{ color: var(--accent); text-decoration: none; }}
+main {{
+  width: min(1600px, calc(100% - 32px));
+  margin: 28px auto 80px;
+}}
+.hero {{
+  border: 1px solid var(--line);
+  background: linear-gradient(135deg, var(--panel), #0d2840);
+  border-radius: 18px;
+  padding: 28px;
+}}
+.hero h1 {{ margin: 0 0 8px; font-size: clamp(2rem, 4vw, 3.4rem); }}
+.hero p {{ color: var(--muted); max-width: 1000px; }}
+.stats {{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin-top: 22px;
+}}
+.stat {{
+  border: 1px solid var(--line);
+  background: rgba(17, 26, 46, 0.75);
+  padding: 16px;
+  border-radius: 14px;
+}}
+.stat strong {{ display: block; font-size: 1.8rem; }}
+.stat span {{ color: var(--muted); }}
+.toolbar {{
+  display: flex;
+  gap: 10px;
+  margin: 18px 0;
+  flex-wrap: wrap;
+}}
+input, button, .button {{
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 13px;
+  font: inherit;
+}}
+input {{ min-width: min(520px, 100%); flex: 1; }}
+button, .button {{ cursor: pointer; }}
+.button.disabled {{ color: var(--muted); cursor: default; }}
+.section-title {{
+  margin: 38px 0 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}}
+.table-wrap {{
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}}
+table {{
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+}}
+th, td {{
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}}
+thead th {{
+  position: sticky;
+  top: 61px;
+  background: var(--panel2);
+  z-index: 2;
+}}
+.metric-table th {{ width: 42%; color: var(--muted); font-weight: 600; }}
+.metric-table td {{ font-weight: 700; }}
+.note {{ display: block; font-size: 0.78rem; font-weight: 400; margin-top: 4px; }}
+.experiment {{
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--panel);
+  margin: 14px 0;
+  overflow: hidden;
+}}
+.experiment > summary {{
+  display: grid;
+  grid-template-columns: 90px minmax(260px, 1fr) auto auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 16px 18px;
+  cursor: pointer;
+  list-style: none;
+}}
+.experiment > summary::-webkit-details-marker {{ display: none; }}
+.exp-id {{ font-weight: 800; color: var(--accent); }}
+.exp-title {{ font-weight: 700; }}
+.artifact-count {{ color: var(--muted); white-space: nowrap; }}
+.pill {{
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 9px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}}
+.pill.good {{ color: var(--good); }}
+.pill.bad {{ color: var(--bad); }}
+.pill.pending {{ color: var(--pending); }}
+.pill.review {{ color: var(--review); }}
+.pill.type {{ color: var(--accent); }}
+.experiment-body {{
+  padding: 20px;
+  border-top: 1px solid var(--line);
+}}
+.metadata {{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}}
+.metadata div {{
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+}}
+.metadata span {{ display: block; color: var(--muted); font-size: 0.8rem; }}
+.narrative {{
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 8px 18px;
+}}
+.narrative h3 {{ margin: 0; font-size: 0.95rem; color: var(--muted); }}
+.narrative p {{ margin: 0 0 14px; }}
+.actions {{ display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 18px; }}
+.warning {{
+  border: 1px solid #7a5d24;
+  background: #2a2212;
+  border-radius: 12px;
+  padding: 12px 16px;
+  margin: 14px 0;
+}}
+.warning ul {{ margin-bottom: 0; }}
+.artifacts {{ margin-top: 18px; }}
+.artifacts > summary {{ cursor: pointer; font-weight: 700; padding: 10px 0; }}
+.muted {{ color: var(--muted); }}
+.hidden {{ display: none !important; }}
+.footer {{ color: var(--muted); margin-top: 28px; }}
+@media (max-width: 980px) {{
+  .experiment > summary {{ grid-template-columns: 80px 1fr; }}
+  .pill, .artifact-count {{ justify-self: start; }}
+  .narrative {{ grid-template-columns: 1fr; }}
+  thead th {{ top: 100px; }}
+}}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-inner">
+    <div class="brand">Quantitative Research Dashboard</div>
+    <nav>
+      <a href="#overview">Overview</a>
+      <a href="#strategy-research">Strategy research</a>
+      <a href="#data-research">Data-source research</a>
+      <a href="strategy_comparison.html">Existing strategy comparison</a>
+    </nav>
+  </div>
+</header>
+<main>
+<section class="hero">
+  <h1>Different experiments, appropriate evidence</h1>
+  <p>
+    Strategy experiments and data-source qualification experiments are displayed
+    separately. Missing metric adapters and missing visual reports are shown
+    explicitly. This page reads saved research files only and does not rerun
+    strategies, optimization, MCPT, downloads or qualification requests.
+  </p>
+  <div class="stats">
+    <div class="stat"><strong>{len(profiles)}</strong><span>Total experiments</span></div>
+    <div class="stat"><strong>{len(strategy_profiles)}</strong><span>Strategy experiments</span></div>
+    <div class="stat"><strong>{len(data_profiles)}</strong><span>Data-source experiments</span></div>
+    <div class="stat"><strong>{accepted}</strong><span>Accepted for paper testing</span></div>
+    <div class="stat"><strong>{review}</strong><span>Review or preregistered</span></div>
+    <div class="stat"><strong>{missing_reports}</strong><span>Without dedicated report</span></div>
+    <div class="stat"><strong>{adapter_gaps}</strong><span>With dashboard coverage gaps</span></div>
+    <div class="stat"><strong>{len(artifacts):,}</strong><span>Linked artifacts</span></div>
+  </div>
+</section>
+
+<div class="toolbar">
+  <input id="search" type="search"
+    placeholder="Search experiment ID, name, stage, classification, market or strategy...">
+  <button id="expand" type="button">Expand all</button>
+  <button id="collapse" type="button">Collapse all</button>
+</div>
+
+<section id="overview">
+  <h2 class="section-title">Research coverage overview</h2>
+  <div class="table-wrap">
+    <table id="overview-table">
+      <thead>
+        <tr>
+          <th>Experiment</th><th>Name</th><th>Research type</th><th>Lifecycle</th>
+          <th>Parsed result</th><th>Primary report</th><th>Files</th><th>Coverage</th>
+        </tr>
+      </thead>
+      <tbody>{overview}</tbody>
+    </table>
+  </div>
+</section>
+
+<section id="strategy-research">
+  <h2 class="section-title">Strategy research · EXP-001 through EXP-014</h2>
+  <p class="muted">
+    Strategy records use performance, risk, robustness and lifecycle evidence.
+    A blank metric means the dashboard does not yet have a trustworthy
+    experiment-specific adapter; it does not mean the experiment had no result.
+  </p>
+  {strategy}
+</section>
+
+<section id="data-research">
+  <h2 class="section-title">Data-source research · EXP-015 through EXP-018</h2>
+  <p class="muted">
+    Data-source records use identity, structural quality, completeness,
+    repeatability, access cost and claim boundaries rather than trading metrics.
+  </p>
+  {data}
+</section>
+
+<p class="footer">
+  Generated from lifecycle records and saved files. No market-data request,
+  strategy execution, optimization, MCPT, bootstrap or paper simulator was run.
+</p>
+</main>
+
+<script>
+const search = document.getElementById("search");
+const experiments = Array.from(document.querySelectorAll(".experiment"));
+const overviewRows = Array.from(document.querySelectorAll("#overview-table tbody tr"));
+
+document.getElementById("expand").addEventListener("click", () => {{
+  experiments.forEach(item => item.open = true);
+}});
+document.getElementById("collapse").addEventListener("click", () => {{
+  experiments.forEach(item => item.open = false);
+}});
+
+search.addEventListener("input", () => {{
+  const query = search.value.trim().toLowerCase();
+  experiments.forEach(item => {{
+    const visible = !query || (item.dataset.search || "").includes(query);
+    item.classList.toggle("hidden", !visible);
+    if (query && visible) item.open = true;
+  }});
+  overviewRows.forEach(item => {{
+    const visible = !query || (item.dataset.search || "").includes(query);
+    item.classList.toggle("hidden", !visible);
+  }});
+}});
+</script>
+</body>
+</html>
+'''
+
+
+def main() -> None:
+    arguments = parse_arguments()
+    lifecycles = list_experiment_lifecycles()
+    experiment_ids = [item.experiment_id for item in lifecycles]
+    artifacts = discover_artifacts(PROJECT_DIR, experiment_ids)
+
+    DASHBOARD_DIR.mkdir(parents=True, exist_ok=True)
+    PROFILE_CSV.parent.mkdir(parents=True, exist_ok=True)
+
+    previews: dict[str, Path | None] = {}
+    for artifact in artifacts:
+        previews[artifact.project_relative_path] = build_artifact_preview(
+            artifact,
+            DASHBOARD_DIR,
+        )
+
+    profiles: list[DashboardProfile] = []
+    for lifecycle in lifecycles:
+        experiment_artifacts = [
+            artifact for artifact in artifacts
+            if artifact.experiment_id == lifecycle.experiment_id
+        ]
+        primary = choose_primary_report(
+            experiment_artifacts,
+            lifecycle.experiment_id,
+        )
+        metrics = load_experiment_metrics(
+            PROJECT_DIR,
+            lifecycle.experiment_id,
+        )
+        profiles.append(
+            build_dashboard_profile(
+                project_dir=PROJECT_DIR,
+                lifecycle=lifecycle,
+                artifacts=artifacts,
+                primary_report=primary,
+                metrics=metrics,
+            )
+        )
+
+    profiles.sort(key=lambda item: int(item.experiment_id.split("-")[1]))
+    DASHBOARD_FILE.write_text(
+        build_html(profiles, artifacts, previews),
+        encoding="utf-8",
+    )
+
+    serializable = [profile.to_dict() for profile in profiles]
+    PROFILE_JSON.write_text(
+        json.dumps(serializable, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+
+    rows = []
+    for profile in profiles:
+        rows.append(
+            {
+                "experiment_id": profile.experiment_id,
+                "experiment_name": profile.experiment_name,
+                "research_type": profile.research_type,
+                "lifecycle_stage": profile.stage,
+                "result_state": profile.result_state,
+                "result_state_source": profile.result_state_source,
+                "artifact_count": profile.artifact_count,
+                "primary_report_path": profile.primary_report_path,
+                "strategy_metric_count": populated_strategy_metric_count(profile.metrics),
+                "dashboard_gap_count": len(profile.missing_items),
+                "dashboard_gaps": " | ".join(profile.missing_items),
+            }
+        )
+    pd.DataFrame(rows).to_csv(PROFILE_CSV, index=False)
+
+    strategy_count = sum(item.research_type == "strategy" for item in profiles)
+    data_count = sum(item.research_type == "data_source" for item in profiles)
+    gap_count = sum(bool(item.missing_items) for item in profiles)
+
+    print()
+    print("Research dashboard v2 created.")
+    print(f"Experiments:             {len(profiles)}")
+    print(f"Strategy experiments:    {strategy_count}")
+    print(f"Data-source experiments: {data_count}")
+    print(f"Linked artifacts:        {len(artifacts)}")
+    print(f"Experiments with gaps:   {gap_count}")
+    print(f"Dashboard:               {DASHBOARD_FILE}")
+    print(f"Coverage CSV:            {PROFILE_CSV}")
+    print(f"Profile JSON:            {PROFILE_JSON}")
+    print("Research rerun:          False")
+    print("Market-data request:     False")
+
+    if arguments.open:
+        if hasattr(os, "startfile"):
+            os.startfile(DASHBOARD_FILE)
+        else:
+            print("--open is automatically supported on Windows only.")
+
+
+if __name__ == "__main__":
+    main()
