@@ -659,7 +659,8 @@ def _experiment_block(
         )
 
     report_link = (
-        f'<a class="button" href="{html.escape(_path_href(profile.primary_report_path))}">'
+        f'<a class="button" href="{html.escape(_path_href(profile.primary_report_path))}" '
+        'target="_blank" rel="noopener noreferrer">'
         "Open primary report</a>"
         if profile.primary_report_path
         else '<span class="button disabled">No primary report</span>'
@@ -855,23 +856,29 @@ def build_html(
 <style>
 :root {{
   color-scheme: dark;
-  --bg: #0a1020;
-  --panel: #111a2e;
-  --panel2: #15213a;
-  --text: #e8eef8;
-  --muted: #9eacc2;
-  --line: #2b3a58;
-  --accent: #86d7ff;
-  --good: #72d89a;
-  --bad: #ff8d8d;
-  --pending: #ffd37a;
-  --review: #b7b8ff;
+  --bg: #070707;
+  --panel: #111113;
+  --panel2: #18181b;
+  --text: #f1efeb;
+  --muted: #9c968e;
+  --line: #343436;
+  --accent: #c6a06a;
+  --good: #9eae8f;
+  --bad: #c98378;
+  --pending: #c9a667;
+  --review: #b7aea4;
+  --grid: rgba(255, 255, 255, 0.026);
 }}
 * {{ box-sizing: border-box; }}
 html {{ scroll-behavior: smooth; }}
 body {{
   margin: 0;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 72px 72px;
+  background-attachment: fixed;
   color: var(--text);
   font-family: Inter, "Segoe UI", Arial, sans-serif;
   line-height: 1.5;
@@ -880,7 +887,7 @@ header {{
   position: sticky;
   top: 0;
   z-index: 10;
-  background: rgba(10, 16, 32, 0.96);
+  background: rgba(7, 7, 7, 0.96);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(10px);
 }}
@@ -903,7 +910,7 @@ main {{
 }}
 .hero {{
   border: 1px solid var(--line);
-  background: linear-gradient(135deg, var(--panel), #0d2840);
+  background: linear-gradient(135deg, #131314, #0b0b0c);
   border-radius: 18px;
   padding: 28px;
 }}
@@ -917,7 +924,7 @@ main {{
 }}
 .stat {{
   border: 1px solid var(--line);
-  background: rgba(17, 26, 46, 0.75);
+  background: rgba(17, 17, 19, 0.88);
   padding: 16px;
   border-radius: 14px;
 }}
@@ -983,13 +990,13 @@ thead th {{
   white-space: normal;
 }}
 .selected-row {{
-  background: rgba(134, 215, 255, 0.08);
+  background: rgba(198, 160, 106, 0.08);
 }}
 .note {{ display: block; font-size: 0.78rem; font-weight: 400; margin-top: 4px; }}
 .research-group {{
   border: 1px solid var(--line);
   border-radius: 18px;
-  background: rgba(13, 40, 64, 0.34);
+  background: rgba(17, 17, 19, 0.78);
   margin: 18px 0;
   overflow: hidden;
 }}
@@ -1014,7 +1021,7 @@ thead th {{
 .lineage-flow {{
   margin: 0 0 18px;
   border-left: 3px solid var(--accent);
-  background: rgba(134, 215, 255, 0.06);
+  background: rgba(198, 160, 106, 0.07);
   padding: 10px 12px;
   font-weight: 700;
 }}
