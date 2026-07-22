@@ -650,22 +650,49 @@ EXPERIMENT_LIFECYCLE: dict[
             "identified sources may distinguish price accuracy, session completeness "
             "and historical reproducibility without continuous-roll ambiguity."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "Six exact-contract windows, a price-free source-lock stage, structural "
-            "and cross-source measurements, repeat-download checks and fixed source-"
-            "selection rules were locked before accessing EXP-017 benchmark bars."
+            "EXP-017 closed as ACCESS_INCOMPLETE before any benchmark OHLCV was "
+            "requested. Databento resolved all six exact contracts, but CME DataMine "
+            "was financially inaccessible and no second affordable source satisfied "
+            "the locked entry requirement. No price comparison occurred."
         ),
         next_action=(
-            "Complete metadata-only eligibility confirmation for Databento GLBX.MDP3 "
-            "and CME DataMine before any bar access. Resolve exact aliases, expiry "
-            "identity, timestamp semantics, entitlements, licensing and cost; then "
-            "commit the final eligibility lock. Do not request OHLCV yet."
+            "Preserve EXP-017 as an access-limited source investigation. EXP-018 "
+            "may perform only the preregistered Databento structural and repeatability "
+            "qualification. Do not reinterpret EXP-017 as price validation."
         ),
         market_name="Exact quarterly NQ futures contracts",
         timeframe="One-minute multi-source data benchmark",
         strategy_name="exact_nq_contract_data_benchmark",
         preregistration_file=Path("research/EXP-017_preregistration.md"),
+    ),
+
+    "EXP-018": ExperimentLifecycle(
+        experiment_id="EXP-018",
+        experiment_name=(
+            "Databento Exact-Contract Structural and "
+            "Repeatability Qualification"
+        ),
+        hypothesis=(
+            "Databento GLBX.MDP3 exact-contract one-minute NQ samples may be "
+            "structurally valid, sufficiently complete and canonically repeatable "
+            "for new research without implying exchange-verified accuracy."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "Six exact-contract windows, two delayed repeats, fixed quality gates, "
+            "a $1 cost cap and no-strategy boundaries were locked before OHLCV."
+        ),
+        next_action=(
+            "Build and commit the protected EXP-018 implementation before restoring "
+            "the Databento API key or requesting bars. Enforce six initial requests, "
+            "two delayed repeats, no automatic retries and local-only raw storage."
+        ),
+        market_name="Exact quarterly NQ futures contracts",
+        timeframe="One-minute Databento source qualification",
+        strategy_name="databento_exact_contract_qualification",
+        preregistration_file=Path("research/EXP-018_preregistration.md"),
     ),
 
 }
