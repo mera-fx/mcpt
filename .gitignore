@@ -5,6 +5,7 @@ __pycache__/
 
 # Virtual environments
 .venv/
+.venv-exp017-databento/
 venv/
 
 # Market data and generated research output

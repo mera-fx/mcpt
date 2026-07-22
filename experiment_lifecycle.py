@@ -685,9 +685,10 @@ EXPERIMENT_LIFECYCLE: dict[
             "a $1 cost cap and no-strategy boundaries were locked before OHLCV."
         ),
         next_action=(
-            "Build and commit the protected EXP-018 implementation before restoring "
-            "the Databento API key or requesting bars. Enforce six initial requests, "
-            "two delayed repeats, no automatic retries and local-only raw storage."
+            "Commit and push the protected EXP-018 implementation, then run its "
+            "local preflight with the Databento API key absent. After preflight, "
+            "restore the key only in the current PowerShell session and perform "
+            "the six locked initial requests. Do not run repeats before 24 hours."
         ),
         market_name="Exact quarterly NQ futures contracts",
         timeframe="One-minute Databento source qualification",
