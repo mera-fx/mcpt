@@ -34,6 +34,7 @@ class BuildResearchDashboardV2Tests(unittest.TestCase):
             ),
             result_state_source="Lifecycle registry",
             metrics={},
+            strategy_context={},
             data_measurements={},
             missing_items=("No primary visual report",),
         )

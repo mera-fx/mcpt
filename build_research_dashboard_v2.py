@@ -10,6 +10,7 @@ from typing import Any
 
 import pandas as pd
 
+from dashboard_data_source_reports import build_data_source_reports
 from dashboard_experiment_profiles import (
     DashboardProfile,
     STRATEGY_METRIC_FIELDS,
@@ -119,62 +120,406 @@ def _metric_row(label: str, value: str, note: str = "") -> str:
     )
 
 
+
+def _strategy_summary_table(context: dict[str, Any]) -> str:
+    rows = context.get("summary_rows")
+    if not isinstance(rows, list) or not rows:
+        return ""
+
+    body = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        label = str(row.get("label", ""))
+        value = str(row.get("value", "—"))
+        body.append(
+            "<tr>"
+            f"<th>{html.escape(label)}</th>"
+            f"<td>{html.escape(value)}</td>"
+            "</tr>"
+        )
+    if not body:
+        return ""
+    return (
+        '<h4 class="subsection-title">Experiment-specific context</h4>'
+        '<table class="metric-table context-table"><tbody>'
+        + "".join(body)
+        + "</tbody></table>"
+    )
+
+
+def _strategy_comparison_table(context: dict[str, Any]) -> str:
+    rows = context.get("comparison_rows")
+    if not isinstance(rows, list) or not rows:
+        return ""
+
+    title = str(
+        context.get(
+            "comparison_title",
+            "Measured comparison",
+        )
+    )
+    note = str(context.get("comparison_note", ""))
+    body = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        selected = bool(row.get("selected", False))
+        row_class = ' class="selected-row"' if selected else ""
+        years = "—"
+        profitable_years = _safe_float(row.get("profitable_years"))
+        trading_years = _safe_float(row.get("trading_years"))
+        if math.isfinite(profitable_years) and math.isfinite(trading_years):
+            years = f"{int(profitable_years)}/{int(trading_years)}"
+
+        role_parts = [
+            str(row.get("role", "")).strip(),
+            str(row.get("note", "")).strip(),
+        ]
+        role = " · ".join(
+            part
+            for part in role_parts
+            if part
+        )
+        family = str(row.get("family", "")).strip()
+        if family and role:
+            role = f"{family} · {role}"
+        elif family:
+            role = family
+
+        body.append(
+            f"<tr{row_class}>"
+            f"<td><strong>{html.escape(str(row.get('name', '')))}</strong>"
+            f"<span class=\"note\">{html.escape(role)}</span></td>"
+            f"<td>{_integer(row.get('completed_trades'))}</td>"
+            f"<td>{_number(row.get('profit_factor'), 3)}</td>"
+            f"<td>{_percent(row.get('win_rate_percent'))}</td>"
+            f"<td>{_money(row.get('average_trade_usd'))}</td>"
+            f"<td>{_money(row.get('net_profit_usd'))}</td>"
+            f"<td>{_money(row.get('maximum_drawdown_usd'))}</td>"
+            f"<td>{_number(row.get('net_profit_to_drawdown'), 3)}</td>"
+            f"<td>{years}</td>"
+            f"<td>{_money(row.get('two_tick_net_profit_usd'))}</td>"
+            "</tr>"
+        )
+
+    if not body:
+        return ""
+
+    note_html = (
+        f'<p class="muted">{html.escape(note)}</p>'
+        if note
+        else ""
+    )
+    return (
+        f'<h4 class="subsection-title">{html.escape(title)}</h4>'
+        + note_html
+        + '<div class="table-wrap"><table class="comparison-table">'
+        "<thead><tr>"
+        "<th>Candidate / method</th>"
+        "<th>Trades</th>"
+        "<th>PF</th>"
+        "<th>Win rate</th>"
+        "<th>Average trade</th>"
+        "<th>Net profit</th>"
+        "<th>Max DD</th>"
+        "<th>Net/DD</th>"
+        "<th>Profitable years</th>"
+        "<th>Two-tick net</th>"
+        "</tr></thead><tbody>"
+        + "".join(body)
+        + "</tbody></table></div>"
+    )
+
+
+def _strategy_pair_table(context: dict[str, Any]) -> str:
+    rows = context.get("pair_rows")
+    if not isinstance(rows, list) or not rows:
+        return ""
+
+    title = str(
+        context.get(
+            "pair_title",
+            "Pair diagnostics",
+        )
+    )
+    note = str(context.get("pair_note", ""))
+    body = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        years = "—"
+        profitable = _safe_float(row.get("profitable_years"))
+        total = _safe_float(row.get("total_years"))
+        if math.isfinite(profitable) and math.isfinite(total):
+            years = f"{int(profitable)}/{int(total)}"
+        body.append(
+            "<tr>"
+            f"<td><strong>{html.escape(str(row.get('name', '')))}</strong>"
+            f"<span class=\"note\">"
+            f"{html.escape(str(row.get('components', '')))}</span></td>"
+            f"<td>{_money(row.get('net_profit_usd'))}</td>"
+            f"<td>{_money(row.get('maximum_drawdown_usd'))}</td>"
+            f"<td>{_number(row.get('net_profit_to_drawdown'), 3)}</td>"
+            f"<td>{years}</td>"
+            f"<td>{_money(row.get('worst_year_usd'))}</td>"
+            f"<td>{_bool(row.get('diagnostic_not_executable_portfolio'))}</td>"
+            "</tr>"
+        )
+
+    note_html = (
+        f'<p class="muted">{html.escape(note)}</p>'
+        if note
+        else ""
+    )
+    return (
+        f'<h4 class="subsection-title">{html.escape(title)}</h4>'
+        + note_html
+        + '<div class="table-wrap"><table class="comparison-table">'
+        "<thead><tr>"
+        "<th>Diagnostic pair</th>"
+        "<th>Net profit</th>"
+        "<th>Max DD</th>"
+        "<th>Net/DD</th>"
+        "<th>Profitable years</th>"
+        "<th>Worst year</th>"
+        "<th>Not executable</th>"
+        "</tr></thead><tbody>"
+        + "".join(body)
+        + "</tbody></table></div>"
+    )
+
+
+def _strategy_context_html(profile: DashboardProfile) -> str:
+    context = profile.strategy_context
+    if not context:
+        return ""
+    return (
+        _strategy_summary_table(context)
+        + _strategy_comparison_table(context)
+        + _strategy_pair_table(context)
+    )
+
+
 def _strategy_table(profile: DashboardProfile) -> str:
     metrics = profile.metrics
     rows = [
+        _metric_row(
+            "Dashboard headline",
+            str(metrics.get("headline_name") or "Saved strategy result"),
+            str(
+                metrics.get("metric_scope")
+                or (
+                    "Single saved-result headline. Open the primary report "
+                    "for full experiment context."
+                )
+            ),
+        ),
         _metric_row("Profit Factor", _number(metrics.get("profit_factor"))),
         _metric_row("Net profit", _money(metrics.get("net_profit_usd"))),
         _metric_row("Win rate", _percent(metrics.get("win_rate_percent"))),
+        _metric_row("Average trade", _money(metrics.get("average_trade_usd"))),
         _metric_row("Maximum drawdown", _money(metrics.get("max_drawdown_usd"))),
-        _metric_row("Maximum drawdown %", _percent(metrics.get("max_drawdown_percent"))),
+        _metric_row(
+            "Maximum drawdown %",
+            _percent(metrics.get("max_drawdown_percent")),
+        ),
+        _metric_row(
+            "Net profit / drawdown",
+            _number(metrics.get("net_profit_to_drawdown"), 3),
+        ),
         _metric_row("Total return", _percent(metrics.get("total_return_percent"))),
         _metric_row("Completed trades", _integer(metrics.get("total_trades"))),
         _metric_row("MCPT p-value", _number(metrics.get("mcpt_p_value"), 4)),
         _metric_row(
             "Metric coverage",
             f"{populated_strategy_metric_count(metrics)}/{len(STRATEGY_METRIC_FIELDS)}",
-            "Blank values are displayed honestly rather than inferred from unrelated files.",
+            (
+                "Blank values are displayed honestly rather than inferred "
+                "from unrelated files."
+            ),
         ),
-        _metric_row("Metric source", str(metrics.get("metric_source") or "No adapter yet")),
+        _metric_row(
+            "Metric source",
+            str(metrics.get("metric_source") or "No adapter yet"),
+        ),
     ]
-    return '<table class="metric-table"><tbody>' + "".join(rows) + "</tbody></table>"
+    headline = (
+        '<table class="metric-table"><tbody>'
+        + "".join(rows)
+        + "</tbody></table>"
+    )
+    return headline + _strategy_context_html(profile)
 
 
 def _data_table(profile: DashboardProfile) -> str:
     values = profile.data_measurements
     rows = [
         _metric_row("Classification", profile.result_state),
-        _metric_row("Result source", profile.result_state_source or "Lifecycle registry"),
-        _metric_row("Initial windows measured", _integer(values.get("initial_windows_measured"))),
+        _metric_row(
+            "Result source",
+            profile.result_state_source or "Lifecycle registry",
+        ),
+        _metric_row("Result phase", str(values.get("result_phase") or "—")),
+        _metric_row(
+            "Classification scope",
+            str(values.get("classification_scope") or "—"),
+        ),
+        _metric_row("Client version", str(values.get("client_version") or "—")),
+        _metric_row("Dataset", str(values.get("dataset") or "—")),
+        _metric_row("Schema", str(values.get("schema") or "—")),
+        _metric_row("Contract type", str(values.get("contract_type") or "—")),
+        _metric_row(
+            "Continuous-series method",
+            str(values.get("continuous_series_method") or "—"),
+        ),
+        _metric_row("Roll method", str(values.get("roll_method") or "—")),
+        _metric_row(
+            "Price adjustment",
+            str(values.get("price_adjustment") or "—"),
+        ),
+        _metric_row(
+            "Volume semantics",
+            str(values.get("volume_semantics") or "—"),
+        ),
+        _metric_row("Sample windows", _integer(values.get("sample_windows"))),
+        _metric_row(
+            "Structural windows",
+            _integer(values.get("structural_windows")),
+        ),
+        _metric_row(
+            "Initial windows measured",
+            _integer(values.get("initial_windows_measured")),
+        ),
         _metric_row(
             "Repeatability windows measured",
             _integer(values.get("repeatability_windows_measured")),
         ),
         _metric_row(
+            "Total vendor rows",
+            _integer(values.get("total_vendor_rows")),
+        ),
+        _metric_row(
             "Minimum regular trade-minute coverage",
-            _percent(values.get("regular_trade_minute_coverage"), 6, fraction=True),
+            _percent(
+                values.get("regular_trade_minute_coverage"),
+                6,
+                fraction=True,
+            ),
         ),
         _metric_row(
             "Minimum extended trade-minute coverage",
-            _percent(values.get("extended_trade_minute_coverage"), 6, fraction=True),
+            _percent(
+                values.get("extended_trade_minute_coverage"),
+                6,
+                fraction=True,
+            ),
+        ),
+        _metric_row(
+            "Minimum expected-minute completeness",
+            _percent(
+                values.get("minimum_expected_minute_completeness"),
+                6,
+                fraction=True,
+            ),
+        ),
+        _metric_row(
+            "Minimum matched-timestamp share",
+            _percent(
+                values.get("minimum_matched_timestamp_share"),
+                6,
+                fraction=True,
+            ),
+        ),
+        _metric_row(
+            "Minimum close within one tick",
+            _percent(
+                values.get("minimum_close_within_one_tick_share"),
+                6,
+                fraction=True,
+            ),
         ),
         _metric_row("Estimated cost", _money(values.get("estimated_cost_usd"))),
-        _metric_row("Identity mismatches", _integer(values.get("identity_mismatch_rows"))),
-        _metric_row("Duplicate timestamps", _integer(values.get("duplicate_timestamp_rows"))),
-        _metric_row("Invalid OHLC rows", _integer(values.get("invalid_ohlc_rows"))),
-        _metric_row("Negative-volume rows", _integer(values.get("negative_volume_rows"))),
-        _metric_row("Nonfinite OHLCV rows", _integer(values.get("nonfinite_ohlcv_rows"))),
-        _metric_row("Off-tick OHLC values", _integer(values.get("off_tick_ohlc_values"))),
-        _metric_row("Futures rows catalogued", _integer(values.get("futures_rows"))),
+        _metric_row(
+            "Identity mismatches",
+            _integer(values.get("identity_mismatch_rows")),
+        ),
+        _metric_row(
+            "Duplicate timestamps",
+            _integer(values.get("duplicate_timestamp_rows")),
+        ),
+        _metric_row(
+            "Invalid OHLC rows",
+            _integer(values.get("invalid_ohlc_rows")),
+        ),
+        _metric_row(
+            "Negative-volume rows",
+            _integer(values.get("negative_volume_rows")),
+        ),
+        _metric_row(
+            "Nonfinite OHLCV rows",
+            _integer(values.get("nonfinite_ohlcv_rows")),
+        ),
+        _metric_row(
+            "Off-tick OHLC values",
+            _integer(values.get("off_tick_ohlc_values")),
+        ),
+        _metric_row(
+            "Futures rows catalogued",
+            _integer(values.get("futures_rows")),
+        ),
         _metric_row("NQ candidates", _integer(values.get("nq_candidates"))),
         _metric_row("MNQ candidates", _integer(values.get("mnq_candidates"))),
-        _metric_row("History downloaded", _bool(values.get("history_downloaded"))),
-        _metric_row("Exchange-accuracy claim", _bool(values.get("exchange_accuracy_claim"))),
+        _metric_row("NQ identified", _bool(values.get("nq_identified"))),
+        _metric_row("MNQ identified", _bool(values.get("mnq_identified"))),
+        _metric_row(
+            "Contract method resolved",
+            _bool(values.get("contract_method_resolved")),
+        ),
+        _metric_row(
+            "Roll method resolved",
+            _bool(values.get("roll_method_resolved")),
+        ),
+        _metric_row(
+            "Price adjustment resolved",
+            _bool(values.get("price_adjustment_resolved")),
+        ),
+        _metric_row(
+            "History download authorized",
+            _bool(values.get("history_download_authorized")),
+        ),
+        _metric_row(
+            "Full history downloaded",
+            _bool(values.get("history_downloaded")),
+        ),
+        _metric_row(
+            "Primary source qualified",
+            _bool(values.get("primary_source_qualified")),
+        ),
+        _metric_row(
+            "Quantower replaced",
+            _bool(values.get("quantower_replaced")),
+        ),
+        _metric_row(
+            "Exchange-accuracy claim",
+            _bool(values.get("exchange_accuracy_claim")),
+        ),
         _metric_row("Strategy run", _bool(values.get("strategy_run"))),
-        _metric_row("Paper trading authorized", _bool(values.get("paper_trading_authorized"))),
-        _metric_row("Live trading authorized", _bool(values.get("live_trading_authorized"))),
+        _metric_row("Optimization run", _bool(values.get("optimization_run"))),
+        _metric_row(
+            "Paper trading authorized",
+            _bool(values.get("paper_trading_authorized")),
+        ),
+        _metric_row(
+            "Live trading authorized",
+            _bool(values.get("live_trading_authorized")),
+        ),
     ]
-    return '<table class="metric-table"><tbody>' + "".join(rows) + "</tbody></table>"
+    return (
+        '<table class="metric-table"><tbody>'
+        + "".join(rows)
+        + "</tbody></table>"
+    )
 
 
 def _artifact_list(
@@ -473,6 +818,22 @@ thead th {{
 }}
 .metric-table th {{ width: 42%; color: var(--muted); font-weight: 600; }}
 .metric-table td {{ font-weight: 700; }}
+.context-table {{ margin-top: 10px; }}
+.subsection-title {{
+  margin: 24px 0 8px;
+  color: var(--muted);
+  font-size: 0.95rem;
+}}
+.comparison-table th, .comparison-table td {{
+  white-space: nowrap;
+}}
+.comparison-table td:first-child {{
+  min-width: 260px;
+  white-space: normal;
+}}
+.selected-row {{
+  background: rgba(134, 215, 255, 0.08);
+}}
 .note {{ display: block; font-size: 0.78rem; font-weight: 400; margin-top: 4px; }}
 .experiment {{
   border: 1px solid var(--line);
@@ -662,26 +1023,16 @@ search.addEventListener("input", () => {{
 '''
 
 
-def main() -> None:
-    arguments = parse_arguments()
-    lifecycles = list_experiment_lifecycles()
-    experiment_ids = [item.experiment_id for item in lifecycles]
-    artifacts = discover_artifacts(PROJECT_DIR, experiment_ids)
 
-    DASHBOARD_DIR.mkdir(parents=True, exist_ok=True)
-    PROFILE_CSV.parent.mkdir(parents=True, exist_ok=True)
-
-    previews: dict[str, Path | None] = {}
-    for artifact in artifacts:
-        previews[artifact.project_relative_path] = build_artifact_preview(
-            artifact,
-            DASHBOARD_DIR,
-        )
-
+def _build_profiles(
+    lifecycles: list[Any],
+    artifacts: list[ResearchArtifact],
+) -> list[DashboardProfile]:
     profiles: list[DashboardProfile] = []
     for lifecycle in lifecycles:
         experiment_artifacts = [
-            artifact for artifact in artifacts
+            artifact
+            for artifact in artifacts
             if artifact.experiment_id == lifecycle.experiment_id
         ]
         primary = choose_primary_report(
@@ -701,16 +1052,83 @@ def main() -> None:
                 metrics=metrics,
             )
         )
+    return sorted(
+        profiles,
+        key=lambda item: int(
+            item.experiment_id.split("-")[1]
+        ),
+    )
 
-    profiles.sort(key=lambda item: int(item.experiment_id.split("-")[1]))
+
+def main() -> None:
+    arguments = parse_arguments()
+    lifecycles = list_experiment_lifecycles()
+    experiment_ids = [
+        item.experiment_id
+        for item in lifecycles
+    ]
+
+    DASHBOARD_DIR.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    PROFILE_CSV.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    initial_artifacts = discover_artifacts(
+        PROJECT_DIR,
+        experiment_ids,
+    )
+    provisional_profiles = _build_profiles(
+        lifecycles,
+        initial_artifacts,
+    )
+    generated_reports = build_data_source_reports(
+        PROJECT_DIR,
+        provisional_profiles,
+    )
+
+    artifacts = discover_artifacts(
+        PROJECT_DIR,
+        experiment_ids,
+    )
+
+    previews: dict[str, Path | None] = {}
+    for artifact in artifacts:
+        previews[
+            artifact.project_relative_path
+        ] = build_artifact_preview(
+            artifact,
+            DASHBOARD_DIR,
+        )
+
+    profiles = _build_profiles(
+        lifecycles,
+        artifacts,
+    )
+
     DASHBOARD_FILE.write_text(
-        build_html(profiles, artifacts, previews),
+        build_html(
+            profiles,
+            artifacts,
+            previews,
+        ),
         encoding="utf-8",
     )
 
-    serializable = [profile.to_dict() for profile in profiles]
+    serializable = [
+        profile.to_dict()
+        for profile in profiles
+    ]
     PROFILE_JSON.write_text(
-        json.dumps(serializable, indent=2, ensure_ascii=False) + "\n",
+        json.dumps(
+            serializable,
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n",
         encoding="utf-8",
     )
 
@@ -726,35 +1144,90 @@ def main() -> None:
                 "result_state_source": profile.result_state_source,
                 "artifact_count": profile.artifact_count,
                 "primary_report_path": profile.primary_report_path,
-                "strategy_metric_count": populated_strategy_metric_count(profile.metrics),
-                "dashboard_gap_count": len(profile.missing_items),
-                "dashboard_gaps": " | ".join(profile.missing_items),
+                "strategy_metric_count": (
+                    populated_strategy_metric_count(
+                        profile.metrics
+                    )
+                ),
+                "strategy_adapter": (
+                    profile.strategy_context.get(
+                        "adapter_id",
+                        "",
+                    )
+                ),
+                "dashboard_gap_count": len(
+                    profile.missing_items
+                ),
+                "dashboard_gaps": " | ".join(
+                    profile.missing_items
+                ),
             }
         )
-    pd.DataFrame(rows).to_csv(PROFILE_CSV, index=False)
+    pd.DataFrame(rows).to_csv(
+        PROFILE_CSV,
+        index=False,
+    )
 
-    strategy_count = sum(item.research_type == "strategy" for item in profiles)
-    data_count = sum(item.research_type == "data_source" for item in profiles)
-    gap_count = sum(bool(item.missing_items) for item in profiles)
+    strategy_count = sum(
+        item.research_type == "strategy"
+        for item in profiles
+    )
+    data_count = sum(
+        item.research_type == "data_source"
+        for item in profiles
+    )
+    adapter_count = sum(
+        bool(item.strategy_context)
+        for item in profiles
+    )
+    gap_count = sum(
+        bool(item.missing_items)
+        for item in profiles
+    )
 
     print()
-    print("Research dashboard v2 created.")
-    print(f"Experiments:             {len(profiles)}")
-    print(f"Strategy experiments:    {strategy_count}")
-    print(f"Data-source experiments: {data_count}")
-    print(f"Linked artifacts:        {len(artifacts)}")
-    print(f"Experiments with gaps:   {gap_count}")
-    print(f"Dashboard:               {DASHBOARD_FILE}")
-    print(f"Coverage CSV:            {PROFILE_CSV}")
-    print(f"Profile JSON:            {PROFILE_JSON}")
-    print("Research rerun:          False")
-    print("Market-data request:     False")
+    print("Research dashboard v2 phase 2 created.")
+    print(
+        f"Experiments:              {len(profiles)}"
+    )
+    print(
+        f"Strategy experiments:     {strategy_count}"
+    )
+    print(
+        f"Data-source experiments:  {data_count}"
+    )
+    print(
+        f"Specific strategy adapters: {adapter_count}"
+    )
+    print(
+        f"Generated data reports:   {len(generated_reports)}"
+    )
+    print(
+        f"Linked artifacts:         {len(artifacts)}"
+    )
+    print(
+        f"Experiments with gaps:    {gap_count}"
+    )
+    print(
+        f"Dashboard:                {DASHBOARD_FILE}"
+    )
+    print(
+        f"Coverage CSV:             {PROFILE_CSV}"
+    )
+    print(
+        f"Profile JSON:             {PROFILE_JSON}"
+    )
+    print("Research rerun:           False")
+    print("Market-data request:      False")
 
     if arguments.open:
         if hasattr(os, "startfile"):
             os.startfile(DASHBOARD_FILE)
         else:
-            print("--open is automatically supported on Windows only.")
+            print(
+                "--open is automatically "
+                "supported on Windows only."
+            )
 
 
 if __name__ == "__main__":
