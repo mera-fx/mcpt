@@ -605,7 +605,7 @@ def _experiment_block(
         )
     ).lower()
 
-    open_attribute = " open" if profile.stage in {"REVIEW", "PRE_REGISTERED", "ACCEPTED_FOR_PAPER_TESTING"} else ""
+    open_attribute = ""
     metric_title = (
         "Strategy measurements"
         if profile.research_type == "strategy"

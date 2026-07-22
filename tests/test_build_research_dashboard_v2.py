@@ -54,6 +54,28 @@ class BuildResearchDashboardV2Tests(unittest.TestCase):
         self.assertIn("Dashboard coverage gaps", page)
         self.assertIn("No market-data request", page)
 
+    def test_experiments_start_collapsed(self) -> None:
+        page = build_html(
+            [
+                self._profile(
+                    "EXP-003",
+                    "strategy",
+                ),
+                self._profile(
+                    "EXP-018",
+                    "data_source",
+                ),
+            ],
+            [],
+            {},
+        )
+
+        self.assertNotRegex(
+            page,
+            r'<details class="experiment"'
+            r'[^>]*\sopen(?:\s|>)',
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
