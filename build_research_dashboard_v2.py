@@ -18,6 +18,7 @@ from dashboard_experiment_profiles import (
     populated_strategy_metric_count,
 )
 from experiment_lifecycle import list_experiment_lifecycles
+from report_monochrome_theme import theme_report_files
 from research_dashboard_library import (
     ResearchArtifact,
     build_artifact_preview,
@@ -1311,6 +1312,10 @@ def main() -> None:
         PROJECT_DIR,
         provisional_profiles,
     )
+    themed_reports = theme_report_files(
+        PROJECT_DIR,
+        write=True,
+    )
 
     artifacts = discover_artifacts(
         PROJECT_DIR,
@@ -1423,6 +1428,9 @@ def main() -> None:
     )
     print(
         f"Generated data reports:   {len(generated_reports)}"
+    )
+    print(
+        f"Report shells updated:    {len(themed_reports)}"
     )
     print(
         f"Linked artifacts:         {len(artifacts)}"
