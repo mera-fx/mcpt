@@ -132,6 +132,30 @@ class LifecycleRegistryTests(unittest.TestCase):
                 record.preregistration_file
             )
 
+    def test_exp018_is_closed_as_qualified_source(
+        self,
+    ) -> None:
+        record = get_experiment_lifecycle(
+            "EXP-018"
+        )
+
+        self.assertEqual(
+            record.stage,
+            "REVIEW",
+        )
+        self.assertIn(
+            "QUALIFIED_AS_ACCESSIBLE_EXACT_CONTRACT_SOURCE",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "Do not rerun EXP-018",
+            record.next_action,
+        )
+        self.assertIn(
+            "separately preregistered",
+            record.next_action,
+        )
+
     def test_unregistered_config_defaults_to_idea(
         self,
     ) -> None:

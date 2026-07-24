@@ -679,16 +679,21 @@ EXPERIMENT_LIFECYCLE: dict[
             "structurally valid, sufficiently complete and canonically repeatable "
             "for new research without implying exchange-verified accuracy."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "Six exact-contract windows, two delayed repeats, fixed quality gates, "
-            "a $1 cost cap and no-strategy boundaries were locked before OHLCV."
+            "EXP-018 completed all six locked exact-contract windows and both "
+            "delayed repeats. It qualified as "
+            "QUALIFIED_AS_ACCESSIBLE_EXACT_CONTRACT_SOURCE with 100.000000% "
+            "minimum regular-session coverage, 99.918699% minimum extended-session "
+            "coverage, exact canonical repeatability and total estimated cost "
+            "$0.366955. This is not exchange-accuracy or best-vendor validation."
         ),
         next_action=(
-            "Commit and push the protected EXP-018 implementation, then run its "
-            "local preflight with the Databento API key absent. After preflight, "
-            "restore the key only in the current PowerShell session and perform "
-            "the six locked initial requests. Do not run repeats before 24 hours."
+            "Preserve EXP-018 as a completed source qualification. Databento "
+            "exact-contract data may be used only in separately preregistered new "
+            "research. Do not rerun EXP-018, reinterpret it as exchange verification, "
+            "construct full history or a continuous series under this experiment ID, "
+            "or authorize paper or live trading from this result."
         ),
         market_name="Exact quarterly NQ futures contracts",
         timeframe="One-minute Databento source qualification",
