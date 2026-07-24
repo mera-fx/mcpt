@@ -645,6 +645,114 @@ def _artifact_list(
     )
 
 
+def _watch_button(
+    experiment_id: str,
+    *,
+    compact: bool = False,
+) -> str:
+    classes = "watch-toggle compact" if compact else "watch-toggle"
+    escaped_id = html.escape(experiment_id)
+    return (
+        f'<button class="{classes}" type="button" '
+        f'data-watch-id="{escaped_id}" aria-pressed="false" '
+        f'aria-label="Add {escaped_id} to watchlist">'
+        '<span aria-hidden="true">☆</span> Watch'
+        "</button>"
+    )
+
+
+def _watchlist_preview_metrics(
+    profile: DashboardProfile,
+) -> list[dict[str, str]]:
+    if profile.research_type == "strategy":
+        values = profile.metrics
+        return [
+            {
+                "label": "Profit Factor",
+                "value": _number(values.get("profit_factor")),
+            },
+            {
+                "label": "Net profit",
+                "value": _money(values.get("net_profit_usd")),
+            },
+            {
+                "label": "Maximum drawdown",
+                "value": _money(values.get("max_drawdown_usd")),
+            },
+            {
+                "label": "Completed trades",
+                "value": _integer(values.get("total_trades")),
+            },
+        ]
+
+    values = profile.data_measurements
+    coverage = values.get("minimum_expected_minute_completeness")
+    if coverage is None:
+        coverage = values.get("regular_trade_minute_coverage")
+    return [
+        {
+            "label": "Classification",
+            "value": profile.result_state or "—",
+        },
+        {
+            "label": "Dataset",
+            "value": str(values.get("dataset") or "—"),
+        },
+        {
+            "label": "Vendor rows",
+            "value": _integer(values.get("total_vendor_rows")),
+        },
+        {
+            "label": "Minimum coverage",
+            "value": _percent(
+                coverage,
+                2,
+                fraction=True,
+            ),
+        },
+    ]
+
+
+def _watchlist_payload(
+    profiles: list[DashboardProfile],
+) -> str:
+    payload = {
+        profile.experiment_id: {
+            "experiment_id": profile.experiment_id,
+            "experiment_name": profile.experiment_name,
+            "research_type_label": profile.research_type_label,
+            "stage": profile.stage,
+            "result_state": profile.result_state,
+            "state_class": _status_class(profile.result_state),
+            "market_name": profile.market_name,
+            "timeframe": profile.timeframe,
+            "strategy_name": profile.strategy_name,
+            "evidence_summary": profile.stage_reason,
+            "group_label": _strategy_group_label(
+                profile.experiment_id
+            ),
+            "experiment_href": f"#{profile.experiment_id.lower()}",
+            "report_href": _path_href(
+                profile.primary_report_path
+            ),
+            "preview_metrics": _watchlist_preview_metrics(profile),
+        }
+        for profile in profiles
+    }
+    serialized = json.dumps(
+        payload,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    return (
+        serialized
+        .replace("&", "\\u0026")
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+    )
+
+
 def _experiment_block(
     profile: DashboardProfile,
     artifacts: list[ResearchArtifact],
@@ -707,6 +815,7 @@ def _experiment_block(
     <span class="pill type">{html.escape(profile.research_type_label)}</span>
     <span class="pill {state_class}">{html.escape(profile.result_state)}</span>
     <span class="artifact-count">{profile.artifact_count:,} files</span>
+    {_watch_button(profile.experiment_id, compact=True)}
   </summary>
   <div class="experiment-body">
     <div class="metadata">
@@ -820,6 +929,7 @@ def _overview_row(profile: DashboardProfile) -> str:
         f"<td>{report}</td>"
         f"<td>{profile.artifact_count:,}</td>"
         f"<td>{html.escape(gap)}</td>"
+        f"<td>{_watch_button(profile.experiment_id)}</td>"
         "</tr>"
     )
 
@@ -847,6 +957,7 @@ def build_html(
         for group in STRATEGY_RESEARCH_GROUPS
     )
     data = "".join(_experiment_block(item, artifacts, previews) for item in data_profiles)
+    watchlist_data = _watchlist_payload(profiles)
 
     return f'''<!doctype html>
 <html lang="en">
@@ -948,6 +1059,144 @@ input, button, .button {{
 input {{ min-width: min(520px, 100%); flex: 1; }}
 button, .button {{ cursor: pointer; }}
 .button.disabled {{ color: var(--muted); cursor: default; }}
+.watch-toggle {{
+  white-space: nowrap;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease,
+    color 120ms ease;
+}}
+.watch-toggle:hover,
+.watch-toggle:focus-visible {{
+  border-color: var(--accent);
+}}
+.watch-toggle[aria-pressed="true"] {{
+  border-color: var(--accent);
+  background: rgba(198, 160, 106, 0.14);
+  color: var(--accent);
+}}
+.watch-toggle.compact {{
+  justify-self: end;
+  padding: 7px 10px;
+  font-size: 0.82rem;
+}}
+.watchlist-section {{
+  margin: 22px 0 34px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(198, 160, 106, 0.08),
+      rgba(17, 17, 19, 0.94) 40%
+    );
+  padding: 22px;
+}}
+.watchlist-heading {{
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 18px;
+}}
+.watchlist-heading .section-title {{
+  margin: 0 0 5px;
+  border: 0;
+  padding: 0;
+}}
+.watchlist-heading p {{ margin: 0; }}
+.watchlist-count {{
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--accent);
+  white-space: nowrap;
+}}
+.watchlist-empty {{
+  margin-top: 16px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+}}
+.watchlist-grid {{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}}
+.watch-card {{
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  padding: 16px;
+}}
+.watch-card-header {{
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: start;
+}}
+.watch-card-id {{
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 800;
+}}
+.watch-card h3 {{
+  margin: 2px 0 0;
+  font-size: 1.05rem;
+}}
+.watch-card-pills {{
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}}
+.watch-card-context {{
+  color: var(--muted);
+  font-size: 0.86rem;
+}}
+.watch-card-summary {{
+  display: -webkit-box;
+  margin: 10px 0 14px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}}
+.watch-card-metrics {{
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}}
+.watch-card-metric {{
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel2);
+  padding: 9px 10px;
+}}
+.watch-card-metric span {{
+  display: block;
+  color: var(--muted);
+  font-size: 0.74rem;
+}}
+.watch-card-metric strong {{
+  display: block;
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}}
+.watch-card-actions {{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}}
+.watch-card-actions .button,
+.watch-card-actions button {{
+  padding: 8px 10px;
+  font-size: 0.84rem;
+}}
 .section-title {{
   margin: 38px 0 14px;
   padding-bottom: 8px;
@@ -1037,7 +1286,7 @@ thead th {{
 }}
 .experiment > summary {{
   display: grid;
-  grid-template-columns: 90px minmax(260px, 1fr) auto auto auto;
+  grid-template-columns: 90px minmax(260px, 1fr) auto auto auto auto;
   gap: 12px;
   align-items: center;
   padding: 16px 18px;
@@ -1101,8 +1350,17 @@ thead th {{
 @media (max-width: 980px) {{
   .experiment > summary {{ grid-template-columns: 80px 1fr; }}
   .pill, .artifact-count {{ justify-self: start; }}
+  .watch-toggle.compact {{ justify-self: start; }}
   .narrative {{ grid-template-columns: 1fr; }}
   thead th {{ top: 100px; }}
+}}
+@media (max-width: 620px) {{
+  .watchlist-heading {{ display: block; }}
+  .watchlist-count {{
+    display: inline-block;
+    margin-top: 12px;
+  }}
+  .watchlist-grid {{ grid-template-columns: 1fr; }}
 }}
 </style>
 </head>
@@ -1112,6 +1370,7 @@ thead th {{
     <div class="brand">Quantitative Research Dashboard</div>
     <nav>
       <a href="#overview">Overview</a>
+      <a href="#watchlist">Watchlist</a>
       <a href="#strategy-research">Strategy research</a>
       <a href="#data-research">Data-source research</a>
       <a href="strategy_comparison.html">Existing strategy comparison</a>
@@ -1147,6 +1406,25 @@ thead th {{
   <button id="collapse" type="button">Collapse all</button>
 </div>
 
+<section id="watchlist" class="watchlist-section">
+  <div class="watchlist-heading">
+    <div>
+      <h2 class="section-title">Experiment watchlist</h2>
+      <p class="muted">
+        Save experiments for quick comparison and preview. Your watchlist is
+        stored only in this browser and never changes research evidence.
+      </p>
+    </div>
+    <span id="watchlist-count" class="watchlist-count"
+      aria-live="polite">0 experiments</span>
+  </div>
+  <div id="watchlist-empty" class="watchlist-empty">
+    No experiments watched yet. Use a <strong>☆ Watch</strong> button in the
+    overview table or beside any experiment.
+  </div>
+  <div id="watchlist-grid" class="watchlist-grid"></div>
+</section>
+
 <section id="overview">
   <h2 class="section-title">Research coverage overview</h2>
   <div class="table-wrap">
@@ -1154,7 +1432,8 @@ thead th {{
       <thead>
         <tr>
           <th>Experiment</th><th>Name</th><th>Research group</th><th>Research type</th>
-          <th>Lifecycle</th><th>Parsed result</th><th>Primary report</th><th>Files</th><th>Coverage</th>
+          <th>Lifecycle</th><th>Parsed result</th><th>Primary report</th><th>Files</th>
+          <th>Coverage</th><th>Watchlist</th>
         </tr>
       </thead>
       <tbody>{overview}</tbody>
@@ -1188,12 +1467,234 @@ thead th {{
 </p>
 </main>
 
+<script id="watchlist-data" type="application/json">{watchlist_data}</script>
 <script>
 const search = document.getElementById("search");
 const experiments = Array.from(document.querySelectorAll(".experiment"));
 const researchGroups = Array.from(document.querySelectorAll(".research-group"));
 const overviewRows = Array.from(document.querySelectorAll("#overview-table tbody tr"));
 const overviewLinks = Array.from(document.querySelectorAll('#overview-table a[href^="#exp-"]'));
+const watchlistProfiles = JSON.parse(
+  document.getElementById("watchlist-data").textContent
+);
+const watchlistButtons = Array.from(
+  document.querySelectorAll("[data-watch-id]")
+);
+const watchlistGrid = document.getElementById("watchlist-grid");
+const watchlistEmpty = document.getElementById("watchlist-empty");
+const watchlistCount = document.getElementById("watchlist-count");
+const WATCHLIST_STORAGE_KEY = "mcpt-research-dashboard-watchlist-v1";
+
+function loadWatchlist() {{
+  try {{
+    const saved = JSON.parse(
+      window.localStorage.getItem(WATCHLIST_STORAGE_KEY) || "[]"
+    );
+    if (!Array.isArray(saved)) return [];
+    return saved.filter(
+      experimentId => Object.prototype.hasOwnProperty.call(
+        watchlistProfiles,
+        experimentId
+      )
+    );
+  }} catch (error) {{
+    return [];
+  }}
+}}
+
+function saveWatchlist(experimentIds) {{
+  try {{
+    window.localStorage.setItem(
+      WATCHLIST_STORAGE_KEY,
+      JSON.stringify(experimentIds)
+    );
+  }} catch (error) {{
+    // The watchlist remains usable for this page session.
+  }}
+}}
+
+let watchedExperiments = new Set(loadWatchlist());
+
+function revealExperiment(experimentId) {{
+  const target = document.getElementById(experimentId.toLowerCase());
+  if (!target) return;
+  const group = target.closest(".research-group");
+  if (group) group.open = true;
+  target.open = true;
+}}
+
+function setWatchButtonState(button, watched) {{
+  const experimentId = button.dataset.watchId;
+  button.setAttribute("aria-pressed", watched ? "true" : "false");
+  button.setAttribute(
+    "aria-label",
+    (watched ? "Remove " : "Add ")
+      + experimentId
+      + (watched ? " from watchlist" : " to watchlist")
+  );
+  const icon = document.createElement("span");
+  icon.setAttribute("aria-hidden", "true");
+  icon.textContent = watched ? "★" : "☆";
+  button.replaceChildren(
+    icon,
+    document.createTextNode(watched ? " Watching" : " Watch")
+  );
+}}
+
+function makeTextElement(tagName, className, text) {{
+  const element = document.createElement(tagName);
+  if (className) element.className = className;
+  element.textContent = text || "";
+  return element;
+}}
+
+function buildWatchCard(profile) {{
+  const card = document.createElement("article");
+  card.className = "watch-card";
+
+  const header = document.createElement("div");
+  header.className = "watch-card-header";
+  const titleBlock = document.createElement("div");
+  titleBlock.append(
+    makeTextElement(
+      "div",
+      "watch-card-id",
+      profile.experiment_id
+    ),
+    makeTextElement("h3", "", profile.experiment_name)
+  );
+  const removeTop = document.createElement("button");
+  removeTop.type = "button";
+  removeTop.className = "watch-toggle compact";
+  removeTop.textContent = "Remove";
+  removeTop.setAttribute(
+    "aria-label",
+    "Remove " + profile.experiment_id + " from watchlist"
+  );
+  removeTop.addEventListener(
+    "click",
+    () => toggleWatch(profile.experiment_id)
+  );
+  header.append(titleBlock, removeTop);
+  card.append(header);
+
+  const pills = document.createElement("div");
+  pills.className = "watch-card-pills";
+  const typePill = makeTextElement(
+    "span",
+    "pill type",
+    profile.research_type_label
+  );
+  const statePill = makeTextElement(
+    "span",
+    "pill " + profile.state_class,
+    profile.result_state
+  );
+  pills.append(typePill, statePill);
+  card.append(pills);
+
+  const contextParts = [
+    profile.group_label,
+    profile.stage,
+    [profile.market_name, profile.timeframe]
+      .filter(Boolean)
+      .join(" · "),
+    profile.strategy_name,
+  ].filter(Boolean);
+  card.append(
+    makeTextElement(
+      "div",
+      "watch-card-context",
+      contextParts.join(" · ")
+    ),
+    makeTextElement(
+      "p",
+      "watch-card-summary",
+      profile.evidence_summary
+    )
+  );
+
+  const metrics = document.createElement("div");
+  metrics.className = "watch-card-metrics";
+  (profile.preview_metrics || []).forEach(metric => {{
+    const metricBox = document.createElement("div");
+    metricBox.className = "watch-card-metric";
+    metricBox.append(
+      makeTextElement("span", "", metric.label),
+      makeTextElement("strong", "", metric.value)
+    );
+    metrics.append(metricBox);
+  }});
+  card.append(metrics);
+
+  const actions = document.createElement("div");
+  actions.className = "watch-card-actions";
+  const openExperimentLink = makeTextElement(
+    "a",
+    "button",
+    "Open experiment"
+  );
+  openExperimentLink.href = profile.experiment_href;
+  openExperimentLink.addEventListener(
+    "click",
+    () => revealExperiment(profile.experiment_id)
+  );
+  actions.append(openExperimentLink);
+  if (profile.report_href) {{
+    const reportLink = makeTextElement(
+      "a",
+      "button",
+      "Open primary report"
+    );
+    reportLink.href = profile.report_href;
+    reportLink.target = "_blank";
+    reportLink.rel = "noopener noreferrer";
+    actions.append(reportLink);
+  }}
+  card.append(actions);
+  return card;
+}}
+
+function renderWatchlist() {{
+  const experimentIds = Array.from(watchedExperiments)
+    .filter(experimentId => watchlistProfiles[experimentId])
+    .sort();
+  const cards = experimentIds.map(
+    experimentId => buildWatchCard(
+      watchlistProfiles[experimentId]
+    )
+  );
+  watchlistGrid.replaceChildren(...cards);
+  watchlistEmpty.hidden = experimentIds.length > 0;
+  watchlistCount.textContent = experimentIds.length === 1
+    ? "1 experiment"
+    : experimentIds.length + " experiments";
+  watchlistButtons.forEach(button => {{
+    setWatchButtonState(
+      button,
+      watchedExperiments.has(button.dataset.watchId)
+    );
+  }});
+}}
+
+function toggleWatch(experimentId) {{
+  if (!watchlistProfiles[experimentId]) return;
+  if (watchedExperiments.has(experimentId)) {{
+    watchedExperiments.delete(experimentId);
+  }} else {{
+    watchedExperiments.add(experimentId);
+  }}
+  saveWatchlist(Array.from(watchedExperiments).sort());
+  renderWatchlist();
+}}
+
+watchlistButtons.forEach(button => {{
+  button.addEventListener("click", event => {{
+    event.preventDefault();
+    event.stopPropagation();
+    toggleWatch(button.dataset.watchId);
+  }});
+}});
 
 document.getElementById("expand").addEventListener("click", () => {{
   researchGroups.forEach(item => item.open = true);
@@ -1206,12 +1707,14 @@ document.getElementById("collapse").addEventListener("click", () => {{
 
 overviewLinks.forEach(link => {{
   link.addEventListener("click", () => {{
-    const target = document.querySelector(link.getAttribute("href"));
-    if (!target) return;
-    const group = target.closest(".research-group");
-    if (group) group.open = true;
-    target.open = true;
+    revealExperiment(link.getAttribute("href").slice(1));
   }});
+}});
+
+window.addEventListener("storage", event => {{
+  if (event.key !== WATCHLIST_STORAGE_KEY) return;
+  watchedExperiments = new Set(loadWatchlist());
+  renderWatchlist();
 }});
 
 search.addEventListener("input", () => {{
@@ -1241,6 +1744,8 @@ search.addEventListener("input", () => {{
     item.classList.toggle("hidden", !visible);
   }});
 }});
+
+renderWatchlist();
 </script>
 </body>
 </html>
