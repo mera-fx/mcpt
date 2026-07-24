@@ -53,6 +53,10 @@ class BuildResearchDashboardV2Tests(unittest.TestCase):
         self.assertIn("REPEATABILITY_PENDING", page)
         self.assertIn("Dashboard coverage gaps", page)
         self.assertIn("No market-data request", page)
+        self.assertIn(
+            '../../results/analytics_expansion/index.html',
+            page,
+        )
 
     def test_experiments_start_collapsed(self) -> None:
         page = build_html(

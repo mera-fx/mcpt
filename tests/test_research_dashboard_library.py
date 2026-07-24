@@ -193,6 +193,63 @@ class ResearchDashboardLibraryTests(
                 locations,
             )
 
+    def test_analytics_discovery_keeps_only_experiment_indexes(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            project = Path(temp)
+            experiment = (
+                project
+                / "results"
+                / "analytics_expansion"
+                / "EXP-005"
+            )
+            series = experiment / "exp-005--primary--nq"
+            series.mkdir(parents=True)
+            for name in (
+                "report.html",
+                "analytics.json",
+                "summary.csv",
+            ):
+                (experiment / name).write_text(
+                    name,
+                    encoding="utf-8",
+                )
+            (series / "report.html").write_text(
+                "series",
+                encoding="utf-8",
+            )
+            (series / "monthly.csv").write_text(
+                "month,pnl\n",
+                encoding="utf-8",
+            )
+
+            artifacts = discover_artifacts(
+                project,
+                ["EXP-005"],
+            )
+
+        self.assertEqual(
+            {
+                artifact.project_relative_path
+                for artifact in artifacts
+            },
+            {
+                (
+                    "results/analytics_expansion/EXP-005/"
+                    "analytics.json"
+                ),
+                (
+                    "results/analytics_expansion/EXP-005/"
+                    "report.html"
+                ),
+                (
+                    "results/analytics_expansion/EXP-005/"
+                    "summary.csv"
+                ),
+            },
+        )
+
     def test_exp005_metrics_explain_drawdown_percent(
         self,
     ) -> None:

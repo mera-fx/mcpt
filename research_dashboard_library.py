@@ -39,6 +39,12 @@ EXCLUDED_PARTS = {
     ".pytest_cache",
 }
 
+ANALYTICS_DASHBOARD_FILES = {
+    "analytics.json",
+    "report.html",
+    "summary.csv",
+}
+
 TEXT_PREVIEW_LIMIT = 250_000
 CSV_PREVIEW_ROWS = 100
 
@@ -245,6 +251,15 @@ def discover_artifacts(
             if (
                 relative.parts[:2]
                 == ("reports", "research_dashboard")
+            ):
+                continue
+
+            if relative.parts[:2] == (
+                "results",
+                "analytics_expansion",
+            ) and not (
+                len(relative.parts) == 4
+                and relative.name in ANALYTICS_DASHBOARD_FILES
             ):
                 continue
 

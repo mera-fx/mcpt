@@ -1115,6 +1115,7 @@ thead th {{
       <a href="#strategy-research">Strategy research</a>
       <a href="#data-research">Data-source research</a>
       <a href="strategy_comparison.html">Existing strategy comparison</a>
+      <a href="../../results/analytics_expansion/index.html">Complete frozen-evidence analytics</a>
     </nav>
   </div>
 </header>
