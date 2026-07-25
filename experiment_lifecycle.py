@@ -712,18 +712,22 @@ EXPERIMENT_LIFECYCLE: dict[
             "with explicit transition overlap may provide a transparent, "
             "auditable basis for later continuous-series construction."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "EXP-019 acquired all 66 locked exact-contract windows with 66 "
-            "successful downloads, zero automatic retries and 104,491,346 "
-            "compressed bytes. The archive remains unqualified pending its "
-            "preregistered read-only local audit."
+            "EXP-019 completed the one-time 66-contract exact-contract "
+            "acquisition and its preregistered read-only local audit. The "
+            "archive closed as QUALIFIED_WITH_KNOWN_PROVIDER_CONDITIONS "
+            "after 6,276,486 records passed all 17 hard checks, with 16 "
+            "known provider-warning windows retained in the evidence. "
+            "No continuous series or strategy was run."
         ),
         next_action=(
-            "Commit and push the EXP-019 archive-audit preregistration, then "
-            "implement the protected read-only local audit tied to that commit. Do not "
-            "rerun the acquisition, call Databento, construct a continuous "
-            "series or run a strategy."
+            "Preserve EXP-019 as frozen exact-contract archive evidence. "
+            "Do not rerun any EXP-019 mode or reinterpret the result as "
+            "exchange accuracy. Any roll rule, continuous-series "
+            "construction, adjustment method or strategy research requires "
+            "a separately preregistered new experiment ID. EXP-019 does "
+            "not authorize paper or live trading."
         ),
         market_name="Exact quarterly NQ futures contracts",
         timeframe=(

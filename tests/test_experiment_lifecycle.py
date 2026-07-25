@@ -156,7 +156,7 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.next_action,
         )
 
-    def test_exp019_is_pending_local_archive_audit(
+    def test_exp019_is_closed_with_known_conditions(
         self,
     ) -> None:
         record = get_experiment_lifecycle(
@@ -165,34 +165,38 @@ class LifecycleRegistryTests(unittest.TestCase):
 
         self.assertEqual(
             record.stage,
-            "PRE_REGISTERED",
+            "REVIEW",
         )
         self.assertIn(
-            "all 66",
+            "QUALIFIED_WITH_KNOWN_PROVIDER_CONDITIONS",
             record.stage_reason,
         )
         self.assertIn(
-            "zero automatic retries",
-            record.stage_reason.lower(),
-        )
-        self.assertIn(
-            "104,491,346",
+            "6,276,486",
             record.stage_reason,
         )
         self.assertIn(
-            "unqualified",
-            record.stage_reason.lower(),
+            "17 hard checks",
+            record.stage_reason,
         )
         self.assertIn(
-            "read-only local audit",
+            "16",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "frozen",
             record.next_action.lower(),
         )
         self.assertIn(
-            "do not rerun the acquisition",
+            "do not rerun any exp-019 mode",
             record.next_action.lower(),
         )
         self.assertIn(
-            "do not",
+            "separately preregistered new experiment",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "does not authorize paper or live trading",
             record.next_action.lower(),
         )
 
