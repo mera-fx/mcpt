@@ -156,7 +156,7 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.next_action,
         )
 
-    def test_exp019_has_authorized_acquisition(
+    def test_exp019_is_pending_local_archive_audit(
         self,
     ) -> None:
         record = get_experiment_lifecycle(
@@ -168,27 +168,31 @@ class LifecycleRegistryTests(unittest.TestCase):
             "PRE_REGISTERED",
         )
         self.assertIn(
-            "$22.914098",
+            "all 66",
             record.stage_reason,
-        )
-        self.assertIn(
-            "$35.00",
-            record.stage_reason,
-        )
-        self.assertIn(
-            "authorization",
-            record.stage_reason.lower(),
-        )
-        self.assertIn(
-            "66 locked exact-contract windows",
-            record.next_action,
         )
         self.assertIn(
             "zero automatic retries",
+            record.stage_reason.lower(),
+        )
+        self.assertIn(
+            "104,491,346",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "unqualified",
+            record.stage_reason.lower(),
+        )
+        self.assertIn(
+            "read-only local audit",
             record.next_action.lower(),
         )
         self.assertIn(
-            "do not construct a continuous series",
+            "do not rerun the acquisition",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "do not",
             record.next_action.lower(),
         )
 

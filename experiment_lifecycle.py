@@ -714,16 +714,16 @@ EXPERIMENT_LIFECYCLE: dict[
         ),
         stage="PRE_REGISTERED",
         stage_reason=(
-            "EXP-019 preregistration and cost estimation are complete. The 66 "
-            "locked exact-contract windows were quoted at $22.914098, below the "
-            "$35.00 cap. Explicit one-time acquisition authorization was recorded "
-            "on 2026-07-25. No EXP-019 bars have been downloaded yet."
+            "EXP-019 acquired all 66 locked exact-contract windows with 66 "
+            "successful downloads, zero automatic retries and 104,491,346 "
+            "compressed bytes. The archive remains unqualified pending its "
+            "preregistered read-only local audit."
         ),
         next_action=(
-            "Commit and push the EXP-019 acquisition authorization, then implement "
-            "a protected downloader tied to that authorization commit. Download "
-            "only the 66 locked exact-contract windows, with zero automatic retries. "
-            "Do not construct a continuous series or run a strategy."
+            "Commit and push the EXP-019 archive-audit preregistration, then "
+            "implement the protected read-only local audit tied to that commit. Do not "
+            "rerun the acquisition, call Databento, construct a continuous "
+            "series or run a strategy."
         ),
         market_name="Exact quarterly NQ futures contracts",
         timeframe=(
