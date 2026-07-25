@@ -741,6 +741,46 @@ EXPERIMENT_LIFECYCLE: dict[
         ),
     ),
 
+    "EXP-020": ExperimentLifecycle(
+        experiment_id="EXP-020",
+        experiment_name=(
+            "NQ Exact-Contract "
+            "Continuous-Series Construction"
+        ),
+        hypothesis=(
+            "A deterministic two-session volume-crossover roll with a locked "
+            "calendar fallback and backward-difference adjustment may transform "
+            "the frozen EXP-019 archive into an auditable one-minute continuous "
+            "NQ dataset without using strategy performance for method selection."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "EXP-020 is preregistered against the frozen EXP-019 closure at "
+            "commit e86a907. No roll-trigger contract volumes or prices were "
+            "inspected before locking the primary method, calendar benchmark, "
+            "session boundary, adjustment method and twenty hard checks. "
+            "Construction has not been implemented."
+        ),
+        next_action=(
+            "Commit and push the EXP-020 preregistration, then implement a "
+            "protected local constructor tied to that commit. Use only the "
+            "read-only EXP-019 archive, make zero Databento requests and run "
+            "no strategy, optimization, MCPT, paper or live trading."
+        ),
+        market_name=(
+            "NQ futures continuous-series data"
+        ),
+        timeframe=(
+            "One-minute local data engineering"
+        ),
+        strategy_name=(
+            "nq_volume_roll_continuous_series"
+        ),
+        preregistration_file=Path(
+            "research/EXP-020_preregistration.md"
+        ),
+    ),
+
 }
 
 

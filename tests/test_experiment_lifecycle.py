@@ -200,6 +200,42 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.next_action.lower(),
         )
 
+    def test_exp020_is_preregistered_for_local_construction(
+        self,
+    ) -> None:
+        record = get_experiment_lifecycle(
+            "EXP-020"
+        )
+
+        self.assertEqual(
+            record.stage,
+            "PRE_REGISTERED",
+        )
+        self.assertIn(
+            "frozen EXP-019",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "No roll-trigger",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "twenty hard checks",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "protected local constructor",
+            record.next_action,
+        )
+        self.assertIn(
+            "zero Databento requests",
+            record.next_action,
+        )
+        self.assertIn(
+            "no strategy",
+            record.next_action.lower(),
+        )
+
     def test_unregistered_config_defaults_to_idea(
         self,
     ) -> None:
