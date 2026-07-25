@@ -156,7 +156,7 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.next_action,
         )
 
-    def test_exp019_is_preregistered_for_cost_estimation(
+    def test_exp019_has_authorized_acquisition(
         self,
     ) -> None:
         record = get_experiment_lifecycle(
@@ -168,7 +168,7 @@ class LifecycleRegistryTests(unittest.TestCase):
             "PRE_REGISTERED",
         )
         self.assertIn(
-            "66 quarterly contracts",
+            "$22.914098",
             record.stage_reason,
         )
         self.assertIn(
@@ -176,11 +176,19 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.stage_reason,
         )
         self.assertIn(
-            "metadata.get_cost",
+            "authorization",
+            record.stage_reason.lower(),
+        )
+        self.assertIn(
+            "66 locked exact-contract windows",
             record.next_action,
         )
         self.assertIn(
-            "do not download bars",
+            "zero automatic retries",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "do not construct a continuous series",
             record.next_action.lower(),
         )
 

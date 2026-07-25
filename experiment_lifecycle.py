@@ -714,16 +714,16 @@ EXPERIMENT_LIFECYCLE: dict[
         ),
         stage="PRE_REGISTERED",
         stage_reason=(
-            "The cost-estimation scope is locked before any EXP-019 OHLCV is "
-            "viewed: 66 quarterly contracts from NQM10 through NQU26, "
-            "2010-06-06 through 2026-07-24 exclusive, 30-day transition "
-            "overlaps, metadata-only quotes and a $35.00 acquisition cap."
+            "EXP-019 preregistration and cost estimation are complete. The 66 "
+            "locked exact-contract windows were quoted at $22.914098, below the "
+            "$35.00 cap. Explicit one-time acquisition authorization was recorded "
+            "on 2026-07-25. No EXP-019 bars have been downloaded yet."
         ),
         next_action=(
-            "Commit and push the EXP-019 preregistration. Then implement a "
-            "protected metadata.get_cost estimator tied to that commit. Do not "
-            "download bars, construct a continuous series or run a strategy "
-            "until the exact-contract quote is reviewed and separately approved."
+            "Commit and push the EXP-019 acquisition authorization, then implement "
+            "a protected downloader tied to that authorization commit. Download "
+            "only the 66 locked exact-contract windows, with zero automatic retries. "
+            "Do not construct a continuous series or run a strategy."
         ),
         market_name="Exact quarterly NQ futures contracts",
         timeframe=(
