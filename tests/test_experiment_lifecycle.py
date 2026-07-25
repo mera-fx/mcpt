@@ -212,15 +212,19 @@ class LifecycleRegistryTests(unittest.TestCase):
             "PRE_REGISTERED",
         )
         self.assertIn(
-            "frozen EXP-019",
+            "protected constructor is frozen",
             record.stage_reason,
         )
         self.assertIn(
-            "protected local constructor",
+            "implementation commit 36473b3",
             record.stage_reason,
         )
         self.assertIn(
-            "twenty hard checks",
+            "one-time authorization",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "exactly one local construction",
             record.stage_reason,
         )
         self.assertIn(
@@ -228,7 +232,11 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.stage_reason,
         )
         self.assertIn(
-            "separate one-time construction authorization",
+            "protected read-only preflight",
+            record.next_action,
+        )
+        self.assertIn(
+            "Do not run construction",
             record.next_action,
         )
         self.assertIn(

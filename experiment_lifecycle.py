@@ -755,18 +755,16 @@ EXPERIMENT_LIFECYCLE: dict[
         ),
         stage="PRE_REGISTERED",
         stage_reason=(
-            "EXP-020 is preregistered against the frozen EXP-019 closure and "
-            "now has a protected local constructor tied to preregistration "
-            "commit 93776c5. The implementation locks all four required series, "
-            "twenty hard checks and an independent deterministic rebuild. "
-            "Construction has not run and remains unauthorized."
+            "EXP-020 is preregistered and its protected constructor is frozen "
+            "at implementation commit 36473b3. A separate one-time authorization "
+            "now permits exactly one local construction after the protected "
+            "read-only preflight passes. Construction has not run."
         ),
         next_action=(
-            "Commit and push the protected EXP-020 constructor, then create a "
-            "separate one-time construction authorization tied to that exact "
-            "implementation commit. Continue to use only the read-only EXP-019 "
-            "archive, make zero Databento requests and run no strategy, "
-            "optimization, MCPT, paper or live trading."
+            "Commit and push the EXP-020 one-time authorization, then run only "
+            "the protected read-only preflight. Do not run construction until "
+            "that preflight is reviewed. Use zero Databento requests and run no "
+            "strategy, optimization, MCPT, paper or live trading."
         ),
         market_name=(
             "NQ futures continuous-series data"
@@ -781,7 +779,6 @@ EXPERIMENT_LIFECYCLE: dict[
             "research/EXP-020_preregistration.md"
         ),
     ),
-
 
 }
 
