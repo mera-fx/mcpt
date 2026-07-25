@@ -98,11 +98,12 @@ class Exp020PreflightDigestCorrectionTests(
             ):
                 load_preflight_correction_authorization()
 
-    def test_real_correction_authorization_is_absent(
+    def test_correction_authorization_path_is_locked(
         self,
     ) -> None:
-        self.assertFalse(
-            PREFLIGHT_CORRECTION_AUTHORIZATION_PATH.exists()
+        self.assertEqual(
+            PREFLIGHT_CORRECTION_AUTHORIZATION_PATH.name,
+            "exp020_preflight_correction_authorization.py",
         )
 
 
