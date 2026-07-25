@@ -72,6 +72,35 @@ AUTHORIZATION_REPORT_PATH = (
     / "EXP-020_construction_authorization.md"
 )
 
+ORIGINAL_AUTHORIZATION_COMMIT = (
+    "e497b1abf247ed83295caa9378c2a4e6869922b1"
+)
+
+PREFLIGHT_CORRECTION_AUTHORIZATION_MODULE = (
+    "exp020_preflight_correction_authorization"
+)
+PREFLIGHT_CORRECTION_AUTHORIZATION_PATH = (
+    PROJECT_DIR
+    / "exp020_preflight_correction_authorization.py"
+)
+PREFLIGHT_CORRECTION_AUTHORIZATION_REPORT_PATH = (
+    PROJECT_DIR
+    / "research"
+    / "EXP-020_preflight_correction_authorization.md"
+)
+
+PREFLIGHT_CORRECTION_IMPLEMENTATION_PATHS = (
+    "exp020_constructor.py",
+    "tests/test_exp020_preflight_correction.py",
+    "research/EXP-020_preflight_correction_implementation.md",
+)
+
+PREFLIGHT_CORRECTION_AUTHORIZATION_PATHS = (
+    "exp020_preflight_correction_authorization.py",
+    "tests/test_exp020_preflight_correction_authorization.py",
+    "research/EXP-020_preflight_correction_authorization.md",
+)
+
 ARCHIVE_ROOT = (
     PROJECT_DIR
     / "data"
@@ -210,9 +239,12 @@ def archive_digest(
             key=lambda item: int(item["sequence"]),
         )
     ]
-    return hashlib.sha256(
-        canonical_json_bytes(payload)
-    ).hexdigest()
+    encoded = json.dumps(
+        payload,
+        separators=(",", ":"),
+        ensure_ascii=True,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def atomic_write_text(
@@ -555,6 +587,89 @@ def load_authorization() -> dict[str, Any]:
     return record
 
 
+def load_preflight_correction_authorization(
+) -> dict[str, Any]:
+    if not PREFLIGHT_CORRECTION_AUTHORIZATION_PATH.is_file():
+        raise RuntimeError(
+            "EXP-020 preflight digest correction is not authorized. "
+            "The separate correction authorization file is absent."
+        )
+
+    module = importlib.import_module(
+        PREFLIGHT_CORRECTION_AUTHORIZATION_MODULE
+    )
+    validator = getattr(
+        module,
+        "validate_exp020_preflight_correction_authorization",
+        None,
+    )
+    getter = getattr(
+        module,
+        "get_exp020_preflight_correction_authorization",
+        None,
+    )
+
+    if validator is None or getter is None:
+        raise RuntimeError(
+            "EXP-020 preflight correction authorization "
+            "interface is incomplete."
+        )
+
+    validator()
+    record = getter()
+
+    if (
+        record["experiment_id"] != "EXP-020"
+        or record["correction_id"]
+        != "EXP-020-PREFLIGHT-DIGEST-001"
+        or record["correction_authorized"] is not True
+        or record["original_authorization_commit"]
+        != ORIGINAL_AUTHORIZATION_COMMIT
+        or record["archive_digest_protocol"]
+        != "EXP-019_INSERTION_ORDER_JSON_V1"
+        or record["databento_api_calls"] != 0
+        or record["source_archive_modified"] is not False
+        or record["construction_run"] is not False
+        or record["construction_authorization_unchanged"]
+        is not True
+        or record["strategy_run_authorized"] is not False
+    ):
+        raise RuntimeError(
+            "EXP-020 preflight correction authorization "
+            "boundary changed."
+        )
+
+    corrected_commit = record[
+        "locked_corrected_implementation_commit"
+    ]
+
+    if (
+        not isinstance(corrected_commit, str)
+        or len(corrected_commit) != 40
+    ):
+        raise RuntimeError(
+            "Corrected implementation commit is invalid."
+        )
+
+    return record
+
+
+def changed_paths(
+    base: str,
+    head: str,
+) -> set[str]:
+    return {
+        line.strip().replace("\\", "/")
+        for line in run_git(
+            "diff",
+            "--name-only",
+            base,
+            head,
+        ).stdout.splitlines()
+        if line.strip()
+    }
+
+
 def commit_that_added(relative_path: str) -> str:
     commits = run_git(
         "log",
@@ -652,6 +767,11 @@ def repository_preflight() -> dict[str, Any]:
         "exp020_construction_authorization.py"
     )
 
+    if authorization_commit != ORIGINAL_AUTHORIZATION_COMMIT:
+        raise RuntimeError(
+            "Original EXP-020 authorization commit changed."
+        )
+
     if run_git(
         "diff",
         "--quiet",
@@ -666,16 +786,92 @@ def repository_preflight() -> dict[str, Any]:
             "implementation lock and authorization."
         )
 
+    correction = (
+        load_preflight_correction_authorization()
+    )
+    corrected_implementation_commit = correction[
+        "locked_corrected_implementation_commit"
+    ]
+
+    if (
+        run_git(
+            "merge-base",
+            "--is-ancestor",
+            authorization_commit,
+            corrected_implementation_commit,
+            check=False,
+        ).returncode
+        != 0
+        or run_git(
+            "merge-base",
+            "--is-ancestor",
+            corrected_implementation_commit,
+            "HEAD",
+            check=False,
+        ).returncode
+        != 0
+    ):
+        raise RuntimeError(
+            "Corrected EXP-020 implementation ancestry "
+            "is invalid."
+        )
+
+    if changed_paths(
+        authorization_commit,
+        corrected_implementation_commit,
+    ) != set(PREFLIGHT_CORRECTION_IMPLEMENTATION_PATHS):
+        raise RuntimeError(
+            "EXP-020 correction implementation scope changed."
+        )
+
+    correction_authorization_commit = commit_that_added(
+        "exp020_preflight_correction_authorization.py"
+    )
+
+    if (
+        run_git(
+            "merge-base",
+            "--is-ancestor",
+            corrected_implementation_commit,
+            correction_authorization_commit,
+            check=False,
+        ).returncode
+        != 0
+        or run_git(
+            "merge-base",
+            "--is-ancestor",
+            correction_authorization_commit,
+            "HEAD",
+            check=False,
+        ).returncode
+        != 0
+    ):
+        raise RuntimeError(
+            "EXP-020 correction authorization ancestry "
+            "is invalid."
+        )
+
+    if changed_paths(
+        corrected_implementation_commit,
+        correction_authorization_commit,
+    ) != set(PREFLIGHT_CORRECTION_AUTHORIZATION_PATHS):
+        raise RuntimeError(
+            "EXP-020 correction authorization scope changed."
+        )
+
     protected_paths = (
         *PREREGISTRATION_PATHS,
         *IMPLEMENTATION_PATHS,
         "exp020_construction_authorization.py",
         "research/EXP-020_construction_authorization.md",
+        *PREFLIGHT_CORRECTION_IMPLEMENTATION_PATHS,
+        *PREFLIGHT_CORRECTION_AUTHORIZATION_PATHS,
     )
+
     if run_git(
         "diff",
         "--quiet",
-        authorization_commit,
+        correction_authorization_commit,
         "HEAD",
         "--",
         *protected_paths,
@@ -683,7 +879,7 @@ def repository_preflight() -> dict[str, Any]:
     ).returncode != 0:
         raise RuntimeError(
             "Protected EXP-020 files changed after "
-            "construction authorization."
+            "preflight correction authorization."
         )
 
     for path in (
@@ -722,6 +918,12 @@ def repository_preflight() -> dict[str, Any]:
         "origin_main": origin_main,
         "implementation_commit": implementation_commit,
         "authorization_commit": authorization_commit,
+        "corrected_implementation_commit": (
+            corrected_implementation_commit
+        ),
+        "correction_authorization_commit": (
+            correction_authorization_commit
+        ),
         "free_bytes": int(free_bytes),
         "databento_version": getattr(
             databento,
@@ -1288,6 +1490,12 @@ def run_construction() -> dict[str, Any]:
                 "authorization_commit": preflight[
                     "authorization_commit"
                 ],
+                "corrected_implementation_commit": preflight[
+                    "corrected_implementation_commit"
+                ],
+                "correction_authorization_commit": preflight[
+                    "correction_authorization_commit"
+                ],
             },
             "source": {
                 "experiment_id": "EXP-019",
@@ -1417,6 +1625,14 @@ def print_preflight(
     print(
         "Authorization commit:   "
         + preflight["authorization_commit"]
+    )
+    print(
+        "Corrected implementation: "
+        + preflight["corrected_implementation_commit"]
+    )
+    print(
+        "Correction authorization: "
+        + preflight["correction_authorization_commit"]
     )
     print(
         "Source contracts:       "
