@@ -156,6 +156,34 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.next_action,
         )
 
+    def test_exp019_is_preregistered_for_cost_estimation(
+        self,
+    ) -> None:
+        record = get_experiment_lifecycle(
+            "EXP-019"
+        )
+
+        self.assertEqual(
+            record.stage,
+            "PRE_REGISTERED",
+        )
+        self.assertIn(
+            "66 quarterly contracts",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "$35.00",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "metadata.get_cost",
+            record.next_action,
+        )
+        self.assertIn(
+            "do not download bars",
+            record.next_action.lower(),
+        )
+
     def test_unregistered_config_defaults_to_idea(
         self,
     ) -> None:

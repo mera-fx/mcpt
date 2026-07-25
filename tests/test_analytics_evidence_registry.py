@@ -14,6 +14,7 @@ from analytics_evidence_registry import (
     metric_availability,
     validate_analytics_evidence_registry,
 )
+from experiment_lifecycle import EXPERIMENT_LIFECYCLE
 
 
 PROJECT_DIR = Path(__file__).resolve().parents[1]
@@ -24,7 +25,7 @@ class AnalyticsEvidenceRegistryTests(unittest.TestCase):
         registry = build_analytics_evidence_registry()
         self.assertEqual(
             set(registry),
-            {f"EXP-{number:03d}" for number in range(1, 19)},
+            set(EXPERIMENT_LIFECYCLE),
         )
 
     def test_registry_has_134_separate_strategy_series(self) -> None:
@@ -82,13 +83,39 @@ class AnalyticsEvidenceRegistryTests(unittest.TestCase):
 
     def test_data_source_experiments_are_not_strategy_series(self) -> None:
         registry = build_analytics_evidence_registry()
-        for number in range(15, 19):
-            experiment = registry[f"EXP-{number:03d}"]
+
+        data_source_ids = {
+            experiment_id
+            for experiment_id, experiment
+            in registry.items()
+            if experiment.analytics_kind
+            == AnalyticsKind.DATA_SOURCE_QUALIFICATION
+        }
+
+        self.assertEqual(
+            data_source_ids,
+            {
+                f"EXP-{number:03d}"
+                for number in range(15, 20)
+            },
+        )
+
+        for experiment_id in sorted(
+            data_source_ids
+        ):
+            experiment = registry[
+                experiment_id
+            ]
+
             self.assertEqual(
                 experiment.analytics_kind,
                 AnalyticsKind.DATA_SOURCE_QUALIFICATION,
             )
-            self.assertEqual(experiment.series, ())
+            self.assertEqual(
+                experiment.series,
+                (),
+            )
+
             for family in MetricFamily:
                 availability = metric_availability(
                     experiment,

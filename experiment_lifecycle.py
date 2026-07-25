@@ -701,6 +701,42 @@ EXPERIMENT_LIFECYCLE: dict[
         preregistration_file=Path("research/EXP-018_preregistration.md"),
     ),
 
+    "EXP-019": ExperimentLifecycle(
+        experiment_id="EXP-019",
+        experiment_name=(
+            "Databento NQ Maximum-History "
+            "Exact-Contract Archive Planning"
+        ),
+        hypothesis=(
+            "A date-bounded archive of exact quarterly NQ one-minute contracts "
+            "with explicit transition overlap may provide a transparent, "
+            "auditable basis for later continuous-series construction."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "The cost-estimation scope is locked before any EXP-019 OHLCV is "
+            "viewed: 66 quarterly contracts from NQM10 through NQU26, "
+            "2010-06-06 through 2026-07-24 exclusive, 30-day transition "
+            "overlaps, metadata-only quotes and a $35.00 acquisition cap."
+        ),
+        next_action=(
+            "Commit and push the EXP-019 preregistration. Then implement a "
+            "protected metadata.get_cost estimator tied to that commit. Do not "
+            "download bars, construct a continuous series or run a strategy "
+            "until the exact-contract quote is reviewed and separately approved."
+        ),
+        market_name="Exact quarterly NQ futures contracts",
+        timeframe=(
+            "One-minute maximum-history archive planning"
+        ),
+        strategy_name=(
+            "databento_nq_exact_contract_archive"
+        ),
+        preregistration_file=Path(
+            "research/EXP-019_preregistration.md"
+        ),
+    ),
+
 }
 
 

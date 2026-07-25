@@ -644,14 +644,23 @@ def validate_analytics_evidence_registry(
     require_files: bool = True,
 ) -> dict[str, ExperimentEvidenceSpec]:
     registry = build_analytics_evidence_registry()
-    expected_ids = {
-        f"EXP-{number:03d}"
-        for number in range(1, 19)
-    }
-    if set(registry) != expected_ids:
+    expected_ids = set(
+        EXPERIMENT_LIFECYCLE
+    )
+    actual_ids = set(registry)
+
+    if actual_ids != expected_ids:
+        missing = sorted(
+            expected_ids - actual_ids
+        )
+        unexpected = sorted(
+            actual_ids - expected_ids
+        )
         raise ValueError(
-            "Analytics registry experiment IDs do not match EXP-001 "
-            "through EXP-018."
+            "Analytics registry experiment IDs do not match "
+            "the lifecycle registry. "
+            f"Missing: {missing}; "
+            f"unexpected: {unexpected}."
         )
 
     strategy_ids = {
