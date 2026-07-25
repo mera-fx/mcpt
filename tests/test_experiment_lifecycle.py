@@ -216,7 +216,7 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.stage_reason,
         )
         self.assertIn(
-            "No roll-trigger",
+            "protected local constructor",
             record.stage_reason,
         )
         self.assertIn(
@@ -224,7 +224,11 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.stage_reason,
         )
         self.assertIn(
-            "protected local constructor",
+            "Construction has not run",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "separate one-time construction authorization",
             record.next_action,
         )
         self.assertIn(
