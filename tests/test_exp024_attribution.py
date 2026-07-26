@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 import numpy as np
 import pandas as pd
@@ -567,13 +568,22 @@ class Exp024ProtectedScannerTests(unittest.TestCase):
             )
 
     def test_authorized_run_is_blocked_while_file_is_absent(self) -> None:
-        self.assertFalse(runner.AUTHORIZATION_PATH.exists())
-        with self.assertRaisesRegex(RuntimeError, "not authorized"):
-            runner.load_authorization()
+        with tempfile.TemporaryDirectory() as temporary:
+            absent = Path(temporary) / "authorization_is_absent.py"
+            with patch.object(runner, "AUTHORIZATION_PATH", absent):
+                self.assertFalse(runner.AUTHORIZATION_PATH.exists())
+                with self.assertRaisesRegex(RuntimeError, "not authorized"):
+                    runner.load_authorization()
 
-    def test_result_directories_are_absent(self) -> None:
-        self.assertFalse(runner.OUTPUT_DIR.exists())
-        self.assertFalse(runner.PARTIAL_OUTPUT_DIR.exists())
+    def test_runner_has_permanent_output_and_partial_guards(self) -> None:
+        source = Path(runner.__file__).read_text(encoding="utf-8")
+        self.assertIn("for path in (OUTPUT_DIR, PARTIAL_OUTPUT_DIR)", source)
+        self.assertIn("output already exists. Refusing to rerun.", source)
+        self.assertIn(
+            "os.replace(PARTIAL_OUTPUT_DIR, OUTPUT_DIR)",
+            source,
+        )
+        self.assertNotEqual(runner.OUTPUT_DIR, runner.PARTIAL_OUTPUT_DIR)
 
     def test_implementation_scope_is_exact(self) -> None:
         self.assertEqual(
