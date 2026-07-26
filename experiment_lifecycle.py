@@ -753,18 +753,20 @@ EXPERIMENT_LIFECYCLE: dict[
             "the frozen EXP-019 archive into an auditable one-minute continuous "
             "NQ dataset without using strategy performance for method selection."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "EXP-020 is preregistered and its protected constructor is frozen "
-            "at implementation commit 36473b3. A separate one-time authorization "
-            "now permits exactly one local construction after the protected "
-            "read-only preflight passes. Construction has not run."
+            "EXP-020 completed one authorised local construction and passed "
+            "all 20 hard checks plus an independent rebuild. It produced four "
+            "5,463,753-row series and was classified "
+            "QUALIFIED_WITH_DISCLOSED_CALENDAR_FALLBACKS. The primary rule "
+            "selected 0 volume crossovers and used 65 calendar fallbacks, so "
+            "the volume-labelled and calendar-labelled market data are identical."
         ),
         next_action=(
-            "Commit and push the EXP-020 one-time authorization, then run only "
-            "the protected read-only preflight. Do not run construction until "
-            "that preflight is reviewed. Use zero Databento requests and run no "
-            "strategy, optimization, MCPT, paper or live trading."
+            "Freeze EXP-020 permanently and do not rerun any EXP-020 mode. "
+            "Preregister EXP-021 to diagnose why the volume trigger was inactive "
+            "and compare construction rules without strategy performance. "
+            "Do not run strategy, optimization, MCPT, paper or live trading."
         ),
         market_name=(
             "NQ futures continuous-series data"

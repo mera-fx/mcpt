@@ -200,7 +200,7 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.next_action.lower(),
         )
 
-    def test_exp020_is_preregistered_for_local_construction(
+    def test_exp020_is_closed_with_calendar_fallbacks(
         self,
     ) -> None:
         record = get_experiment_lifecycle(
@@ -209,42 +209,38 @@ class LifecycleRegistryTests(unittest.TestCase):
 
         self.assertEqual(
             record.stage,
-            "PRE_REGISTERED",
+            "REVIEW",
         )
         self.assertIn(
-            "protected constructor is frozen",
+            "20 hard checks",
             record.stage_reason,
         )
         self.assertIn(
-            "implementation commit 36473b3",
+            "QUALIFIED_WITH_DISCLOSED_CALENDAR_FALLBACKS",
             record.stage_reason,
         )
         self.assertIn(
-            "one-time authorization",
+            "0 volume crossovers",
             record.stage_reason,
         )
         self.assertIn(
-            "exactly one local construction",
+            "65 calendar fallbacks",
             record.stage_reason,
         )
         self.assertIn(
-            "Construction has not run",
-            record.stage_reason,
+            "freeze exp-020",
+            record.next_action.lower(),
         )
         self.assertIn(
-            "protected read-only preflight",
-            record.next_action,
+            "do not rerun any exp-020 mode",
+            record.next_action.lower(),
         )
         self.assertIn(
-            "Do not run construction",
-            record.next_action,
+            "preregister exp-021",
+            record.next_action.lower(),
         )
         self.assertIn(
-            "zero Databento requests",
-            record.next_action,
-        )
-        self.assertIn(
-            "no strategy",
+            "do not run strategy",
             record.next_action.lower(),
         )
 
