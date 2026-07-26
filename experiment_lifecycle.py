@@ -863,6 +863,47 @@ EXPERIMENT_LIFECYCLE: dict[
         ),
     ),
 
+    "EXP-023": ExperimentLifecycle(
+        experiment_id="EXP-023",
+        experiment_name=(
+            "NQ Frozen-Finalist Continuous-Series "
+            "Transfer Qualification"
+        ),
+        hypothesis=(
+            "The three unchanged EXP-014 finalists may preserve their "
+            "session eligibility, signal decisions and trade-level P&L "
+            "behaviour when replayed on the frozen EXP-022 backward-adjusted "
+            "series during the already-known 2020-2025 overlap."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "EXP-023 is locked before any transfer replay. The known "
+            "EXP-014 results and EXP-022 construction result are disclosed, "
+            "the backward-adjusted representation is selected in advance, "
+            "and all EXP-022 dates outside 2020-2025 remain protected from "
+            "strategy calculation."
+        ),
+        next_action=(
+            "Build and commit a protected result-free EXP-023 implementation, "
+            "then require separate one-time execution authorization before "
+            "the overlap diagnostic. Do not access out-of-overlap OHLCV "
+            "values, change a finalist, optimize, run MCPT, bootstrap or "
+            "walk-forward analysis, or begin paper or live trading."
+        ),
+        market_name=(
+            "NQ selected-roll continuous-series transfer data"
+        ),
+        timeframe=(
+            "One-minute execution and five-minute fixed-rule signals"
+        ),
+        strategy_name=(
+            "frozen_exp014_finalist_transfer_diagnostic"
+        ),
+        preregistration_file=Path(
+            "research/EXP-023_preregistration.md"
+        ),
+    ),
+
 }
 
 

@@ -48,6 +48,12 @@ class AnalyticsKind(str, Enum):
     DATA_SOURCE_QUALIFICATION = "DATA_SOURCE_QUALIFICATION"
 
 
+DATA_SOURCE_OR_ENGINEERING_EXPERIMENT_IDS = frozenset(
+    f"EXP-{number:03d}"
+    for number in range(15, 23)
+)
+
+
 class TradeSchema(str, Enum):
     BTC_HOURLY = "BTC_HOURLY"
     QQQ_QUICK_SCREEN = "QQQ_QUICK_SCREEN"
@@ -502,7 +508,8 @@ def build_analytics_evidence_registry() -> dict[
     for experiment_id, lifecycle in EXPERIMENT_LIFECYCLE.items():
         kind = (
             AnalyticsKind.DATA_SOURCE_QUALIFICATION
-            if experiment_id >= "EXP-015"
+            if experiment_id
+            in DATA_SOURCE_OR_ENGINEERING_EXPERIMENT_IDS
             else AnalyticsKind.STRATEGY
         )
         registry[experiment_id] = ExperimentEvidenceSpec(
@@ -663,18 +670,25 @@ def validate_analytics_evidence_registry(
             f"unexpected: {unexpected}."
         )
 
-    strategy_ids = {
-        f"EXP-{number:03d}"
-        for number in range(1, 15)
-    }
-    data_ids = expected_ids - strategy_ids
+    data_ids = (
+        expected_ids
+        & DATA_SOURCE_OR_ENGINEERING_EXPERIMENT_IDS
+    )
+    strategy_ids = expected_ids - data_ids
     for experiment_id in strategy_ids:
         experiment = registry[experiment_id]
         if experiment.analytics_kind != AnalyticsKind.STRATEGY:
             raise ValueError(
                 f"{experiment_id} must be a strategy experiment."
             )
-        if not experiment.series:
+        lifecycle = EXPERIMENT_LIFECYCLE[
+            experiment_id
+        ]
+        if (
+            not experiment.series
+            and lifecycle.stage
+            not in {"IDEA", "PRE_REGISTERED"}
+        ):
             raise ValueError(
                 f"{experiment_id} has no registered strategy series."
             )

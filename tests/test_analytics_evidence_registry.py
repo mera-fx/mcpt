@@ -130,6 +130,38 @@ class AnalyticsEvidenceRegistryTests(unittest.TestCase):
                     NOT_APPLICABLE_MESSAGE,
                 )
 
+    def test_exp023_is_a_preregistered_strategy_without_evidence(
+        self,
+    ) -> None:
+        registry = validate_analytics_evidence_registry(
+            PROJECT_DIR,
+            require_files=False,
+        )
+        experiment = registry["EXP-023"]
+
+        self.assertEqual(
+            experiment.analytics_kind,
+            AnalyticsKind.STRATEGY,
+        )
+        self.assertEqual(
+            experiment.series,
+            (),
+        )
+
+        for family in MetricFamily:
+            availability = metric_availability(
+                experiment,
+                family,
+            )
+            self.assertEqual(
+                availability.status,
+                AvailabilityStatus.NOT_AVAILABLE,
+            )
+            self.assertEqual(
+                availability.message,
+                NOT_AVAILABLE_MESSAGE,
+            )
+
     def test_no_series_points_at_generated_report_html(self) -> None:
         for series in all_series():
             for path in series.source_paths():

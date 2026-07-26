@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 import unittest
 
 from build_research_dashboard import (
@@ -349,6 +350,59 @@ class LifecycleRegistryTests(unittest.TestCase):
         )
         self.assertIsNotNone(
             record.preregistration_file
+        )
+
+    def test_exp023_is_preregistered_as_transfer_qualification(
+        self,
+    ) -> None:
+        record = get_experiment_lifecycle(
+            "EXP-023"
+        )
+
+        self.assertEqual(
+            record.stage,
+            "PRE_REGISTERED",
+        )
+        self.assertIn(
+            "three unchanged EXP-014 finalists",
+            record.hypothesis,
+        )
+        self.assertIn(
+            "2020-2025 overlap",
+            record.hypothesis,
+        )
+        self.assertIn(
+            "locked before any transfer replay",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "backward-adjusted representation",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "outside 2020-2025 remain protected",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "separate one-time execution authorization",
+            record.next_action,
+        )
+        self.assertIn(
+            "do not access out-of-overlap",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "do not",
+            record.next_action.lower(),
+        )
+        self.assertIsNotNone(
+            record.preregistration_file
+        )
+        self.assertEqual(
+            record.preregistration_file,
+            Path(
+                "research/EXP-023_preregistration.md"
+            ),
         )
 
     def test_unregistered_config_defaults_to_idea(
