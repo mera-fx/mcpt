@@ -782,6 +782,42 @@ EXPERIMENT_LIFECYCLE: dict[
         ),
     ),
 
+    "EXP-021": ExperimentLifecycle(
+        experiment_id="EXP-021",
+        experiment_name=(
+            "NQ Volume-Roll Trigger Diagnostic "
+            "and Rule Selection"
+        ),
+        hypothesis=(
+            "The inactive EXP-020 volume trigger may be explained by its "
+            "two-session requirement and calendar-boundary cap. A fixed "
+            "eight-candidate diagnostic grid may identify a distinct, "
+            "auditable volume rule without using strategy performance."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "EXP-021 is preregistered as a diagnostic-only local study. "
+            "The known EXP-020 result of 0 volume crossovers and 65 calendar "
+            "fallbacks is disclosed. Eight candidate rules are locked before "
+            "execution, and no candidate diagnostic result has been viewed."
+        ),
+        next_action=(
+            "Commit and push the EXP-021 preregistration, then design a "
+            "separately locked protected diagnostic implementation. Do not "
+            "rerun EXP-019 or EXP-020, construct a continuous series, request "
+            "Databento data, or run strategy, optimization, MCPT, paper or "
+            "live trading."
+        ),
+        market_name="NQ exact-contract roll diagnostics",
+        timeframe=(
+            "One-minute source aggregated by New York trading date"
+        ),
+        strategy_name="nq_volume_roll_trigger_diagnostic",
+        preregistration_file=Path(
+            "research/EXP-021_preregistration.md"
+        ),
+    ),
+
 }
 
 
