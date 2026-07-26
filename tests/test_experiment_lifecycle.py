@@ -425,6 +425,44 @@ class LifecycleRegistryTests(unittest.TestCase):
             ),
         )
 
+    def test_exp024_is_preregistered_for_mismatch_attribution(
+        self,
+    ) -> None:
+        record = get_experiment_lifecycle("EXP-024")
+
+        self.assertEqual(record.stage, "PRE_REGISTERED")
+        self.assertIn("51 frozen EXP-023", record.hypothesis)
+        self.assertIn(
+            "without accessing protected history",
+            record.hypothesis,
+        )
+        self.assertIn(
+            "before any complete cross-source feature attribution",
+            record.stage_reason,
+        )
+        self.assertIn("all 51 primary mismatch rows", record.stage_reason)
+        self.assertIn(
+            "result-free EXP-024 implementation",
+            record.next_action,
+        )
+        self.assertIn(
+            "separate one-time execution authorization",
+            record.next_action,
+        )
+        self.assertIn(
+            "do not rerun exp-023",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "calculate p&l",
+            record.next_action.lower(),
+        )
+        self.assertIsNotNone(record.preregistration_file)
+        self.assertEqual(
+            record.preregistration_file,
+            Path("research/EXP-024_preregistration.md"),
+        )
+
     def test_unregistered_config_defaults_to_idea(
         self,
     ) -> None:

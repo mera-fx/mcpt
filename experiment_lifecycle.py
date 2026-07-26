@@ -909,6 +909,47 @@ EXPERIMENT_LIFECYCLE: dict[
         ),
     ),
 
+    "EXP-024": ExperimentLifecycle(
+        experiment_id="EXP-024",
+        experiment_name=(
+            "NQ Cross-Source Signal-Disagreement Attribution"
+        ),
+        hypothesis=(
+            "The 51 frozen EXP-023 primary candidate-session mismatches "
+            "may be attributable to prespecified eligibility, normalized-"
+            "context, direction-confirmation or entry-risk components "
+            "without accessing protected history or calculating strategy "
+            "performance."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "EXP-024 is locked before any complete cross-source feature "
+            "attribution. The known EXP-023 result, all 51 primary mismatch "
+            "rows, the opaque Quantower roll methodology and the explicit "
+            "Databento roll context are disclosed in advance."
+        ),
+        next_action=(
+            "Build and commit a result-free EXP-024 implementation that may "
+            "inspect only entry-decision inputs for the 51 frozen mismatch "
+            "rows. Then require a protected preflight and separate one-time "
+            "execution authorization. Do not rerun EXP-023, read protected "
+            "or post-entry OHLCV, calculate P&L, change a rule, rank a "
+            "candidate or source, or begin paper or live trading."
+        ),
+        market_name=(
+            "NQ Quantower versus Databento-derived continuous series"
+        ),
+        timeframe=(
+            "One-minute source inputs and five-minute entry decisions"
+        ),
+        strategy_name=(
+            "cross_source_signal_disagreement_attribution"
+        ),
+        preregistration_file=Path(
+            "research/EXP-024_preregistration.md"
+        ),
+    ),
+
 }
 
 
