@@ -59,12 +59,39 @@ IMPLEMENTATION_PATHS = (
     "tests/test_exp024_attribution.py",
     "research/EXP-024_implementation_report.md",
 )
+ORIGINAL_IMPLEMENTATION_COMMIT = (
+    "34f7d4c83dee025108229d5247e9cb4f87398a59"
+)
 AUTHORIZATION_MODULE = "exp024_attribution_authorization"
 AUTHORIZATION_PATH = PROJECT_DIR / "exp024_attribution_authorization.py"
 AUTHORIZATION_PATHS = (
     "exp024_attribution_authorization.py",
     "research/EXP-024_attribution_authorization.md",
     "tests/test_exp024_attribution_authorization.py",
+)
+ORIGINAL_AUTHORIZATION_COMMIT = (
+    "55ae174f5517bdb5afc48f5a36f5268fbc1eb42a"
+)
+FAILED_ATTEMPT_MODULE = "exp024_attempt_001_failure"
+FAILED_ATTEMPT_PATH = PROJECT_DIR / "exp024_attempt_001_failure.py"
+REPLACEMENT_IMPLEMENTATION_PATHS = (
+    "exp024_attribution.py",
+    "tests/test_exp024_attribution.py",
+    "exp024_attempt_001_failure.py",
+    "tests/test_exp024_attempt_001_failure.py",
+    "research/EXP-024_attempt_001_failure.md",
+    "research/EXP-024_replacement_implementation_report.md",
+)
+REPLACEMENT_AUTHORIZATION_MODULE = (
+    "exp024_replacement_authorization"
+)
+REPLACEMENT_AUTHORIZATION_PATH = (
+    PROJECT_DIR / "exp024_replacement_authorization.py"
+)
+REPLACEMENT_AUTHORIZATION_PATHS = (
+    "exp024_replacement_authorization.py",
+    "research/EXP-024_replacement_authorization.md",
+    "tests/test_exp024_replacement_authorization.py",
 )
 
 EXP023_DIR = PROJECT_DIR / "results" / "EXP-023" / "transfer_qualification"
@@ -348,6 +375,8 @@ def write_csv(path: Path, frame: pd.DataFrame) -> None:
 
 
 def load_authorization() -> dict[str, Any]:
+    """Load the consumed original authorization for audit compatibility."""
+
     if not AUTHORIZATION_PATH.is_file():
         raise RuntimeError(
             "EXP-024 attribution execution is not authorized. "
@@ -396,6 +425,100 @@ def load_authorization() -> dict[str, Any]:
         raise RuntimeError(
             "EXP-024 locked implementation commit is invalid."
         )
+    return record
+
+
+def load_replacement_authorization() -> dict[str, Any]:
+    if not REPLACEMENT_AUTHORIZATION_PATH.is_file():
+        raise RuntimeError(
+            "EXP-024 replacement execution is not authorized. "
+            "The separate replacement authorization file is absent."
+        )
+    module = importlib.import_module(
+        REPLACEMENT_AUTHORIZATION_MODULE
+    )
+    validator = getattr(
+        module,
+        "validate_exp024_replacement_authorization",
+        None,
+    )
+    getter = getattr(
+        module,
+        "get_exp024_replacement_authorization",
+        None,
+    )
+    if validator is None or getter is None:
+        raise RuntimeError(
+            "EXP-024 replacement authorization interface is incomplete."
+        )
+    validator()
+    record = getter()
+    if (
+        record.get("experiment_id") != "EXP-024"
+        or record.get("authorization_id")
+        != "EXP-024-ATTRIBUTION-AUTH-002"
+        or record.get("replacement_execution_authorized") is not True
+        or record.get("one_time_replacement_run") is not True
+        or record.get("maximum_replacement_runs") != 1
+        or record.get("original_authorization_consumed") is not True
+        or tuple(record.get("candidate_ids", ())) != CANDIDATE_IDS
+        or record.get("candidate_session_row_count") != 51
+        or record.get("out_of_overlap_access_authorized") is not False
+        or record.get("current_post_entry_access_authorized") is not False
+        or record.get("strategy_replay_authorized") is not False
+        or record.get("network_access_authorized") is not False
+        or record.get("optimization_authorized") is not False
+        or record.get("paper_trading_authorized") is not False
+        or record.get("live_trading_authorized") is not False
+    ):
+        raise RuntimeError(
+            "EXP-024 replacement authorization boundary changed."
+        )
+    implementation_commit = record.get(
+        "locked_replacement_implementation_commit"
+    )
+    if (
+        not isinstance(implementation_commit, str)
+        or len(implementation_commit) != 40
+    ):
+        raise RuntimeError(
+            "EXP-024 locked replacement implementation commit is invalid."
+        )
+    return record
+
+
+def verify_failed_attempt_record() -> dict[str, Any]:
+    if not FAILED_ATTEMPT_PATH.is_file():
+        raise RuntimeError("EXP-024 failed-attempt record is absent.")
+    module = importlib.import_module(FAILED_ATTEMPT_MODULE)
+    validator = getattr(
+        module,
+        "validate_exp024_attempt_001_failure",
+        None,
+    )
+    getter = getattr(
+        module,
+        "get_exp024_attempt_001_failure",
+        None,
+    )
+    if validator is None or getter is None:
+        raise RuntimeError(
+            "EXP-024 failed-attempt interface is incomplete."
+        )
+    validator()
+    record = getter()
+    if (
+        record.get("experiment_id") != "EXP-024"
+        or record.get("attempt_id") != "EXP-024-ATTEMPT-001"
+        or record.get("execution_head") != ORIGINAL_AUTHORIZATION_COMMIT
+        or record.get("attribution_calculated") is not False
+        or record.get("databento_values_materialized") is not False
+        or record.get("final_output_created") is not False
+        or record.get("partial_output_created") is not False
+        or record.get("original_authorization_consumed") is not True
+        or record.get("retry_under_original_authorization") is not False
+    ):
+        raise RuntimeError("EXP-024 failed-attempt record changed.")
     return record
 
 
@@ -682,25 +805,137 @@ def implementation_preflight() -> dict[str, Any]:
     }
 
 
-def repository_preflight() -> dict[str, Any]:
-    """Authorized preflight. It still calculates no attribution result."""
-
-    state = _base_repository_state()
-    authorization = load_authorization()
-    implementation_commit = authorization["locked_implementation_commit"]
+def _verify_original_execution_chain() -> dict[str, Any]:
+    original_authorization = load_authorization()
+    if (
+        original_authorization["locked_implementation_commit"]
+        != ORIGINAL_IMPLEMENTATION_COMMIT
+    ):
+        raise RuntimeError(
+            "EXP-024 original implementation identity changed."
+        )
     if changed_paths(
         LOCKED_PREREGISTRATION_COMMIT,
-        implementation_commit,
+        ORIGINAL_IMPLEMENTATION_COMMIT,
     ) != set(IMPLEMENTATION_PATHS):
-        raise RuntimeError("EXP-024 implementation scope changed.")
+        raise RuntimeError("EXP-024 original implementation scope changed.")
+    if (
+        commit_that_added("exp024_attribution_authorization.py")
+        != ORIGINAL_AUTHORIZATION_COMMIT
+    ):
+        raise RuntimeError(
+            "EXP-024 original authorization commit changed."
+        )
+    if changed_paths(
+        ORIGINAL_IMPLEMENTATION_COMMIT,
+        ORIGINAL_AUTHORIZATION_COMMIT,
+    ) != set(AUTHORIZATION_PATHS):
+        raise RuntimeError("EXP-024 original authorization scope changed.")
+    if run_git(
+        "diff",
+        "--quiet",
+        ORIGINAL_AUTHORIZATION_COMMIT,
+        "HEAD",
+        "--",
+        *PREREGISTRATION_PATHS,
+        "exp024_attribution_core.py",
+        "research/EXP-024_implementation_report.md",
+        *AUTHORIZATION_PATHS,
+        check=False,
+    ).returncode != 0:
+        raise RuntimeError(
+            "Frozen original EXP-024 records changed after attempt 001."
+        )
+    if (
+        run_git(
+            "merge-base",
+            "--is-ancestor",
+            ORIGINAL_IMPLEMENTATION_COMMIT,
+            ORIGINAL_AUTHORIZATION_COMMIT,
+            check=False,
+        ).returncode
+        != 0
+        or run_git(
+            "merge-base",
+            "--is-ancestor",
+            ORIGINAL_AUTHORIZATION_COMMIT,
+            "HEAD",
+            check=False,
+        ).returncode
+        != 0
+    ):
+        raise RuntimeError(
+            "EXP-024 original execution ancestry is invalid."
+        )
+    return {
+        "original_implementation_commit": (
+            ORIGINAL_IMPLEMENTATION_COMMIT
+        ),
+        "original_authorization_commit": (
+            ORIGINAL_AUTHORIZATION_COMMIT
+        ),
+    }
+
+
+def replacement_implementation_preflight() -> dict[str, Any]:
+    """Result-free preflight for the attempt-001 loader correction."""
+
+    state = _base_repository_state()
+    chain = _verify_original_execution_chain()
+    if REPLACEMENT_AUTHORIZATION_PATH.exists():
+        raise RuntimeError(
+            "EXP-024 replacement authorization already exists; use the "
+            "authorized repository preflight."
+        )
+    if changed_paths(
+        ORIGINAL_AUTHORIZATION_COMMIT,
+        state["head"],
+    ) != set(REPLACEMENT_IMPLEMENTATION_PATHS):
+        raise RuntimeError(
+            "EXP-024 replacement implementation scope changed."
+        )
+    failed_attempt = verify_failed_attempt_record()
+    evidence = verify_frozen_evidence()
+    return {
+        **state,
+        **chain,
+        **evidence,
+        "failed_attempt": failed_attempt,
+        "implementation_commit": state["head"],
+        "authorization_commit": None,
+        "authorization_present": False,
+        "market_values_materialized": False,
+        "result_calculated": False,
+        "replacement_run_calculated": False,
+    }
+
+
+def repository_preflight() -> dict[str, Any]:
+    """Replacement-authorized preflight; calculates no attribution."""
+
+    state = _base_repository_state()
+    chain = _verify_original_execution_chain()
+    authorization = load_replacement_authorization()
+    implementation_commit = authorization[
+        "locked_replacement_implementation_commit"
+    ]
+    if changed_paths(
+        ORIGINAL_AUTHORIZATION_COMMIT,
+        implementation_commit,
+    ) != set(REPLACEMENT_IMPLEMENTATION_PATHS):
+        raise RuntimeError(
+            "EXP-024 replacement implementation scope changed."
+        )
     authorization_commit = commit_that_added(
-        "exp024_attribution_authorization.py"
+        "exp024_replacement_authorization.py"
     )
     if changed_paths(
         implementation_commit,
         authorization_commit,
-    ) != set(AUTHORIZATION_PATHS):
-        raise RuntimeError("EXP-024 authorization scope changed.")
+    ) != set(REPLACEMENT_AUTHORIZATION_PATHS):
+        raise RuntimeError(
+            "EXP-024 replacement authorization scope changed."
+        )
     if (
         run_git(
             "merge-base",
@@ -720,12 +955,15 @@ def repository_preflight() -> dict[str, Any]:
         != 0
     ):
         raise RuntimeError(
-            "EXP-024 implementation/authorization ancestry is invalid."
+            "EXP-024 replacement implementation/authorization ancestry "
+            "is invalid."
         )
     protected_paths = (
         *PREREGISTRATION_PATHS,
         *IMPLEMENTATION_PATHS,
         *AUTHORIZATION_PATHS,
+        *REPLACEMENT_IMPLEMENTATION_PATHS,
+        *REPLACEMENT_AUTHORIZATION_PATHS,
     )
     if run_git(
         "diff",
@@ -737,17 +975,22 @@ def repository_preflight() -> dict[str, Any]:
         check=False,
     ).returncode != 0:
         raise RuntimeError(
-            "Protected EXP-024 files changed after authorization."
+            "Protected EXP-024 replacement files changed after "
+            "authorization."
         )
+    failed_attempt = verify_failed_attempt_record()
     evidence = verify_frozen_evidence()
     return {
         **state,
+        **chain,
         **evidence,
+        "failed_attempt": failed_attempt,
         "implementation_commit": implementation_commit,
         "authorization_commit": authorization_commit,
         "authorization_present": True,
         "market_values_materialized": False,
         "result_calculated": False,
+        "replacement_run_calculated": False,
     }
 
 
@@ -835,6 +1078,13 @@ def scan_parquet_intervals(
     if tuple(table.column_names) != tuple(columns):
         raise RuntimeError("EXP-024 Arrow projection changed.")
     frame = table.to_pandas(split_blocks=True, self_destruct=True)
+    if timestamp_column not in frame.columns:
+        if frame.index.name != timestamp_column:
+            raise RuntimeError(
+                "EXP-024 projected timestamp was neither a column nor "
+                "the restored pandas index."
+            )
+        frame = frame.reset_index()
     timestamps = pd.to_datetime(
         frame[timestamp_column],
         utc=True,
@@ -1902,6 +2152,26 @@ def print_preflight(preflight: Mapping[str, Any]) -> None:
     print("======================================")
 
 
+def print_replacement_preflight(
+    preflight: Mapping[str, Any],
+) -> None:
+    print()
+    print("EXP-024 REPLACEMENT RESULT-FREE PREFLIGHT")
+    print("=========================================")
+    print("Status:          CORRECTED_NOT_REAUTHORIZED_NOT_RUN")
+    print("Attempt 001:     failed before attribution")
+    print("Correction:      restore projected timestamp index")
+    print("Rows:            51 candidate-session mismatches")
+    print("Market values:   not materialized by this preflight")
+    print("Post-entry data: prohibited")
+    print("Protected dates: prohibited")
+    print("API/network:     disabled")
+    print(f"Git commit:      {preflight['head'][:12]}")
+    print("Results:         not calculated")
+    print("Next gate:       replacement authorization 002")
+    print("=========================================")
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -1915,6 +2185,11 @@ def parse_args() -> argparse.Namespace:
         help="Run the result-free implementation preflight.",
     )
     action.add_argument(
+        "--replacement-preflight",
+        action="store_true",
+        help="Run the result-free replacement-implementation preflight.",
+    )
+    action.add_argument(
         "--run",
         action="store_true",
         help="Execute the single separately authorized attribution.",
@@ -1926,6 +2201,11 @@ def main() -> None:
     args = parse_args()
     if args.preflight:
         print_preflight(implementation_preflight())
+        return
+    if args.replacement_preflight:
+        print_replacement_preflight(
+            replacement_implementation_preflight()
+        )
         return
     summary = run_attribution()
     print()

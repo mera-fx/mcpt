@@ -472,6 +472,50 @@ class Exp024ProtectedScannerTests(unittest.TestCase):
         self.assertTrue(audit[0]["row_filter_before_materialization"])
         self.assertTrue(audit[0]["column_projection_before_materialization"])
 
+    def test_scanner_restores_projected_pandas_timestamp_index(
+        self,
+    ) -> None:
+        frame = pd.DataFrame(
+            {
+                "open": [1.0, 2.0, 3.0, 4.0],
+                "high": [9.0] * 4,
+                "low": [0.0] * 4,
+                "close": [8.0] * 4,
+                "volume": [999] * 4,
+            },
+            index=pd.DatetimeIndex(
+                pd.to_datetime(
+                    [
+                        "2024-01-03T12:59:00Z",
+                        "2024-01-03T13:00:00Z",
+                        "2024-01-03T14:34:00Z",
+                        "2024-01-03T14:35:00Z",
+                    ],
+                    utc=True,
+                ),
+                name="timestamp",
+            ),
+        )
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "pandas-index.parquet"
+            frame.to_parquet(path, index=True)
+            result = runner.scan_parquet_intervals(
+                path,
+                timestamp_column="timestamp",
+                columns=("timestamp", "open"),
+                intervals=(
+                    (
+                        pd.Timestamp("2024-01-03T13:00:00Z"),
+                        pd.Timestamp("2024-01-03T14:35:00Z"),
+                    ),
+                ),
+            )
+        self.assertEqual(result.columns.tolist(), ["timestamp", "open"])
+        self.assertEqual(result["open"].tolist(), [2.0, 3.0])
+        self.assertTrue(
+            pd.api.types.is_datetime64_any_dtype(result["timestamp"])
+        )
+
     def test_volume_projection_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "volume materialization"):
             runner.scan_parquet_intervals(
@@ -575,6 +619,22 @@ class Exp024ProtectedScannerTests(unittest.TestCase):
                 with self.assertRaisesRegex(RuntimeError, "not authorized"):
                     runner.load_authorization()
 
+    def test_replacement_run_is_blocked_while_file_is_absent(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            absent = Path(temporary) / "replacement_is_absent.py"
+            with patch.object(
+                runner,
+                "REPLACEMENT_AUTHORIZATION_PATH",
+                absent,
+            ):
+                with self.assertRaisesRegex(
+                    RuntimeError,
+                    "replacement execution is not authorized",
+                ):
+                    runner.load_replacement_authorization()
+
     def test_runner_has_permanent_output_and_partial_guards(self) -> None:
         source = Path(runner.__file__).read_text(encoding="utf-8")
         self.assertIn("for path in (OUTPUT_DIR, PARTIAL_OUTPUT_DIR)", source)
@@ -598,6 +658,17 @@ class Exp024ProtectedScannerTests(unittest.TestCase):
         self.assertNotIn(
             "exp024_attribution_authorization.py",
             runner.IMPLEMENTATION_PATHS,
+        )
+        self.assertEqual(
+            set(runner.REPLACEMENT_IMPLEMENTATION_PATHS),
+            {
+                "exp024_attribution.py",
+                "tests/test_exp024_attribution.py",
+                "exp024_attempt_001_failure.py",
+                "tests/test_exp024_attempt_001_failure.py",
+                "research/EXP-024_attempt_001_failure.md",
+                "research/EXP-024_replacement_implementation_report.md",
+            },
         )
 
 
