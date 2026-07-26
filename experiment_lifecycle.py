@@ -875,20 +875,25 @@ EXPERIMENT_LIFECYCLE: dict[
             "behaviour when replayed on the frozen EXP-022 backward-adjusted "
             "series during the already-known 2020-2025 overlap."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "EXP-023 is locked before any transfer replay. The known "
-            "EXP-014 results and EXP-022 construction result are disclosed, "
-            "the backward-adjusted representation is selected in advance, "
-            "and all EXP-022 dates outside 2020-2025 remain protected from "
-            "strategy calculation."
+            "EXP-023 closed as "
+            "TRANSFER_DIAGNOSTIC_COMPLETE_WITH_MATERIAL_DIFFERENCES after "
+            "20 hard checks and an independent rebuild. The primary "
+            "backward-adjusted replay passed all locked transfer gates for "
+            "premarket_continuation_0p50_time, while gap_fade_0p50_1r "
+            "failed three gates and premarket_continuation_0p75_time "
+            "narrowly failed the 1% trade-count-difference gate. No "
+            "protected earlier or 2026 strategy history was accessed."
         ),
         next_action=(
-            "Build and commit a protected result-free EXP-023 implementation, "
-            "then require separate one-time execution authorization before "
-            "the overlap diagnostic. Do not access out-of-overlap OHLCV "
-            "values, change a finalist, optimize, run MCPT, bootstrap or "
-            "walk-forward analysis, or begin paper or live trading."
+            "Freeze EXP-023 permanently and do not rerun its preflight or "
+            "transfer diagnostic. Preserve all three finalists as separate "
+            "evidence rows; do not select or rescue a winner, change a gate, "
+            "or access protected history under EXP-023. Any follow-up "
+            "requires a new experiment ID, separate preregistration and "
+            "separate execution authorization. Do not begin paper or live "
+            "trading."
         ),
         market_name=(
             "NQ selected-roll continuous-series transfer data"

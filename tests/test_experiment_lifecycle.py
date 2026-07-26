@@ -352,7 +352,7 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.preregistration_file
         )
 
-    def test_exp023_is_preregistered_as_transfer_qualification(
+    def test_exp023_is_closed_with_material_transfer_differences(
         self,
     ) -> None:
         record = get_experiment_lifecycle(
@@ -361,7 +361,7 @@ class LifecycleRegistryTests(unittest.TestCase):
 
         self.assertEqual(
             record.stage,
-            "PRE_REGISTERED",
+            "REVIEW",
         )
         self.assertIn(
             "three unchanged EXP-014 finalists",
@@ -372,27 +372,47 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.hypothesis,
         )
         self.assertIn(
-            "locked before any transfer replay",
+            "TRANSFER_DIAGNOSTIC_COMPLETE_WITH_MATERIAL_DIFFERENCES",
             record.stage_reason,
         )
         self.assertIn(
-            "backward-adjusted representation",
+            "20 hard checks",
             record.stage_reason,
         )
         self.assertIn(
-            "outside 2020-2025 remain protected",
+            "premarket_continuation_0p50_time",
             record.stage_reason,
         )
         self.assertIn(
-            "separate one-time execution authorization",
-            record.next_action,
+            "gap_fade_0p50_1r",
+            record.stage_reason,
         )
         self.assertIn(
-            "do not access out-of-overlap",
+            "1% trade-count-difference gate",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "do not rerun",
             record.next_action.lower(),
         )
         self.assertIn(
-            "do not",
+            "all three finalists as separate evidence rows",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "do not select or rescue a winner",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "new experiment id",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "separate preregistration",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "do not begin paper or live trading",
             record.next_action.lower(),
         )
         self.assertIsNotNone(

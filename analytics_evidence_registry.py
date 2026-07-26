@@ -22,6 +22,12 @@ NOT_APPLICABLE_MESSAGE = (
 )
 
 
+NONCANONICAL_DIAGNOSTIC_MESSAGE = (
+    "Frozen transfer-diagnostic evidence is available, but it is not "
+    "exposed as canonical strategy-series analytics"
+)
+
+
 class AvailabilityStatus(str, Enum):
     AVAILABLE = "AVAILABLE"
     NOT_AVAILABLE = "NOT_AVAILABLE"
@@ -52,6 +58,23 @@ DATA_SOURCE_OR_ENGINEERING_EXPERIMENT_IDS = frozenset(
     f"EXP-{number:03d}"
     for number in range(15, 23)
 )
+
+NONCANONICAL_STRATEGY_DIAGNOSTIC_EVIDENCE = {
+    "EXP-023": (
+        Path(
+            "results/EXP-023/transfer_qualification/"
+            "transfer_summary.json"
+        ),
+        Path(
+            "results/EXP-023/transfer_qualification/"
+            "candidate_transfer_metrics.csv"
+        ),
+        Path(
+            "results/EXP-023/transfer_qualification/"
+            "report.html"
+        ),
+    ),
+}
 
 
 class TradeSchema(str, Enum):
@@ -536,6 +559,17 @@ def metric_availability(
 
     if series is None:
         if not experiment.series:
+            diagnostic_paths = (
+                NONCANONICAL_STRATEGY_DIAGNOSTIC_EVIDENCE.get(
+                    experiment.experiment_id
+                )
+            )
+            if diagnostic_paths is not None:
+                return MetricAvailability(
+                    AvailabilityStatus.NOT_AVAILABLE,
+                    NONCANONICAL_DIAGNOSTIC_MESSAGE,
+                    diagnostic_paths,
+                )
             return MetricAvailability(
                 AvailabilityStatus.NOT_AVAILABLE,
                 NOT_AVAILABLE_MESSAGE,
@@ -675,6 +709,14 @@ def validate_analytics_evidence_registry(
         & DATA_SOURCE_OR_ENGINEERING_EXPERIMENT_IDS
     )
     strategy_ids = expected_ids - data_ids
+    diagnostic_ids = set(
+        NONCANONICAL_STRATEGY_DIAGNOSTIC_EVIDENCE
+    )
+    if not diagnostic_ids.issubset(strategy_ids):
+        raise ValueError(
+            "Noncanonical strategy diagnostics must be registered "
+            "strategy experiments."
+        )
     for experiment_id in strategy_ids:
         experiment = registry[experiment_id]
         if experiment.analytics_kind != AnalyticsKind.STRATEGY:
@@ -688,9 +730,22 @@ def validate_analytics_evidence_registry(
             not experiment.series
             and lifecycle.stage
             not in {"IDEA", "PRE_REGISTERED"}
+            and experiment_id not in diagnostic_ids
         ):
             raise ValueError(
                 f"{experiment_id} has no registered strategy series."
+            )
+    for experiment_id in diagnostic_ids:
+        experiment = registry[experiment_id]
+        lifecycle = EXPERIMENT_LIFECYCLE[experiment_id]
+        if lifecycle.stage != "REVIEW":
+            raise ValueError(
+                f"{experiment_id} noncanonical diagnostic is not closed."
+            )
+        if experiment.series:
+            raise ValueError(
+                f"{experiment_id} noncanonical diagnostic must not "
+                "expose canonical strategy series."
             )
     for experiment_id in data_ids:
         experiment = registry[experiment_id]
