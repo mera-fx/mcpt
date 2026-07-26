@@ -821,6 +821,46 @@ EXPERIMENT_LIFECYCLE: dict[
         ),
     ),
 
+    "EXP-022": ExperimentLifecycle(
+        experiment_id="EXP-022",
+        experiment_name=(
+            "NQ Selected Volume-Roll "
+            "Continuous-Series Construction"
+        ),
+        hypothesis=(
+            "The frozen EXP-021 VOL_GT_OUT_2S_E3 roll ledger may be "
+            "transformed into deterministic unadjusted and backward-adjusted "
+            "one-minute NQ continuous-series representations without "
+            "reselecting the roll rule or using strategy performance."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "EXP-022 is preregistered as construction-only data engineering. "
+            "It locks the EXP-021-selected VOL_GT_OUT_2S_E3 schedule with "
+            "40 volume-driven transitions and 25 disclosed calendar "
+            "fallbacks. No EXP-022 construction result has been viewed."
+        ),
+        next_action=(
+            "Commit and push the EXP-022 preregistration, then create a "
+            "separately locked protected implementation. Do not rerun "
+            "EXP-019, EXP-020 or EXP-021, recalculate roll dates, request "
+            "Databento data, or run strategy, optimization, MCPT, paper or "
+            "live trading."
+        ),
+        market_name=(
+            "NQ selected-roll continuous-series data"
+        ),
+        timeframe=(
+            "One-minute local data engineering"
+        ),
+        strategy_name=(
+            "nq_selected_volume_roll_continuous_series"
+        ),
+        preregistration_file=Path(
+            "research/EXP-022_preregistration.md"
+        ),
+    ),
+
 }
 
 

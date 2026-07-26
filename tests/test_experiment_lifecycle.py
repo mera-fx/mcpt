@@ -296,6 +296,45 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.next_action.lower(),
         )
 
+    def test_exp022_is_preregistered_for_selected_construction(
+        self,
+    ) -> None:
+        record = get_experiment_lifecycle(
+            "EXP-022"
+        )
+
+        self.assertEqual(
+            record.stage,
+            "PRE_REGISTERED",
+        )
+        self.assertIn(
+            "VOL_GT_OUT_2S_E3",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "40 volume-driven transitions",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "25 disclosed calendar fallbacks",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "protected implementation",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "do not rerun exp-019, exp-020 or exp-021",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "do not",
+            record.next_action.lower(),
+        )
+        self.assertIsNotNone(
+            record.preregistration_file
+        )
+
     def test_unregistered_config_defaults_to_idea(
         self,
     ) -> None:
