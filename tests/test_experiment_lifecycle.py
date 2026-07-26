@@ -244,7 +244,7 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.next_action.lower(),
         )
 
-    def test_exp021_is_preregistered_for_roll_diagnostics(
+    def test_exp021_is_closed_with_selected_roll_rule(
         self,
     ) -> None:
         record = get_experiment_lifecycle(
@@ -253,30 +253,47 @@ class LifecycleRegistryTests(unittest.TestCase):
 
         self.assertEqual(
             record.stage,
-            "PRE_REGISTERED",
+            "REVIEW",
         )
         self.assertIn(
-            "0 volume crossovers",
+            "16 hard checks",
             record.stage_reason,
         )
         self.assertIn(
-            "65 calendar fallbacks",
+            "VOL_GT_OUT_2S_E3",
             record.stage_reason,
         )
         self.assertIn(
-            "eight candidate rules",
-            record.stage_reason.lower(),
+            "40 of 42 clean",
+            record.stage_reason,
         )
         self.assertIn(
-            "diagnostic implementation",
+            "23 warning",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "2 clean transitions",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "not equivalent",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "freeze exp-021",
             record.next_action.lower(),
         )
         self.assertIn(
-            "do not rerun exp-019 or exp-020",
+            "do not rerun",
             record.next_action.lower(),
         )
-        self.assertIsNotNone(
-            record.preregistration_file
+        self.assertIn(
+            "preregister exp-022",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "do not run strategy",
+            record.next_action.lower(),
         )
 
     def test_unregistered_config_defaults_to_idea(

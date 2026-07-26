@@ -794,19 +794,22 @@ EXPERIMENT_LIFECYCLE: dict[
             "eight-candidate diagnostic grid may identify a distinct, "
             "auditable volume rule without using strategy performance."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "EXP-021 is preregistered as a diagnostic-only local study. "
-            "The known EXP-020 result of 0 volume crossovers and 65 calendar "
-            "fallbacks is disclosed. Eight candidate rules are locked before "
-            "execution, and no candidate diagnostic result has been viewed."
+            "EXP-021 completed one authorised local diagnostic and passed "
+            "all 16 hard checks plus an independent rebuild. The locked "
+            "selection order chose VOL_GT_OUT_2S_E3: 40 of 42 clean "
+            "transitions used volume-driven boundaries, while 23 warning "
+            "transitions and 2 clean transitions used calendar fallback. "
+            "Three candidates passed, but their roll schedules were not "
+            "equivalent."
         ),
         next_action=(
-            "Commit and push the EXP-021 preregistration, then design a "
-            "separately locked protected diagnostic implementation. Do not "
-            "rerun EXP-019 or EXP-020, construct a continuous series, request "
-            "Databento data, or run strategy, optimization, MCPT, paper or "
-            "live trading."
+            "Freeze EXP-021 permanently and do not rerun its preflight or "
+            "diagnostic. Preregister EXP-022 before constructing a continuous "
+            "series from VOL_GT_OUT_2S_E3. Do not reinterpret this operational "
+            "selection as strategy edge, and do not run strategy, optimization, "
+            "MCPT, paper or live trading."
         ),
         market_name="NQ exact-contract roll diagnostics",
         timeframe=(
