@@ -833,19 +833,21 @@ EXPERIMENT_LIFECYCLE: dict[
             "one-minute NQ continuous-series representations without "
             "reselecting the roll rule or using strategy performance."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "EXP-022 is preregistered as construction-only data engineering. "
-            "It locks the EXP-021-selected VOL_GT_OUT_2S_E3 schedule with "
-            "40 volume-driven transitions and 25 disclosed calendar "
-            "fallbacks. No EXP-022 construction result has been viewed."
+            "EXP-022 closed as "
+            "QUALIFIED_AS_SELECTED_VOLUME_ROLL_CONTINUOUS_SERIES after "
+            "20 hard checks and an independent rebuild. The frozen "
+            "VOL_GT_OUT_2S_E3 schedule produced two representations with "
+            "5,457,606 rows each: 40 transitions used volume-driven "
+            "boundaries and 25 used calendar fallback."
         ),
         next_action=(
-            "Commit and push the EXP-022 preregistration, then create a "
-            "separately locked protected implementation. Do not rerun "
-            "EXP-019, EXP-020 or EXP-021, recalculate roll dates, request "
-            "Databento data, or run strategy, optimization, MCPT, paper or "
-            "live trading."
+            "Freeze EXP-022 permanently and do not rerun its preflight or "
+            "construction. Preregister EXP-023 before any strategy research "
+            "uses either series. Do not modify EXP-022 outputs or run "
+            "strategy, optimization, MCPT, bootstrap, walk-forward, paper or "
+            "live trading without separate preregistration and authorization."
         ),
         market_name=(
             "NQ selected-roll continuous-series data"

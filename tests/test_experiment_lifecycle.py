@@ -296,7 +296,7 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.next_action.lower(),
         )
 
-    def test_exp022_is_preregistered_for_selected_construction(
+    def test_exp022_is_closed_as_selected_continuous_series(
         self,
     ) -> None:
         record = get_experiment_lifecycle(
@@ -305,30 +305,46 @@ class LifecycleRegistryTests(unittest.TestCase):
 
         self.assertEqual(
             record.stage,
-            "PRE_REGISTERED",
+            "REVIEW",
         )
         self.assertIn(
-            "VOL_GT_OUT_2S_E3",
+            "QUALIFIED_AS_SELECTED_VOLUME_ROLL_CONTINUOUS_SERIES",
             record.stage_reason,
         )
         self.assertIn(
-            "40 volume-driven transitions",
+            "20 hard checks",
             record.stage_reason,
         )
         self.assertIn(
-            "25 disclosed calendar fallbacks",
+            "5,457,606 rows each",
             record.stage_reason,
         )
         self.assertIn(
-            "protected implementation",
+            "40 transitions",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "25 used calendar fallback",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "freeze exp-022",
             record.next_action.lower(),
         )
         self.assertIn(
-            "do not rerun exp-019, exp-020 or exp-021",
+            "do not rerun",
             record.next_action.lower(),
         )
         self.assertIn(
-            "do not",
+            "preregister exp-023",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "do not modify exp-022 outputs",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "strategy",
             record.next_action.lower(),
         )
         self.assertIsNotNone(
