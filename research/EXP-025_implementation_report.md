@@ -48,7 +48,7 @@ The implementation-only preflight verifies, without reading market values:
 
 1. clean synchronized `main`;
 2. unchanged EXP-025 preregistration files;
-3. one committed implementation revision;
+3. one shared latest implementation revision across all four implementation files;
 4. all 14 frozen EXP-024 output files and hashes;
 5. the frozen EXP-019 acquisition manifest and completion marker;
 6. all 66 exact-contract archive file sizes and SHA-256 hashes;
@@ -258,3 +258,30 @@ After this implementation is committed:
 6. run execution preflight before any diagnostic execution.
 
 EXP-024 remains permanently frozen.
+
+## Result-free guard correction
+
+A post-preflight implementation review identified two missing protections before
+any Quantower export was authorized:
+
+1. the export manifest previously required only that `previous_session_date`
+   precede the target date, rather than equal the immediately prior frozen cash
+   session;
+2. the implementation baseline previously resolved the commit that created the
+   implementation files, rather than the latest single commit shared by all four
+   implementation files.
+
+The corrected implementation hash-verifies
+`results/extended_session_data/session_quality.csv` at 78,768 bytes and SHA-256
+`6b55077783ad2c1cd8ef99f10d50ed7d691aad7cafcdb7e8fa37639d90724712`.
+It uses only that file's `session_date` metadata to map each of the 43 target
+sessions to the immediately preceding frozen session. It reads no OHLC values.
+
+The Quantower export manifest must now contain that exact prior-session mapping.
+A merely earlier calendar date is rejected. The implementation preflight now
+reports the latest shared commit that modified all four implementation files, so
+a later authorization can lock the final corrected implementation revision.
+
+This correction does not authorize or create Quantower exports, materialize
+market values, execute the diagnostic, calculate performance, or authorize
+paper or live trading.

@@ -414,6 +414,113 @@ def select_unresolved_population(
     ).reset_index(drop=True)
 
 
+def attach_previous_session_dates(
+    population: pd.DataFrame,
+    session_quality: pd.DataFrame,
+) -> pd.DataFrame:
+    if "session_date" not in population.columns:
+        raise Exp025DataError(
+            "EXP-025 population is missing session_date."
+        )
+    if "session_date" not in session_quality.columns:
+        raise Exp025DataError(
+            "Frozen session calendar is missing session_date."
+        )
+
+    calendar = session_quality.loc[:, ["session_date"]].copy()
+    if calendar.empty:
+        raise Exp025DataError("Frozen session calendar is empty.")
+
+    calendar["session_date"] = calendar["session_date"].astype(str)
+    if calendar["session_date"].duplicated().any():
+        raise Exp025DataError(
+            "Frozen session calendar contains duplicate session dates."
+        )
+
+    try:
+        parsed_calendar = pd.to_datetime(
+            calendar["session_date"],
+            format="%Y-%m-%d",
+            errors="raise",
+        )
+    except (TypeError, ValueError) as exc:
+        raise Exp025DataError(
+            "Frozen session calendar contains an invalid date."
+        ) from exc
+
+    canonical_calendar = parsed_calendar.dt.strftime("%Y-%m-%d")
+    if not canonical_calendar.eq(calendar["session_date"]).all():
+        raise Exp025DataError(
+            "Frozen session calendar dates are not canonical ISO dates."
+        )
+
+    sessions = sorted(canonical_calendar.tolist())
+    if len(sessions) < 2:
+        raise Exp025DataError(
+            "Frozen session calendar cannot define a prior session."
+        )
+
+    previous_by_session = {
+        current: previous
+        for previous, current in zip(sessions[:-1], sessions[1:])
+    }
+
+    result = population.copy()
+    result["session_date"] = result["session_date"].astype(str)
+
+    try:
+        parsed_population = pd.to_datetime(
+            result["session_date"],
+            format="%Y-%m-%d",
+            errors="raise",
+        )
+    except (TypeError, ValueError) as exc:
+        raise Exp025DataError(
+            "EXP-025 population contains an invalid session date."
+        ) from exc
+
+    canonical_population = parsed_population.dt.strftime("%Y-%m-%d")
+    if not canonical_population.eq(result["session_date"]).all():
+        raise Exp025DataError(
+            "EXP-025 population dates are not canonical ISO dates."
+        )
+
+    missing = sorted(
+        set(result["session_date"]) - set(previous_by_session)
+    )
+    if missing:
+        raise Exp025DataError(
+            "EXP-025 target sessions are absent from the frozen session "
+            "calendar or lack a prior session: "
+            + ", ".join(missing)
+        )
+
+    result["previous_session_date"] = result["session_date"].map(
+        previous_by_session
+    )
+
+    if result["previous_session_date"].isna().any():
+        raise Exp025DataError(
+            "EXP-025 previous-session mapping is incomplete."
+        )
+    if not result["previous_session_date"].lt(
+        result["session_date"]
+    ).all():
+        raise Exp025DataError(
+            "EXP-025 previous-session mapping is not strictly prior."
+        )
+
+    columns = list(result.columns)
+    columns.remove("previous_session_date")
+    insert_at = columns.index("session_date") + 1
+    columns.insert(insert_at, "previous_session_date")
+
+    return result.loc[:, columns].sort_values(
+        ["session_date", "candidate_id"],
+        kind="stable",
+    ).reset_index(drop=True)
+
+
 def archive_digest(completed: Sequence[Mapping[str, Any]]) -> str:
     payload = [
         {
@@ -535,6 +642,11 @@ def validate_quantower_export_manifest(
             f"EXP-025 requires 43 Quantower exports, found {len(files)}."
         )
 
+    if "previous_session_date" not in population.columns:
+        raise Exp025DataError(
+            "Population lacks locked previous-session dates."
+        )
+
     expected = population.set_index("session_date")
     rows: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -567,12 +679,22 @@ def validate_quantower_export_manifest(
             )
         previous_session_date = str(raw["previous_session_date"])
         try:
-            current_date = date.fromisoformat(session_date)
-            prior_date = date.fromisoformat(previous_session_date)
+            date.fromisoformat(session_date)
+            date.fromisoformat(previous_session_date)
         except ValueError as exc:
-            raise Exp025DataError("Quantower manifest date is invalid.") from exc
-        if prior_date >= current_date:
-            raise Exp025DataError("Previous session must precede current session.")
+            raise Exp025DataError(
+                "Quantower manifest date is invalid."
+            ) from exc
+
+        expected_previous_session = str(
+            expected.loc[session_date, "previous_session_date"]
+        )
+        if previous_session_date != expected_previous_session:
+            raise Exp025DataError(
+                "Quantower previous-session mismatch for "
+                f"{session_date}: {previous_session_date} != "
+                f"{expected_previous_session}."
+            )
         symbol = normalise_contract_symbol(raw["explicit_contract_symbol"])
         expected_symbol = str(expected.loc[session_date, "exact_contract_symbol"])
         if symbol != expected_symbol:

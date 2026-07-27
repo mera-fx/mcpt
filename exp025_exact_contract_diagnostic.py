@@ -26,6 +26,7 @@ from exp025_exact_contract_core import (
     PRICE_DECISION_FIELDS,
     REQUIRED_OUTPUT_NAMES,
     archive_digest,
+    attach_previous_session_dates,
     build_archive_index,
     canonical_dataframe_sha256,
     canonical_gap_fade_decision,
@@ -97,6 +98,30 @@ EXP024_PARTIAL_DIR = (
 )
 MISMATCH_PATH = EXP024_DIR / "mismatch_attribution.csv"
 ROLL_CONTEXT_PATH = EXP024_DIR / "roll_context.csv"
+
+SESSION_QUALITY_PATH = (
+    PROJECT_DIR
+    / "results"
+    / "extended_session_data"
+    / "session_quality.csv"
+)
+EXPECTED_SESSION_QUALITY_SIZE_BYTES = 78_768
+EXPECTED_SESSION_QUALITY_SHA256 = (
+    "6b55077783ad2c1cd8ef99f10d50ed7d"
+    "691aad7cafcdb7e8fa37639d90724712"
+)
+EXPECTED_SESSION_QUALITY_COLUMNS = (
+    "session_date",
+    "expected_rows",
+    "nq_rows",
+    "mnq_rows",
+    "common_rows",
+    "nq_missing_rows",
+    "mnq_missing_rows",
+    "common_missing_rows",
+    "legacy_pause_expected",
+    "complete_aligned",
+)
 
 ARCHIVE_ROOT = (
     PROJECT_DIR / "data" / "EXP-019" / "exact_contract_archive"
@@ -180,18 +205,18 @@ def changed_paths(base: str, head: str) -> set[str]:
     }
 
 
-def commit_that_added(relative_path: str) -> str:
+def commit_that_last_modified(relative_path: str) -> str:
     commits = run_git(
         "log",
-        "--diff-filter=A",
-        "--reverse",
+        "-1",
         "--format=%H",
         "--",
         relative_path,
     ).stdout.strip().splitlines()
     if len(commits) != 1:
         raise RuntimeError(
-            f"Expected exactly one creation commit for {relative_path}."
+            "Expected exactly one latest implementation commit for "
+            f"{relative_path}."
         )
     return commits[0]
 
@@ -282,6 +307,37 @@ def verify_exp024_outputs() -> dict[str, dict[str, Any]]:
     return result
 
 
+def verify_session_quality_metadata() -> dict[str, dict[str, Any]]:
+    if not SESSION_QUALITY_PATH.is_file():
+        raise RuntimeError(
+            "Frozen session-quality calendar is missing."
+        )
+
+    current = {
+        "size_bytes": int(SESSION_QUALITY_PATH.stat().st_size),
+        "sha256": sha256_file(SESSION_QUALITY_PATH),
+    }
+    expected = {
+        "size_bytes": EXPECTED_SESSION_QUALITY_SIZE_BYTES,
+        "sha256": EXPECTED_SESSION_QUALITY_SHA256,
+    }
+    if current != expected:
+        raise RuntimeError(
+            "Frozen session-quality calendar changed."
+        )
+
+    header = pd.read_csv(SESSION_QUALITY_PATH, nrows=0)
+    if tuple(header.columns) != EXPECTED_SESSION_QUALITY_COLUMNS:
+        raise RuntimeError(
+            "Frozen session-quality calendar columns changed."
+        )
+
+    relative = SESSION_QUALITY_PATH.relative_to(
+        PROJECT_DIR
+    ).as_posix()
+    return {relative: current}
+
+
 def verify_archive_bytes() -> tuple[dict[str, Any], dict[str, Any], dict[str, dict[str, Any]]]:
     if not ARCHIVE_MANIFEST_PATH.is_file() or not ARCHIVE_COMPLETION_PATH.is_file():
         raise RuntimeError("Frozen EXP-019 archive metadata is missing.")
@@ -353,7 +409,8 @@ def repository_state_preflight() -> dict[str, str]:
     if protected_diff.returncode != 0:
         raise RuntimeError("Locked EXP-025 preregistration files changed.")
     implementation_commits = {
-        commit_that_added(path) for path in IMPLEMENTATION_PATHS
+        commit_that_last_modified(path)
+        for path in IMPLEMENTATION_PATHS
     }
     if len(implementation_commits) != 1:
         raise RuntimeError("EXP-025 implementation files lack one locked commit.")
@@ -379,7 +436,15 @@ def repository_state_preflight() -> dict[str, str]:
 def load_population() -> pd.DataFrame:
     mismatch = pd.read_csv(MISMATCH_PATH)
     roll = pd.read_csv(ROLL_CONTEXT_PATH)
-    return select_unresolved_population(mismatch, roll)
+    session_quality = pd.read_csv(
+        SESSION_QUALITY_PATH,
+        usecols=["session_date"],
+    )
+    population = select_unresolved_population(mismatch, roll)
+    return attach_previous_session_dates(
+        population,
+        session_quality,
+    )
 
 
 def implementation_preflight() -> dict[str, Any]:
@@ -393,6 +458,7 @@ def implementation_preflight() -> dict[str, Any]:
             "Quantower exact-contract exports are not authorized yet; input directory must be absent."
         )
     exp024_snapshot = verify_exp024_outputs()
+    session_quality_snapshot = verify_session_quality_metadata()
     archive_manifest, archive_completion, archive_snapshot = verify_archive_bytes()
     population = load_population()
     archive_index = build_archive_index(archive_manifest)
@@ -403,6 +469,9 @@ def implementation_preflight() -> dict[str, Any]:
         "population_rows": int(len(population)),
         "unique_contracts": int(population["exact_contract_symbol"].nunique()),
         "exp024_files_verified": int(len(exp024_snapshot)),
+        "session_quality_files_verified": int(
+            len(session_quality_snapshot)
+        ),
         "archive_files_verified": int(len(archive_snapshot)),
         "archive_sha256": archive_completion["archive_sha256"],
         "quantower_export_authorized": False,
@@ -456,6 +525,7 @@ def execution_preflight() -> dict[str, Any]:
         implementation_commit=state["implementation_commit"]
     )
     exp024_snapshot = verify_exp024_outputs()
+    session_quality_snapshot = verify_session_quality_metadata()
     archive_manifest, archive_completion, archive_snapshot = verify_archive_bytes()
     population = load_population()
     archive_index = build_archive_index(archive_manifest)
@@ -499,6 +569,7 @@ def execution_preflight() -> dict[str, Any]:
         "quantower_index": quantower_index,
         "source_snapshot": {
             **exp024_snapshot,
+            **session_quality_snapshot,
             **archive_snapshot,
             **quantower_snapshot,
         },
@@ -1140,6 +1211,11 @@ def print_implementation_preflight(result: Mapping[str, Any]) -> None:
     print(f"Implementation commit:        {result['implementation_commit']}")
     print(f"Frozen unresolved rows:       {result['population_rows']}")
     print(f"Frozen archive files verified:{result['archive_files_verified']:>9}")
+    print(
+        "Frozen session calendars verified:"
+        f"{result['session_quality_files_verified']:>5}"
+    )
+    print("Previous sessions locked:      True")
     print("Quantower export authorized:  False")
     print("Market values materialized:   False")
     print("Diagnostic run:               False")

@@ -22,6 +22,7 @@ from exp025_exact_contract_core import (
     Exp025DataError,
     aggregate_observed_five_minute,
     archive_digest,
+    attach_previous_session_dates,
     build_archive_index,
     canonical_gap_fade_decision,
     canonical_object_sha256,
@@ -86,6 +87,16 @@ def make_population_inputs(count: int = 43):
     return pd.DataFrame(mismatch_rows), pd.DataFrame(roll_rows)
 
 
+def make_session_calendar():
+    dates = pd.bdate_range(
+        "2019-12-20",
+        "2021-01-31",
+    )
+    return pd.DataFrame(
+        {"session_date": dates.strftime("%Y-%m-%d")}
+    )
+
+
 def make_archive_manifest():
     completed = []
     month_codes = ("H", "M", "U", "Z")
@@ -115,12 +126,12 @@ def make_archive_manifest():
 def make_quantower_manifest(population: pd.DataFrame):
     files = []
     for index, row in enumerate(population.itertuples(index=False)):
-        current = date.fromisoformat(str(row.session_date))
-        previous = current.fromordinal(current.toordinal() - 1)
         files.append(
             {
                 "session_date": str(row.session_date),
-                "previous_session_date": previous.isoformat(),
+                "previous_session_date": str(
+                    row.previous_session_date
+                ),
                 "explicit_contract_symbol": str(row.exact_contract_symbol),
                 "relative_path": f"raw/{row.session_date}_{row.exact_contract_symbol}.csv",
                 "size_bytes": 1000 + index,
@@ -270,6 +281,55 @@ class Exp025ExactContractTests(unittest.TestCase):
         with self.assertRaisesRegex(Exp025DataError, "disagree on exact contract"):
             select_unresolved_population(mismatch, roll)
 
+    def test_09a_previous_session_uses_frozen_calendar(self):
+        population = pd.DataFrame(
+            {
+                "candidate_id": [CANDIDATE_ID],
+                "session_date": ["2020-01-06"],
+            }
+        )
+        calendar = pd.DataFrame(
+            {
+                "session_date": [
+                    "2020-01-02",
+                    "2020-01-03",
+                    "2020-01-06",
+                ]
+            }
+        )
+        attached = attach_previous_session_dates(
+            population,
+            calendar,
+        )
+        self.assertEqual(
+            attached.iloc[0]["previous_session_date"],
+            "2020-01-03",
+        )
+
+    def test_09b_previous_session_requires_calendar_membership(self):
+        population = pd.DataFrame(
+            {
+                "candidate_id": [CANDIDATE_ID],
+                "session_date": ["2020-01-07"],
+            }
+        )
+        calendar = pd.DataFrame(
+            {
+                "session_date": [
+                    "2020-01-03",
+                    "2020-01-06",
+                ]
+            }
+        )
+        with self.assertRaisesRegex(
+            Exp025DataError,
+            "absent from the frozen session calendar",
+        ):
+            attach_previous_session_dates(
+                population,
+                calendar,
+            )
+
     def test_10_archive_digest_is_sequence_ordered(self):
         manifest = make_archive_manifest()
         forward = archive_digest(manifest["completed"])
@@ -291,13 +351,19 @@ class Exp025ExactContractTests(unittest.TestCase):
 
     def test_13_population_contracts_must_exist_in_archive(self):
         mismatch, roll = make_population_inputs()
-        population = select_unresolved_population(mismatch, roll)
+        population = attach_previous_session_dates(
+            select_unresolved_population(mismatch, roll),
+            make_session_calendar(),
+        )
         with self.assertRaisesRegex(Exp025DataError, "absent from archive"):
             validate_population_contracts_in_archive(population, {})
 
     def test_14_quantower_manifest_accepts_exact_43_session_set(self):
         mismatch, roll = make_population_inputs()
-        population = select_unresolved_population(mismatch, roll)
+        population = attach_previous_session_dates(
+            select_unresolved_population(mismatch, roll),
+            make_session_calendar(),
+        )
         frame = validate_quantower_export_manifest(
             make_quantower_manifest(population), population
         )
@@ -306,7 +372,10 @@ class Exp025ExactContractTests(unittest.TestCase):
 
     def test_15_quantower_manifest_rejects_missing_session(self):
         mismatch, roll = make_population_inputs()
-        population = select_unresolved_population(mismatch, roll)
+        population = attach_previous_session_dates(
+            select_unresolved_population(mismatch, roll),
+            make_session_calendar(),
+        )
         manifest = make_quantower_manifest(population)
         manifest["files"].pop()
         with self.assertRaisesRegex(Exp025DataError, "requires 43"):
@@ -314,15 +383,40 @@ class Exp025ExactContractTests(unittest.TestCase):
 
     def test_16_quantower_manifest_rejects_contract_change(self):
         mismatch, roll = make_population_inputs()
-        population = select_unresolved_population(mismatch, roll)
+        population = attach_previous_session_dates(
+            select_unresolved_population(mismatch, roll),
+            make_session_calendar(),
+        )
         manifest = make_quantower_manifest(population)
         manifest["files"][0]["explicit_contract_symbol"] = "NQZ26"
         with self.assertRaisesRegex(Exp025DataError, "contract mismatch"):
             validate_quantower_export_manifest(manifest, population)
 
+    def test_16a_quantower_manifest_rejects_wrong_previous_session(
+        self,
+    ):
+        mismatch, roll = make_population_inputs()
+        population = attach_previous_session_dates(
+            select_unresolved_population(mismatch, roll),
+            make_session_calendar(),
+        )
+        manifest = make_quantower_manifest(population)
+        manifest["files"][0]["previous_session_date"] = "2019-01-01"
+        with self.assertRaisesRegex(
+            Exp025DataError,
+            "previous-session mismatch",
+        ):
+            validate_quantower_export_manifest(
+                manifest,
+                population,
+            )
+
     def test_17_quantower_manifest_rejects_path_escape(self):
         mismatch, roll = make_population_inputs()
-        population = select_unresolved_population(mismatch, roll)
+        population = attach_previous_session_dates(
+            select_unresolved_population(mismatch, roll),
+            make_session_calendar(),
+        )
         manifest = make_quantower_manifest(population)
         manifest["files"][0]["relative_path"] = "../outside.csv"
         with self.assertRaisesRegex(Exp025DataError, "Unsafe relative path"):
@@ -639,6 +733,9 @@ class Exp025ExactContractTests(unittest.TestCase):
         self.assertIn("--execution-preflight", source)
         self.assertIn("--execute", source)
         self.assertIn("HARD_CHECK_NAMES", source)
+        self.assertIn("commit_that_last_modified", source)
+        self.assertNotIn("commit_that_added", source)
+        self.assertIn("EXPECTED_SESSION_QUALITY_SHA256", source)
 
 
 if __name__ == "__main__":
