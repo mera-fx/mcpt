@@ -516,6 +516,50 @@ class LifecycleRegistryTests(unittest.TestCase):
             Path("research/EXP-025_preregistration.md"),
         )
 
+    def test_exp026_is_preregistered_for_databento_development(
+        self,
+    ) -> None:
+        record = get_experiment_lifecycle("EXP-026")
+
+        self.assertEqual(
+            record.stage,
+            "PRE_REGISTERED",
+        )
+        self.assertIn(
+            "Databento-Native",
+            record.experiment_name,
+        )
+        self.assertIn(
+            "bounded set of gap-fade",
+            record.hypothesis,
+        )
+        self.assertIn(
+            "22 development candidates",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "three research phases",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "protected 2026",
+            record.next_action,
+        )
+        self.assertIn(
+            "separate Phase A, Phase B",
+            record.next_action,
+        )
+        self.assertIn(
+            "paper or live trading",
+            record.next_action,
+        )
+        self.assertEqual(
+            record.preregistration_file,
+            Path(
+                "research/EXP-026_preregistration.md"
+            ),
+        )
+
     def test_unregistered_config_defaults_to_idea(
         self,
     ) -> None:

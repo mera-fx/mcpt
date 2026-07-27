@@ -1000,6 +1000,47 @@ EXPERIMENT_LIFECYCLE: dict[
         ),
     ),
 
+    "EXP-026": ExperimentLifecycle(
+        experiment_id="EXP-026",
+        experiment_name=(
+            "Databento-Native NQ Multi-Family "
+            "Strategy Development Tournament"
+        ),
+        hypothesis=(
+            "A bounded set of gap-fade, premarket-continuation and "
+            "opening-drive variants may exhibit meaningfully different "
+            "profitability, drawdown, consistency, cost resilience and "
+            "parameter stability on the frozen Databento-derived NQ series."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "EXP-026 is locked before implementation or access to any "
+            "Databento-native strategy result. The 22 development candidates, "
+            "two fixed controls, three research phases, robustness methods "
+            "and protected 2026 confirmation boundary are fixed in advance."
+        ),
+        next_action=(
+            "Build and commit a result-free three-phase EXP-026 implementation. "
+            "Require an implementation preflight and separate Phase A, Phase B "
+            "and Phase C authorization commits. Do not access protected 2026 "
+            "market values, download new data, change the candidate grid or "
+            "begin paper or live trading."
+        ),
+        market_name=(
+            "NQ Databento-derived selected-roll continuous series"
+        ),
+        timeframe=(
+            "Extended-session one-minute context, five-minute signals "
+            "and one-minute execution"
+        ),
+        strategy_name=(
+            "databento_native_multi_family_strategy_development"
+        ),
+        preregistration_file=Path(
+            "research/EXP-026_preregistration.md"
+        ),
+    ),
+
 }
 
 
