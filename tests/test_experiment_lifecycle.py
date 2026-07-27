@@ -470,37 +470,44 @@ class LifecycleRegistryTests(unittest.TestCase):
             Path("research/EXP-024_preregistration.md"),
         )
 
-    def test_exp025_is_preregistered_for_exact_contract_diagnostic(
+    def test_exp025_is_closed_as_data_unavailable(
         self,
     ) -> None:
         record = get_experiment_lifecycle("EXP-025")
 
-        self.assertEqual(record.stage, "PRE_REGISTERED")
+        self.assertEqual(record.stage, "REVIEW")
         self.assertIn("43 unresolved EXP-024", record.hypothesis)
         self.assertIn("same explicit quarterly NQ", record.hypothesis)
         self.assertIn(
-            "before any Quantower exact-contract export",
+            "BLOCKED_DATA_UNAVAILABLE",
             record.stage_reason,
         )
-        self.assertIn("all 43 unresolved gap-fade", record.stage_reason)
         self.assertIn(
-            "result-free EXP-025 exact-contract ingest",
-            record.next_action,
+            "no expired NQH0 contract",
+            record.stage_reason,
         )
         self.assertIn(
-            "implementation-only preflight",
-            record.next_action,
+            "no explicit contract identity",
+            record.stage_reason,
         )
         self.assertIn(
-            "separate one-time execution authorization",
-            record.next_action,
-        )
-        self.assertIn(
-            "do not export or ingest quantower",
+            "freeze exp-025",
             record.next_action.lower(),
         )
         self.assertIn(
-            "begin paper or live trading",
+            "databento as the primary historical",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "new experiment id",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "do not infer a strategy conclusion",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "paper or live trading",
             record.next_action.lower(),
         )
         self.assertIsNotNone(record.preregistration_file)

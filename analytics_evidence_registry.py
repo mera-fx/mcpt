@@ -23,7 +23,7 @@ NOT_APPLICABLE_MESSAGE = (
 
 
 NONCANONICAL_DIAGNOSTIC_MESSAGE = (
-    "Frozen transfer-diagnostic evidence is available, but it is not "
+    "Frozen diagnostic or closure evidence is available, but it is not "
     "exposed as canonical strategy-series analytics"
 )
 
@@ -86,6 +86,17 @@ NONCANONICAL_STRATEGY_DIAGNOSTIC_EVIDENCE = {
         Path(
             "results/EXP-024/source_disagreement_attribution/"
             "report.html"
+        ),
+    ),
+    "EXP-025": (
+        Path(
+            "research/EXP-025_closure.md"
+        ),
+        Path(
+            "research/HISTORICAL_DATA_POLICY.md"
+        ),
+        Path(
+            "research/EXP-025_quantower_export_authorization.md"
         ),
     ),
 }

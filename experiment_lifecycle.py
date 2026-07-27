@@ -967,20 +967,23 @@ EXPERIMENT_LIFECYCLE: dict[
             "semantics or the decision-engine implementation by comparing the "
             "same explicit quarterly NQ contracts and two independent engines."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "EXP-025 is locked before any Quantower exact-contract export, "
-            "ingest, bar comparison or decision-engine result. The known "
-            "EXP-024 failure and all 43 unresolved gap-fade rows are disclosed "
-            "in advance."
+            "EXP-025 closed as BLOCKED_DATA_UNAVAILABLE. Its result-free "
+            "implementation and Quantower export preflights passed, but the "
+            "Lucid/Rithmic connection exposed no expired NQH0 contract in "
+            "Quantower or R Trader Pro. Two generic-NQ format-check files were "
+            "rejected because the CSVs contained no explicit contract identity. "
+            "No accepted exact-contract evidence or diagnostic result exists."
         ),
         next_action=(
-            "Build and commit a result-free EXP-025 exact-contract ingest and "
-            "diagnostic implementation. Then require an implementation-only "
-            "preflight and a separate one-time execution authorization. Do "
-            "not export or ingest Quantower exact-contract data yet, rerun "
-            "EXP-024, call Databento, calculate performance, change the "
-            "strategy, or begin paper or live trading."
+            "Freeze EXP-025 and do not rerun its implementation, export or "
+            "diagnostic modes. Preserve the rejected generic-NQ files as local "
+            "audit evidence only. Use Databento as the primary historical "
+            "testing source under the Databento-first policy. Any future "
+            "cross-provider exact-contract comparison requires a new experiment "
+            "ID and separate preregistration. Do not infer a strategy conclusion "
+            "or begin paper or live trading from EXP-025."
         ),
         market_name=(
             "NQ exact quarterly contracts from Quantower/Lucid-Rithmic "

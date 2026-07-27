@@ -212,6 +212,59 @@ class AnalyticsEvidenceRegistryTests(unittest.TestCase):
                 ],
             )
 
+    def test_exp025_is_a_closed_data_unavailable_diagnostic(
+        self,
+    ) -> None:
+        registry = validate_analytics_evidence_registry(
+            PROJECT_DIR,
+            require_files=False,
+        )
+        experiment = registry["EXP-025"]
+
+        self.assertEqual(
+            experiment.analytics_kind,
+            AnalyticsKind.STRATEGY,
+        )
+        self.assertEqual(experiment.series, ())
+        self.assertEqual(
+            EXPERIMENT_LIFECYCLE["EXP-025"].stage,
+            "REVIEW",
+        )
+
+        expected_paths = (
+            Path("research/EXP-025_closure.md"),
+            Path("research/HISTORICAL_DATA_POLICY.md"),
+            Path(
+                "research/"
+                "EXP-025_quantower_export_authorization.md"
+            ),
+        )
+
+        self.assertEqual(
+            NONCANONICAL_STRATEGY_DIAGNOSTIC_EVIDENCE[
+                "EXP-025"
+            ],
+            expected_paths,
+        )
+
+        for family in MetricFamily:
+            availability = metric_availability(
+                experiment,
+                family,
+            )
+            self.assertEqual(
+                availability.status,
+                AvailabilityStatus.NOT_AVAILABLE,
+            )
+            self.assertEqual(
+                availability.message,
+                NONCANONICAL_DIAGNOSTIC_MESSAGE,
+            )
+            self.assertEqual(
+                availability.evidence_paths,
+                expected_paths,
+            )
+
     def test_no_series_points_at_generated_report_html(self) -> None:
         for series in all_series():
             for path in series.source_paths():
