@@ -174,7 +174,7 @@ class AnalyticsEvidenceRegistryTests(unittest.TestCase):
                 ],
             )
 
-    def test_exp024_is_a_preregistered_strategy_diagnostic(
+    def test_exp024_is_a_closed_noncanonical_strategy_diagnostic(
         self,
     ) -> None:
         registry = validate_analytics_evidence_registry(
@@ -190,7 +190,7 @@ class AnalyticsEvidenceRegistryTests(unittest.TestCase):
         self.assertEqual(experiment.series, ())
         self.assertEqual(
             EXPERIMENT_LIFECYCLE["EXP-024"].stage,
-            "PRE_REGISTERED",
+            "REVIEW",
         )
         for family in MetricFamily:
             availability = metric_availability(
@@ -203,7 +203,13 @@ class AnalyticsEvidenceRegistryTests(unittest.TestCase):
             )
             self.assertEqual(
                 availability.message,
-                NOT_AVAILABLE_MESSAGE,
+                NONCANONICAL_DIAGNOSTIC_MESSAGE,
+            )
+            self.assertEqual(
+                availability.evidence_paths,
+                NONCANONICAL_STRATEGY_DIAGNOSTIC_EVIDENCE[
+                    "EXP-024"
+                ],
             )
 
     def test_no_series_points_at_generated_report_html(self) -> None:

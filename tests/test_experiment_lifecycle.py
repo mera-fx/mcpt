@@ -425,36 +425,43 @@ class LifecycleRegistryTests(unittest.TestCase):
             ),
         )
 
-    def test_exp024_is_preregistered_for_mismatch_attribution(
+    def test_exp024_is_closed_after_failed_attribution_diagnostic(
         self,
     ) -> None:
         record = get_experiment_lifecycle("EXP-024")
 
-        self.assertEqual(record.stage, "PRE_REGISTERED")
+        self.assertEqual(record.stage, "REVIEW")
         self.assertIn("51 frozen EXP-023", record.hypothesis)
         self.assertIn(
-            "without accessing protected history",
-            record.hypothesis,
-        )
-        self.assertIn(
-            "before any complete cross-source feature attribution",
+            "ATTRIBUTION_DIAGNOSTIC_NOT_QUALIFIED",
             record.stage_reason,
         )
-        self.assertIn("all 51 primary mismatch rows", record.stage_reason)
+        self.assertIn("evidence-only recovery", record.stage_reason)
+        self.assertIn("51 of 51", record.stage_reason)
+        self.assertIn("8 of 51", record.stage_reason)
+        self.assertIn("43 gap-fade", record.stage_reason)
         self.assertIn(
-            "result-free EXP-024 implementation",
-            record.next_action,
-        )
-        self.assertIn(
-            "separate one-time execution authorization",
-            record.next_action,
-        )
-        self.assertIn(
-            "do not rerun exp-023",
+            "freeze exp-024 permanently",
             record.next_action.lower(),
         )
         self.assertIn(
-            "calculate p&l",
+            "do not rerun any exp-024",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "do not modify exp-024 outputs",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "new experiment id",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "data or engine qualification",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "do not begin paper or live trading",
             record.next_action.lower(),
         )
         self.assertIsNotNone(record.preregistration_file)

@@ -74,6 +74,20 @@ NONCANONICAL_STRATEGY_DIAGNOSTIC_EVIDENCE = {
             "report.html"
         ),
     ),
+    "EXP-024": (
+        Path(
+            "results/EXP-024/source_disagreement_attribution/"
+            "attribution_summary.json"
+        ),
+        Path(
+            "results/EXP-024/source_disagreement_attribution/"
+            "mismatch_attribution.csv"
+        ),
+        Path(
+            "results/EXP-024/source_disagreement_attribution/"
+            "report.html"
+        ),
+    ),
 }
 
 

@@ -921,20 +921,25 @@ EXPERIMENT_LIFECYCLE: dict[
             "without accessing protected history or calculating strategy "
             "performance."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "EXP-024 is locked before any complete cross-source feature "
-            "attribution. The known EXP-023 result, all 51 primary mismatch "
-            "rows, the opaque Quantower roll methodology and the explicit "
-            "Databento roll context are disclosed in advance."
+            "EXP-024 closed as ATTRIBUTION_DIAGNOSTIC_NOT_QUALIFIED. "
+            "Attempt 002 completed matched independent attribution rebuilds, "
+            "and a separate evidence-only recovery published 14 frozen files. "
+            "The transfer rebuild matched 51 of 51 rows and all 4,709 "
+            "Quantower aggregation rows matched, but the Quantower reference "
+            "decision rebuild matched only 8 of 51 rows. The remaining 43 "
+            "gap-fade rows failed the locked reconstruction hard check and "
+            "remained unresolved."
         ),
         next_action=(
-            "Build and commit a result-free EXP-024 implementation that may "
-            "inspect only entry-decision inputs for the 51 frozen mismatch "
-            "rows. Then require a protected preflight and separate one-time "
-            "execution authorization. Do not rerun EXP-023, read protected "
-            "or post-entry OHLCV, calculate P&L, change a rule, rank a "
-            "candidate or source, or begin paper or live trading."
+            "Freeze EXP-024 permanently and do not rerun any EXP-024 "
+            "preflight, attribution, replacement or recovery mode. Do not "
+            "modify EXP-024 outputs, select or rescue a candidate or source, "
+            "or unlock protected history. A new experiment ID, beginning "
+            "with EXP-025 or later, must separately preregister a data or "
+            "engine qualification before strategy validation. Do not begin "
+            "paper or live trading."
         ),
         market_name=(
             "NQ Quantower versus Databento-derived continuous series"
