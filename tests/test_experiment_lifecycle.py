@@ -470,6 +470,45 @@ class LifecycleRegistryTests(unittest.TestCase):
             Path("research/EXP-024_preregistration.md"),
         )
 
+    def test_exp025_is_preregistered_for_exact_contract_diagnostic(
+        self,
+    ) -> None:
+        record = get_experiment_lifecycle("EXP-025")
+
+        self.assertEqual(record.stage, "PRE_REGISTERED")
+        self.assertIn("43 unresolved EXP-024", record.hypothesis)
+        self.assertIn("same explicit quarterly NQ", record.hypothesis)
+        self.assertIn(
+            "before any Quantower exact-contract export",
+            record.stage_reason,
+        )
+        self.assertIn("all 43 unresolved gap-fade", record.stage_reason)
+        self.assertIn(
+            "result-free EXP-025 exact-contract ingest",
+            record.next_action,
+        )
+        self.assertIn(
+            "implementation-only preflight",
+            record.next_action,
+        )
+        self.assertIn(
+            "separate one-time execution authorization",
+            record.next_action,
+        )
+        self.assertIn(
+            "do not export or ingest quantower",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "begin paper or live trading",
+            record.next_action.lower(),
+        )
+        self.assertIsNotNone(record.preregistration_file)
+        self.assertEqual(
+            record.preregistration_file,
+            Path("research/EXP-025_preregistration.md"),
+        )
+
     def test_unregistered_config_defaults_to_idea(
         self,
     ) -> None:

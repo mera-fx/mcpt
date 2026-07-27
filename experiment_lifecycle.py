@@ -955,6 +955,48 @@ EXPERIMENT_LIFECYCLE: dict[
         ),
     ),
 
+    "EXP-025": ExperimentLifecycle(
+        experiment_id="EXP-025",
+        experiment_name=(
+            "NQ Gap-Fade Exact-Contract "
+            "Decision-Engine Qualification"
+        ),
+        hypothesis=(
+            "The 43 unresolved EXP-024 gap-fade mismatches may be localized "
+            "to exact-contract source bars, provider-managed continuous-series "
+            "semantics or the decision-engine implementation by comparing the "
+            "same explicit quarterly NQ contracts and two independent engines."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "EXP-025 is locked before any Quantower exact-contract export, "
+            "ingest, bar comparison or decision-engine result. The known "
+            "EXP-024 failure and all 43 unresolved gap-fade rows are disclosed "
+            "in advance."
+        ),
+        next_action=(
+            "Build and commit a result-free EXP-025 exact-contract ingest and "
+            "diagnostic implementation. Then require an implementation-only "
+            "preflight and a separate one-time execution authorization. Do "
+            "not export or ingest Quantower exact-contract data yet, rerun "
+            "EXP-024, call Databento, calculate performance, change the "
+            "strategy, or begin paper or live trading."
+        ),
+        market_name=(
+            "NQ exact quarterly contracts from Quantower/Lucid-Rithmic "
+            "and the frozen Databento archive"
+        ),
+        timeframe=(
+            "One-minute source bars and five-minute gap-fade decisions"
+        ),
+        strategy_name=(
+            "gap_fade_exact_contract_decision_engine_diagnostic"
+        ),
+        preregistration_file=Path(
+            "research/EXP-025_preregistration.md"
+        ),
+    ),
+
 }
 
 
