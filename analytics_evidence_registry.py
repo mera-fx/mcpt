@@ -99,6 +99,23 @@ NONCANONICAL_STRATEGY_DIAGNOSTIC_EVIDENCE = {
             "research/EXP-025_quantower_export_authorization.md"
         ),
     ),
+    "EXP-026": (
+        Path(
+            "research/EXP-026_closure.md"
+        ),
+        Path(
+            "results/EXP-026/phase_b_internal_validation/"
+            "internal_validation_metrics.csv"
+        ),
+        Path(
+            "results/EXP-026/phase_c_known_comparison/"
+            "known_comparison_metrics.csv"
+        ),
+        Path(
+            "results/EXP-026/phase_c_known_comparison/"
+            "report.html"
+        ),
+    ),
 }
 
 

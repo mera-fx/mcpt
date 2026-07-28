@@ -516,14 +516,16 @@ class LifecycleRegistryTests(unittest.TestCase):
             Path("research/EXP-025_preregistration.md"),
         )
 
-    def test_exp026_is_preregistered_for_databento_development(
+    def test_exp026_is_closed_after_measurement_review(
         self,
     ) -> None:
-        record = get_experiment_lifecycle("EXP-026")
+        record = get_experiment_lifecycle(
+            "EXP-026"
+        )
 
         self.assertEqual(
             record.stage,
-            "PRE_REGISTERED",
+            "REVIEW",
         )
         self.assertIn(
             "Databento-Native",
@@ -534,24 +536,44 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.hypothesis,
         )
         self.assertIn(
-            "22 development candidates",
+            "COMPLETED_MEASUREMENT_REVIEW",
             record.stage_reason,
         )
         self.assertIn(
-            "three research phases",
+            "six survivors",
             record.stage_reason,
         )
         self.assertIn(
-            "protected 2026",
-            record.next_action,
+            "three family finalists",
+            record.stage_reason,
         )
         self.assertIn(
-            "separate Phase A, Phase B",
-            record.next_action,
+            "0.465534",
+            record.stage_reason,
         )
         self.assertIn(
-            "paper or live trading",
-            record.next_action,
+            "not independent confirmation",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "freeze exp-026 permanently",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "exp-027",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "separate preregistration",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "does not authorise exp-027",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "paper trading or live trading",
+            record.next_action.lower(),
         )
         self.assertEqual(
             record.preregistration_file,

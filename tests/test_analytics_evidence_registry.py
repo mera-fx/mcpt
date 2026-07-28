@@ -265,6 +265,81 @@ class AnalyticsEvidenceRegistryTests(unittest.TestCase):
                 expected_paths,
             )
 
+    def test_exp026_is_a_closed_noncanonical_measurement_review(
+        self,
+    ) -> None:
+        registry = validate_analytics_evidence_registry(
+            PROJECT_DIR,
+            require_files=False,
+        )
+        experiment = registry["EXP-026"]
+
+        self.assertEqual(
+            experiment.analytics_kind,
+            AnalyticsKind.STRATEGY,
+        )
+        self.assertEqual(
+            experiment.series,
+            (),
+        )
+        self.assertEqual(
+            EXPERIMENT_LIFECYCLE[
+                "EXP-026"
+            ].stage,
+            "REVIEW",
+        )
+
+        expected_paths = (
+            Path(
+                "research/EXP-026_closure.md"
+            ),
+            Path(
+                "results/EXP-026/"
+                "phase_b_internal_validation/"
+                "internal_validation_metrics.csv"
+            ),
+            Path(
+                "results/EXP-026/"
+                "phase_c_known_comparison/"
+                "known_comparison_metrics.csv"
+            ),
+            Path(
+                "results/EXP-026/"
+                "phase_c_known_comparison/"
+                "report.html"
+            ),
+        )
+
+        self.assertEqual(
+            NONCANONICAL_STRATEGY_DIAGNOSTIC_EVIDENCE[
+                "EXP-026"
+            ],
+            expected_paths,
+        )
+
+        for path in expected_paths:
+            self.assertTrue(
+                (PROJECT_DIR / path).is_file()
+            )
+
+        for family in MetricFamily:
+            availability = metric_availability(
+                experiment,
+                family,
+            )
+            self.assertEqual(
+                availability.status,
+                AvailabilityStatus.NOT_AVAILABLE,
+            )
+            self.assertEqual(
+                availability.message,
+                NONCANONICAL_DIAGNOSTIC_MESSAGE,
+            )
+            self.assertEqual(
+                availability.evidence_paths,
+                expected_paths,
+            )
+
     def test_no_series_points_at_generated_report_html(self) -> None:
         for series in all_series():
             for path in series.source_paths():

@@ -1012,19 +1012,25 @@ EXPERIMENT_LIFECYCLE: dict[
             "profitability, drawdown, consistency, cost resilience and "
             "parameter stability on the frozen Databento-derived NQ series."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "EXP-026 is locked before implementation or access to any "
-            "Databento-native strategy result. The 22 development candidates, "
-            "two fixed controls, three research phases, robustness methods "
-            "and protected 2026 confirmation boundary are fixed in advance."
+            "EXP-026 is closed as COMPLETED_MEASUREMENT_REVIEW after all "
+            "three locked phases completed. Phase A measured 22 development "
+            "candidates and two controls and retained six survivors. Phase B "
+            "selected three family finalists; its selection-aware MCPT "
+            "plus-one p-value was 0.465534 and was contextual rather than a "
+            "decision gate. Phase C measured the frozen finalists on the "
+            "known 2020-2025 comparison without reselection or parameter "
+            "changes. That period is not independent confirmation, and "
+            "protected 2026 was not accessed."
         ),
         next_action=(
-            "Build and commit a result-free three-phase EXP-026 implementation. "
-            "Require an implementation preflight and separate Phase A, Phase B "
-            "and Phase C authorization commits. Do not access protected 2026 "
-            "market values, download new data, change the candidate grid or "
-            "begin paper or live trading."
+            "Freeze EXP-026 permanently. Do not rerun Phase A, B or C or "
+            "modify its frozen outputs. Keep the three finalists as separate "
+            "measurement evidence, not confirmed edges. Any protected 2026 "
+            "confirmation requires EXP-027 with separate preregistration and "
+            "execution authorisation. This closure does not authorise EXP-027, "
+            "new data downloads, paper trading or live trading."
         ),
         market_name=(
             "NQ Databento-derived selected-roll continuous series"
