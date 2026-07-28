@@ -16,6 +16,7 @@ from analytics_evidence_registry import (
     metric_availability,
     validate_analytics_evidence_registry,
 )
+from exp027_core import exp027_reported_ids
 from experiment_lifecycle import EXPERIMENT_LIFECYCLE
 
 
@@ -30,15 +31,43 @@ class AnalyticsEvidenceRegistryTests(unittest.TestCase):
             set(EXPERIMENT_LIFECYCLE),
         )
 
-    def test_registry_has_134_separate_strategy_series(self) -> None:
+    def test_registry_has_158_separate_strategy_series(self) -> None:
         registry = validate_analytics_evidence_registry(
             PROJECT_DIR,
             require_files=False,
         )
-        self.assertEqual(len(all_series(registry)), 134)
+        self.assertEqual(len(all_series(registry)), 158)
         self.assertEqual(len(registry["EXP-009"].series), 48)
         self.assertEqual(len(registry["EXP-011"].series), 6)
         self.assertEqual(len(registry["EXP-012"].series), 48)
+        self.assertEqual(len(registry["EXP-027"].series), 24)
+        self.assertEqual(
+            {
+                item.candidate_id
+                for item in registry["EXP-027"].series
+            },
+            set(exp027_reported_ids()),
+        )
+        for item in registry["EXP-027"].series:
+            self.assertEqual(item.market, "NQ")
+            self.assertEqual(
+                item.analysis_start,
+                "2026-01-01",
+            )
+            self.assertEqual(
+                item.analysis_end,
+                "2026-07-23",
+            )
+            self.assertTrue(item.dense_session_equity)
+            self.assertFalse(item.supports_mae_mfe)
+            self.assertTrue(
+                item.trades_path.is_relative_to(
+                    Path(
+                        "results/EXP-027/"
+                        "protected_2026_measurement/series"
+                    )
+                )
+            )
 
     def test_only_exp014_supports_mae_mfe(self) -> None:
         registry = build_analytics_evidence_registry()

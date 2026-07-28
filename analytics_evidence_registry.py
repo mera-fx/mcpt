@@ -11,6 +11,8 @@ from exp011_preregistration import SIGNAL_VARIANTS, SIZING_METHODS
 from exp012_preregistration import EXP012_CANDIDATES
 from exp013_preregistration import FINALIST_CANDIDATES
 from exp014_preregistration import FINALIST_IDS
+from exp026_core import CANDIDATE_SPEC_BY_ID
+from exp027_core import exp027_reported_ids
 from experiment_lifecycle import EXPERIMENT_LIFECYCLE
 
 
@@ -434,6 +436,41 @@ def _exp014_series() -> tuple[AnalyticsSeriesSpec, ...]:
     )
 
 
+def _exp027_series() -> tuple[AnalyticsSeriesSpec, ...]:
+    base_dir = (
+        "results/EXP-027/protected_2026_measurement/series"
+    )
+    return tuple(
+        _series(
+            experiment_id="EXP-027",
+            variant_id=candidate_id,
+            candidate_id=candidate_id,
+            family_id=CANDIDATE_SPEC_BY_ID[
+                candidate_id
+            ].family_id,
+            display_name=(
+                f"{candidate_id} — NQ protected 2026"
+            ),
+            market="NQ",
+            trades_path=(
+                f"{base_dir}/{candidate_id}/trades.csv"
+            ),
+            equity_path=(
+                f"{base_dir}/{candidate_id}/equity.csv"
+            ),
+            trade_schema=TradeSchema.FUTURES_CANDIDATE,
+            equity_schema=EquitySchema.CANDIDATE_EQUITY,
+            benchmark_schema=BenchmarkSchema.NONE,
+            reference_capital_usd=100_000.0,
+            analysis_start="2026-01-01",
+            analysis_end="2026-07-23",
+            supports_mae_mfe=False,
+            dense_session_equity=True,
+        )
+        for candidate_id in exp027_reported_ids()
+    )
+
+
 def build_analytics_evidence_registry() -> dict[
     str,
     ExperimentEvidenceSpec,
@@ -567,6 +604,7 @@ def build_analytics_evidence_registry() -> dict[
             analysis_end="2025-12-31",
         ),
         "EXP-014": _exp014_series(),
+        "EXP-027": _exp027_series(),
     }
 
     registry: dict[str, ExperimentEvidenceSpec] = {}
@@ -818,6 +856,7 @@ def validate_analytics_evidence_registry(
         "EXP-012": 48,
         "EXP-013": 6,
         "EXP-014": 3,
+        "EXP-027": 24,
     }
     for experiment_id, expected_count in expected_counts.items():
         actual_count = len(registry[experiment_id].series)
@@ -826,9 +865,9 @@ def validate_analytics_evidence_registry(
                 f"{experiment_id} series count changed: "
                 f"{actual_count} != {expected_count}."
             )
-    if len(series) != 134:
+    if len(series) != 158:
         raise ValueError(
-            f"Expected 134 strategy series, found {len(series)}."
+            f"Expected 158 strategy series, found {len(series)}."
         )
     series_ids = [item.series_id for item in series]
     if len(series_ids) != len(set(series_ids)):

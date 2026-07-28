@@ -582,7 +582,7 @@ class LifecycleRegistryTests(unittest.TestCase):
             ),
         )
 
-    def test_exp027_is_preregistered_for_protected_measurement(
+    def test_exp027_is_complete_and_under_review(
         self,
     ) -> None:
         record = get_experiment_lifecycle(
@@ -591,7 +591,7 @@ class LifecycleRegistryTests(unittest.TestCase):
 
         self.assertEqual(
             record.stage,
-            "PRE_REGISTERED",
+            "REVIEW",
         )
         self.assertIn(
             "Protected 2026",
@@ -602,28 +602,36 @@ class LifecycleRegistryTests(unittest.TestCase):
             record.hypothesis,
         )
         self.assertIn(
-            "two controls",
+            "PROTECTED_2026_MEASUREMENT_COMPLETE",
             record.stage_reason,
         )
         self.assertIn(
-            "three EXP-026 finalists",
+            "22 fixed strategy variants and two controls",
             record.stage_reason,
         )
         self.assertIn(
-            "No protected 2026",
+            "111 frozen output files",
             record.stage_reason,
         )
         self.assertIn(
-            "result-free EXP-027 implementation",
-            record.next_action,
+            "protected 2026 period has now been consumed",
+            record.stage_reason.lower(),
         )
         self.assertIn(
-            "separate one-time execution authorisation",
-            record.next_action,
+            "do not rerun",
+            record.next_action.lower(),
         )
         self.assertIn(
-            "Do not download data",
-            record.next_action,
+            "review the frozen",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "do not optimise",
+            record.next_action.lower(),
+        )
+        self.assertIn(
+            "paper trade or live trade",
+            record.next_action.lower(),
         )
         self.assertEqual(
             record.preregistration_file,

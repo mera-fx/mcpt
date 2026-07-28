@@ -1059,22 +1059,22 @@ EXPERIMENT_LIFECYCLE: dict[
             "divergence on the untouched 2026 Databento-derived NQ period "
             "when every rule, parameter and cost assumption remains frozen."
         ),
-        stage="PRE_REGISTERED",
+        stage="REVIEW",
         stage_reason=(
-            "EXP-027 is preregistered but not implemented or executed. "
-            "All 22 fixed EXP-026 variants and two controls will remain "
-            "visible. The three EXP-026 finalists are the predeclared "
-            "primary cohort; the remaining candidates are secondary "
-            "measurement context and cannot replace them based on 2026. "
-            "No protected 2026 market value or strategy result has been "
-            "accessed."
+            "EXP-027 completed its one authorised protected 2026 "
+            "measurement and is classified "
+            "PROTECTED_2026_MEASUREMENT_COMPLETE. It reported all 22 "
+            "fixed strategy variants and two controls across 111 frozen "
+            "output files, passed independent rebuild and serial/parallel "
+            "parity, and made zero Databento API calls. The protected "
+            "2026 period has now been consumed."
         ),
         next_action=(
-            "Build and commit a result-free EXP-027 implementation and "
-            "preflight without materialising protected 2026 values. Do not "
-            "run the protected measurement until a separate one-time "
-            "execution authorisation is committed. Do not download data, "
-            "optimise, reselect, paper trade or live trade."
+            "Freeze the EXP-027 execution and do not rerun it. Review the "
+            "frozen all/long/short metrics, cost sensitivity, representation "
+            "sensitivity, equity and drawdown evidence before writing a "
+            "separate closure interpretation. Do not optimise, reselect, "
+            "promote a secondary candidate, paper trade or live trade."
         ),
         market_name=(
             "NQ Databento-derived selected-roll continuous series"
