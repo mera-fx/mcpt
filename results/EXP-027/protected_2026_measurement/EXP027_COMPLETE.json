@@ -1,0 +1,19 @@
+{
+  "candidate_selection": false,
+  "completed": true,
+  "completed_at_utc": "2026-07-28T19:32:52.845773+00:00",
+  "databento_api_calls": 0,
+  "experiment_id": "EXP-027",
+  "historical_2010_2025_market_rows_accessed": false,
+  "independent_rebuild": true,
+  "live_trading_authorized": false,
+  "network_access": false,
+  "output_file_count_before_completion": 110,
+  "output_manifest_sha256": "fd8823bea6a04407da5f574552e4b17a79d8c21ec949a93c693421ef743e51d7",
+  "paper_trading_authorized": false,
+  "parameter_optimization": false,
+  "protected_2026_accessed": true,
+  "reported_series_count": 24,
+  "serial_parallel_parity": true,
+  "winner_declaration": false
+}

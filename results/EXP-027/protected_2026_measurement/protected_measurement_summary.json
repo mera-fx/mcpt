@@ -1,0 +1,69 @@
+{
+  "authorization_commit": "88d6f4f7addad0e5ad9db6134987875ff1a7df10",
+  "candidate_selection": false,
+  "classification": "PROTECTED_2026_MEASUREMENT_COMPLETE",
+  "control_candidate_count": 2,
+  "databento_api_calls": 0,
+  "exp022_series_snapshot": {
+    "BACKWARD_ADJUSTED": {
+      "path": "results/EXP-022/selected_continuous_series/selected_roll_backward_adjusted.parquet",
+      "sha256": "61ccb3621b53fa313147a866948ec1f2c7a6b36956d2ba26090162b518c30c84",
+      "size_bytes": 71964074
+    },
+    "UNADJUSTED": {
+      "path": "results/EXP-022/selected_continuous_series/selected_roll_unadjusted.parquet",
+      "sha256": "606a69bbba4f4a5db3e0356d7b2849f9481e4555dc24cae4c6b9d1d12f673ab1",
+      "size_bytes": 73760121
+    }
+  },
+  "experiment_id": "EXP-027",
+  "historical_2010_2025_market_rows_accessed": false,
+  "implementation_commit": "591cdf43b4c23abc312ae3d50b7d7948f88c90b2",
+  "independent_rebuild": true,
+  "live_trading_authorized": false,
+  "network_access": false,
+  "new_databento_download": false,
+  "paper_trading_authorized": false,
+  "parameter_optimization": false,
+  "parquet_metadata_rows": {
+    "BACKWARD_ADJUSTED": 5457606,
+    "UNADJUSTED": 5457606
+  },
+  "partial_year": true,
+  "period_end": "2026-07-23",
+  "period_start": "2026-01-01",
+  "preregistration_sha256": "3177e5bb81bbf330b8a020c3bfee56b584cd284da3546fcdad4b90df5ffd76bd",
+  "primary_confirmation_cohort": [
+    "gap_fade_0p75_1r",
+    "opening_drive_0p75_time",
+    "premarket_continuation_0p875_1p5r"
+  ],
+  "primary_decision_rows": 3480,
+  "primary_rebuild_hashes": {
+    "first_decisions": "d89598c43ba38c2d150e148bc7ce984d7e680bc19869fa1b1d0b3588044ba5a3",
+    "first_trades": "42818593f0e7888037d3b43d7398f7cdd6aaa6bd8a7d67501ea2fa70a4c6320f",
+    "parallel_decisions": "d89598c43ba38c2d150e148bc7ce984d7e680bc19869fa1b1d0b3588044ba5a3",
+    "parallel_trades": "42818593f0e7888037d3b43d7398f7cdd6aaa6bd8a7d67501ea2fa70a4c6320f",
+    "second_decisions": "d89598c43ba38c2d150e148bc7ce984d7e680bc19869fa1b1d0b3588044ba5a3",
+    "second_trades": "42818593f0e7888037d3b43d7398f7cdd6aaa6bd8a7d67501ea2fa70a4c6320f"
+  },
+  "primary_source_rows": 198240,
+  "primary_trade_rows": 925,
+  "protected_2026_accessed": true,
+  "reported_series_count": 24,
+  "secondary_candidate_promotion": false,
+  "secondary_decision_rows": 3480,
+  "secondary_rebuild_hashes": {
+    "first_decisions": "b69ff57ce6f025035ef41a8d51a5dbfb6a3398b75a9fe5b0998ac0fe7ad35d03",
+    "first_trades": "015e2f98f539759c332beb130953111706b3102d4cd6060c7877c24841483bba",
+    "parallel_decisions": "b69ff57ce6f025035ef41a8d51a5dbfb6a3398b75a9fe5b0998ac0fe7ad35d03",
+    "parallel_trades": "015e2f98f539759c332beb130953111706b3102d4cd6060c7877c24841483bba",
+    "second_decisions": "b69ff57ce6f025035ef41a8d51a5dbfb6a3398b75a9fe5b0998ac0fe7ad35d03",
+    "second_trades": "015e2f98f539759c332beb130953111706b3102d4cd6060c7877c24841483bba"
+  },
+  "secondary_source_rows": 198240,
+  "secondary_trade_rows": 927,
+  "serial_parallel_parity": true,
+  "strategy_candidate_count": 22,
+  "winner_declaration": false
+}

@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>EXP-027 Protected 2026 Measurement</title>
+<style>
+body {
+  background: #0b0b0c;
+  color: #f0f0f0;
+  font-family: Arial, sans-serif;
+  margin: 0;
+}
+main {
+  width: min(1500px, calc(100% - 32px));
+  margin: 24px auto 70px;
+}
+section {
+  background: #151517;
+  border: 1px solid #333;
+  border-radius: 14px;
+  padding: 22px;
+  margin: 18px 0;
+}
+h1, h2 { margin-top: 0; }
+p, li { line-height: 1.55; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: auto;
+}
+th, td {
+  border-bottom: 1px solid #333;
+  padding: 9px 10px;
+  text-align: right;
+}
+th:first-child, td:first-child,
+th:nth-child(2), td:nth-child(2) {
+  text-align: left;
+}
+img {
+  width: 100%;
+  background: white;
+  border-radius: 10px;
+}
+.warning {
+  border-left: 4px solid #c6a06a;
+  padding-left: 14px;
+}
+</style>
+</head>
+<body>
+<main>
+<section>
+<h1>EXP-027 Protected 2026 Multi-Strategy Measurement</h1>
+<p>
+Protected period: <strong>2026-01-01</strong> through
+<strong>2026-07-23</strong>. All 22 fixed strategy variants and
+two fixed controls are reported.
+</p>
+<p class="warning">
+No candidate selection, parameter optimisation, secondary-candidate promotion,
+winner declaration, paper trading or live trading is authorised.
+</p>
+</section>
+<section>
+<h2>All / Long / Short measurements</h2>
+<table class="dataframe metrics">
+  <thead>
+    <tr style="text-align: right;">
+      <th>candidate_id</th>
+      <th>cohort</th>
+      <th>completed_trades</th>
+      <th>net_profit_usd</th>
+      <th>trade_profit_factor</th>
+      <th>win_rate</th>
+      <th>maximum_drawdown_usd</th>
+      <th>net_profit_to_drawdown</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>gap_fade_0p25_prior_close</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>48</td>
+      <td>-11,580.000</td>
+      <td>0.780</td>
+      <td>35.417</td>
+      <td>-24,490.000</td>
+      <td>-0.473</td>
+    </tr>
+    <tr>
+      <td>gap_fade_0p25_1r</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>48</td>
+      <td>-4,055.000</td>
+      <td>0.908</td>
+      <td>43.750</td>
+      <td>-16,090.000</td>
+      <td>-0.252</td>
+    </tr>
+    <tr>
+      <td>gap_fade_0p50_prior_close</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>31</td>
+      <td>3,470.000</td>
+      <td>1.109</td>
+      <td>35.484</td>
+      <td>-13,440.000</td>
+      <td>0.258</td>
+    </tr>
+    <tr>
+      <td>gap_fade_0p50_1r</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>31</td>
+      <td>5,080.000</td>
+      <td>1.210</td>
+      <td>45.161</td>
+      <td>-9,340.000</td>
+      <td>0.544</td>
+    </tr>
+    <tr>
+      <td>gap_fade_0p75_prior_close</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>15</td>
+      <td>580.000</td>
+      <td>1.030</td>
+      <td>26.667</td>
+      <td>-9,245.000</td>
+      <td>0.063</td>
+    </tr>
+    <tr>
+      <td>gap_fade_0p75_1r</td>
+      <td>PRIMARY_CONFIRMATION_COHORT</td>
+      <td>15</td>
+      <td>6,240.000</td>
+      <td>1.530</td>
+      <td>46.667</td>
+      <td>-6,215.000</td>
+      <td>1.004</td>
+    </tr>
+    <tr>
+      <td>premarket_continuation_0p50_time</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>25</td>
+      <td>-4,080.000</td>
+      <td>0.841</td>
+      <td>28.000</td>
+      <td>-20,640.000</td>
+      <td>-0.198</td>
+    </tr>
+    <tr>
+      <td>premarket_continuation_0p50_1p5r</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>25</td>
+      <td>-9,537.500</td>
+      <td>0.629</td>
+      <td>28.000</td>
+      <td>-19,522.500</td>
+      <td>-0.489</td>
+    </tr>
+    <tr>
+      <td>premarket_continuation_0p625_time</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>18</td>
+      <td>-6,435.000</td>
+      <td>0.675</td>
+      <td>22.222</td>
+      <td>-17,600.000</td>
+      <td>-0.366</td>
+    </tr>
+    <tr>
+      <td>premarket_continuation_0p625_1p5r</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>18</td>
+      <td>-10,482.500</td>
+      <td>0.470</td>
+      <td>22.222</td>
+      <td>-16,227.500</td>
+      <td>-0.646</td>
+    </tr>
+    <tr>
+      <td>premarket_continuation_0p75_time</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>9</td>
+      <td>-10,860.000</td>
+      <td>0.000</td>
+      <td>0.000</td>
+      <td>-10,860.000</td>
+      <td>-1.000</td>
+    </tr>
+    <tr>
+      <td>premarket_continuation_0p75_1p5r</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>9</td>
+      <td>-10,860.000</td>
+      <td>0.000</td>
+      <td>0.000</td>
+      <td>-10,860.000</td>
+      <td>-1.000</td>
+    </tr>
+    <tr>
+      <td>premarket_continuation_0p875_time</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>0</td>
+      <td>0.000</td>
+      <td>—</td>
+      <td>—</td>
+      <td>0.000</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>premarket_continuation_0p875_1p5r</td>
+      <td>PRIMARY_CONFIRMATION_COHORT</td>
+      <td>0</td>
+      <td>0.000</td>
+      <td>—</td>
+      <td>—</td>
+      <td>0.000</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>opening_drive_0p25_time</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>106</td>
+      <td>2,590.000</td>
+      <td>1.017</td>
+      <td>47.170</td>
+      <td>-45,395.000</td>
+      <td>0.057</td>
+    </tr>
+    <tr>
+      <td>opening_drive_0p25_1p5r</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>106</td>
+      <td>9,127.500</td>
+      <td>1.060</td>
+      <td>50.943</td>
+      <td>-45,697.500</td>
+      <td>0.200</td>
+    </tr>
+    <tr>
+      <td>opening_drive_0p50_time</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>69</td>
+      <td>-6,505.000</td>
+      <td>0.940</td>
+      <td>47.826</td>
+      <td>-43,730.000</td>
+      <td>-0.149</td>
+    </tr>
+    <tr>
+      <td>opening_drive_0p50_1p5r</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>69</td>
+      <td>1,782.500</td>
+      <td>1.016</td>
+      <td>50.725</td>
+      <td>-46,832.500</td>
+      <td>0.038</td>
+    </tr>
+    <tr>
+      <td>opening_drive_0p75_time</td>
+      <td>PRIMARY_CONFIRMATION_COHORT</td>
+      <td>27</td>
+      <td>7,770.000</td>
+      <td>1.187</td>
+      <td>51.852</td>
+      <td>-12,605.000</td>
+      <td>0.616</td>
+    </tr>
+    <tr>
+      <td>opening_drive_0p75_1p5r</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>27</td>
+      <td>10,340.000</td>
+      <td>1.249</td>
+      <td>51.852</td>
+      <td>-13,712.500</td>
+      <td>0.754</td>
+    </tr>
+    <tr>
+      <td>opening_drive_1p00_time</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>0</td>
+      <td>0.000</td>
+      <td>—</td>
+      <td>—</td>
+      <td>0.000</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>opening_drive_1p00_1p5r</td>
+      <td>SECONDARY_MEASUREMENT_CONTEXT</td>
+      <td>0</td>
+      <td>0.000</td>
+      <td>—</td>
+      <td>—</td>
+      <td>0.000</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <td>orb_control_exp005_15m_both_time</td>
+      <td>FIXED_CONTROL</td>
+      <td>139</td>
+      <td>-23,820.000</td>
+      <td>0.885</td>
+      <td>45.324</td>
+      <td>-74,605.000</td>
+      <td>-0.319</td>
+    </tr>
+    <tr>
+      <td>orb_control_exp007_30m_long_1r</td>
+      <td>FIXED_CONTROL</td>
+      <td>90</td>
+      <td>25,715.000</td>
+      <td>1.324</td>
+      <td>63.333</td>
+      <td>-28,920.000</td>
+      <td>0.889</td>
+    </tr>
+  </tbody>
+</table>
+</section>
+<section>
+<h2>Equity curves</h2>
+<img src="assets/equity_curves.png" alt="Equity curves">
+</section>
+<section>
+<h2>Drawdown curves</h2>
+<img src="assets/drawdown_curves.png" alt="Drawdown curves">
+</section>
+<section>
+<h2>Execution integrity</h2>
+<ul>
+<li>Independent rebuild: True</li>
+<li>Serial/parallel parity: True</li>
+<li>Databento API calls: 0</li>
+<li>New market-data download: False</li>
+<li>Paper/live trading authorised: False</li>
+</ul>
+</section>
+</main>
+</body>
+</html>

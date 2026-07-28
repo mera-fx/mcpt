@@ -1,0 +1,1 @@
+series_id,experiment_id,candidate_id,family_id,market,trade_id,session_date,direction,entry_time,exit_time,holding_minutes,entry_price,exit_price,gross_pnl_usd,transaction_cost_usd,net_pnl_usd,risk_points,initial_risk_usd,contracts,exit_reason,mae_usd,mfe_usd,captured_fraction_of_mfe,source_row_number
