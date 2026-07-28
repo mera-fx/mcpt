@@ -6,6 +6,25 @@
 
 **Preregistration commit:** `ce661c7785fa6d8d409378ee2ad63a00f0e0a9b9`
 
+## Pre-result correction EXP-026-I1
+
+**Correction date:** 2026-07-28
+
+The first uncommitted Phase A authorisation package exposed a lifecycle-test
+incompatibility before any market values, strategy results or protected-period
+values were read.
+
+The implementation test previously required all three phase-authorisation
+modules to remain absent. It now independently simulates a missing Phase A
+module while continuing to require the not-yet-authorised Phase B and Phase C
+modules to be absent.
+
+No candidate, parameter, strategy rule, data period, execution rule, cost
+model, selection method, reporting requirement or protected-data boundary
+changed.
+
+No Phase A run occurred.
+
 ## Scope
 
 This implementation provides the complete protected execution path for the

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# EXP-026-I1: pre-result authorization-lifecycle compatibility correction.
+
 import os
 from pathlib import Path
 import subprocess

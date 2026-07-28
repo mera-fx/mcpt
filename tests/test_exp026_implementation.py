@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# EXP-026-I1: pre-result authorization-lifecycle compatibility correction.
+
 import inspect
 from pathlib import Path
 import tempfile
@@ -147,7 +149,21 @@ class Exp026ImplementationTests(unittest.TestCase):
     def test_06_missing_phase_authorization_is_rejected(
         self,
     ) -> None:
-        for phase in ("A", "B", "C"):
+        with mock.patch.dict(
+            PHASE_AUTHORIZATION_MODULES,
+            {
+                "A": (
+                    "exp026_missing_phase_a_authorization"
+                )
+            },
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "not authorized",
+            ):
+                load_phase_authorization("A")
+
+        for phase in ("B", "C"):
             with self.assertRaisesRegex(
                 RuntimeError,
                 "not authorized",
