@@ -41,15 +41,31 @@ class DashboardStrategyGroupTests(unittest.TestCase):
             for group in STRATEGY_RESEARCH_GROUPS
             for experiment_id in group["experiment_ids"]
         ]
+        expected_ids = (
+            [
+                f"EXP-{number:03d}"
+                for number in range(1, 15)
+            ]
+            + [
+                f"EXP-{number:03d}"
+                for number in range(23, 28)
+            ]
+        )
         self.assertEqual(
             experiment_ids,
-            [f"EXP-{number:03d}" for number in range(1, 15)],
+            expected_ids,
         )
         self.assertEqual(len(experiment_ids), len(set(experiment_ids)))
 
     def test_html_renders_collapsed_lineage_groups(self) -> None:
         page = build_html(
-            [self._profile(f"EXP-{number:03d}") for number in range(1, 15)],
+            [
+                self._profile(f"EXP-{number:03d}")
+                for number in (
+                    *range(1, 15),
+                    *range(23, 28),
+                )
+            ],
             [],
             {},
         )
@@ -60,11 +76,17 @@ class DashboardStrategyGroupTests(unittest.TestCase):
             "Long-Only ORB Exit-Geometry Lineage",
             "Multi-Strategy Discovery and Opening-Drive Lineage",
             "Extended-Hours Context Lineage",
+            "Databento-Native NQ Research Lineage",
         ):
             self.assertIn(title, page)
 
         self.assertIn("Research group", page)
         self.assertIn("EXP-004 QQQ quick screen → EXP-005", page)
+        self.assertIn(
+            "EXP-026 historical strategy measurement → "
+            "EXP-027 protected 2026 measurement",
+            page,
+        )
         self.assertNotRegex(
             page,
             re.compile(r'<details class="research-group"[^>]*\sopen(?:\s|>)'),

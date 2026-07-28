@@ -104,6 +104,27 @@ STRATEGY_RESEARCH_GROUPS = (
         ),
         "experiment_ids": ("EXP-012", "EXP-013", "EXP-014"),
     },
+    {
+        "group_id": "databento-native-nq-lineage",
+        "title": "Databento-Native NQ Research Lineage",
+        "description": (
+            "Continuous-series transfer diagnostics, source attribution, "
+            "historical multi-family measurement and the separately "
+            "preregistered protected 2026 measurement."
+        ),
+        "relationship": (
+            "EXP-023 transfer diagnostic → EXP-024 disagreement attribution → "
+            "EXP-025 exact-contract diagnostic → EXP-026 historical strategy "
+            "measurement → EXP-027 protected 2026 measurement"
+        ),
+        "experiment_ids": (
+            "EXP-023",
+            "EXP-024",
+            "EXP-025",
+            "EXP-026",
+            "EXP-027",
+        ),
+    },
 )
 
 

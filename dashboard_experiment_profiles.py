@@ -12,8 +12,10 @@ from dashboard_strategy_adapters import load_strategy_adapter
 from research_dashboard_library import ResearchArtifact
 
 
-STRATEGY_EXPERIMENT_MAX = 14
-DATA_SOURCE_EXPERIMENT_MIN = 15
+DATA_SOURCE_EXPERIMENT_IDS = frozenset(
+    f"EXP-{number:03d}"
+    for number in range(15, 23)
+)
 
 STRATEGY_METRIC_FIELDS = (
     "profit_factor",
@@ -90,9 +92,12 @@ def experiment_number(experiment_id: str) -> int:
 
 
 def research_type_for(experiment_id: str) -> str:
+    normalized = (
+        f"EXP-{experiment_number(experiment_id):03d}"
+    )
     return (
         "data_source"
-        if experiment_number(experiment_id) >= DATA_SOURCE_EXPERIMENT_MIN
+        if normalized in DATA_SOURCE_EXPERIMENT_IDS
         else "strategy"
     )
 

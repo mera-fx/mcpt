@@ -18,6 +18,10 @@ class DashboardExperimentProfileTests(unittest.TestCase):
         self.assertEqual(research_type_for("EXP-014"), "strategy")
         self.assertEqual(research_type_for("EXP-015"), "data_source")
         self.assertEqual(research_type_for("EXP-018"), "data_source")
+        self.assertEqual(research_type_for("EXP-022"), "data_source")
+        self.assertEqual(research_type_for("EXP-023"), "strategy")
+        self.assertEqual(research_type_for("EXP-026"), "strategy")
+        self.assertEqual(research_type_for("EXP-027"), "strategy")
 
     def test_strategy_metric_count_is_honest(self) -> None:
         self.assertEqual(

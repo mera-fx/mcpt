@@ -1047,6 +1047,50 @@ EXPERIMENT_LIFECYCLE: dict[
         ),
     ),
 
+    "EXP-027": ExperimentLifecycle(
+        experiment_id="EXP-027",
+        experiment_name=(
+            "Protected 2026 Databento NQ "
+            "Multi-Strategy Measurement"
+        ),
+        hypothesis=(
+            "The 22 unchanged EXP-026 strategy variants and two fixed "
+            "controls may show measurable continuity, degradation or "
+            "divergence on the untouched 2026 Databento-derived NQ period "
+            "when every rule, parameter and cost assumption remains frozen."
+        ),
+        stage="PRE_REGISTERED",
+        stage_reason=(
+            "EXP-027 is preregistered but not implemented or executed. "
+            "All 22 fixed EXP-026 variants and two controls will remain "
+            "visible. The three EXP-026 finalists are the predeclared "
+            "primary cohort; the remaining candidates are secondary "
+            "measurement context and cannot replace them based on 2026. "
+            "No protected 2026 market value or strategy result has been "
+            "accessed."
+        ),
+        next_action=(
+            "Build and commit a result-free EXP-027 implementation and "
+            "preflight without materialising protected 2026 values. Do not "
+            "run the protected measurement until a separate one-time "
+            "execution authorisation is committed. Do not download data, "
+            "optimise, reselect, paper trade or live trade."
+        ),
+        market_name=(
+            "NQ Databento-derived selected-roll continuous series"
+        ),
+        timeframe=(
+            "Protected 2026 one-minute execution and five-minute "
+            "fixed-rule signals"
+        ),
+        strategy_name=(
+            "protected_2026_multi_strategy_measurement"
+        ),
+        preregistration_file=Path(
+            "research/EXP-027_preregistration.md"
+        ),
+    ),
+
 }
 
 

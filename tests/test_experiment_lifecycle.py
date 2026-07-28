@@ -582,6 +582,56 @@ class LifecycleRegistryTests(unittest.TestCase):
             ),
         )
 
+    def test_exp027_is_preregistered_for_protected_measurement(
+        self,
+    ) -> None:
+        record = get_experiment_lifecycle(
+            "EXP-027"
+        )
+
+        self.assertEqual(
+            record.stage,
+            "PRE_REGISTERED",
+        )
+        self.assertIn(
+            "Protected 2026",
+            record.experiment_name,
+        )
+        self.assertIn(
+            "22 unchanged EXP-026",
+            record.hypothesis,
+        )
+        self.assertIn(
+            "two controls",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "three EXP-026 finalists",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "No protected 2026",
+            record.stage_reason,
+        )
+        self.assertIn(
+            "result-free EXP-027 implementation",
+            record.next_action,
+        )
+        self.assertIn(
+            "separate one-time execution authorisation",
+            record.next_action,
+        )
+        self.assertIn(
+            "Do not download data",
+            record.next_action,
+        )
+        self.assertEqual(
+            record.preregistration_file,
+            Path(
+                "research/EXP-027_preregistration.md"
+            ),
+        )
+
     def test_unregistered_config_defaults_to_idea(
         self,
     ) -> None:
