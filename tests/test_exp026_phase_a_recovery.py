@@ -18,7 +18,11 @@ from exp026_phase_a_recovery import (
     partial_snapshot,
     validate_partial_evidence,
 )
-from exp026_runner import PHASE_PARTIAL_DIRS, PHASE_REQUIRED_OUTPUTS
+from exp026_runner import (
+    PHASE_OUTPUT_DIRS,
+    PHASE_PARTIAL_DIRS,
+    PHASE_REQUIRED_OUTPUTS,
+)
 
 
 class Exp026PhaseARecoveryTests(unittest.TestCase):
@@ -26,13 +30,56 @@ class Exp026PhaseARecoveryTests(unittest.TestCase):
         self.assertEqual(AUTHORIZATION_COMMIT, "5fa417ed56c2d620c5d348e9ab43f3d7634518b8")
         self.assertEqual(IMPLEMENTATION_COMMIT, "13ee0683dfcbbb5d763f7254f3b245ecc8e6d9cd")
 
-    def test_02_partial_hashes_are_locked(self) -> None:
-        self.assertEqual(partial_snapshot(PHASE_PARTIAL_DIRS["A"]), EXPECTED_PARTIAL_FILES)
+    def test_02_original_result_hashes_are_locked(
+        self,
+    ) -> None:
+        output_dir = PHASE_OUTPUT_DIRS["A"]
+        snapshot = {
+            name: (
+                int((output_dir / name).stat().st_size),
+                __import__(
+                    "exp026_runner"
+                ).sha256_file(
+                    output_dir / name
+                ),
+            )
+            for name in EXPECTED_PARTIAL_FILES
+        }
+        self.assertEqual(
+            snapshot,
+            EXPECTED_PARTIAL_FILES,
+        )
 
-    def test_03_partial_evidence_is_valid(self) -> None:
-        evidence = validate_partial_evidence()
-        self.assertTrue(evidence["summary"]["independent_rebuild"])
-        self.assertEqual(tuple(evidence["survivors"]["candidate_ids"]), EXPECTED_SURVIVORS)
+    def test_03_original_evidence_is_valid(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for name in EXPECTED_PARTIAL_FILES:
+                source = (
+                    PHASE_OUTPUT_DIRS["A"]
+                    / name
+                )
+                (root / name).write_bytes(
+                    source.read_bytes()
+                )
+            evidence = validate_partial_evidence(
+                root
+            )
+
+        self.assertTrue(
+            evidence["summary"][
+                "independent_rebuild"
+            ]
+        )
+        self.assertEqual(
+            tuple(
+                evidence["survivors"][
+                    "candidate_ids"
+                ]
+            ),
+            EXPECTED_SURVIVORS,
+        )
 
     def test_04_required_outputs_are_exact(self) -> None:
         self.assertEqual(len(PHASE_REQUIRED_OUTPUTS["A"]), 8)
@@ -51,7 +98,10 @@ class Exp026PhaseARecoveryTests(unittest.TestCase):
             self.assertIn(column, value)
 
     def test_07_report_discloses_recovery(self) -> None:
-        metrics = pd.read_csv(PHASE_PARTIAL_DIRS["A"] / "development_metrics.csv")
+        metrics = pd.read_csv(
+            PHASE_OUTPUT_DIRS["A"]
+            / "development_metrics.csv"
+        )
         value = build_report(metrics)
         self.assertIn("EXP-026-A-R1", value)
         self.assertIn("did not read market data", value)
@@ -69,7 +119,10 @@ class Exp026PhaseARecoveryTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             for name in EXPECTED_PARTIAL_FILES:
-                source = PHASE_PARTIAL_DIRS["A"] / name
+                source = (
+                    PHASE_OUTPUT_DIRS["A"]
+                    / name
+                )
                 (root / name).write_bytes(source.read_bytes())
             (root / "candidate_registry.csv").write_text("changed\n", encoding="utf-8")
             with self.assertRaisesRegex(RuntimeError, "partial evidence changed"):
